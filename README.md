@@ -5,7 +5,7 @@ API base em FastAPI com organização MVC e Postgres.
 ## Estrutura
 
 ```text
-backend/
+.
 ├── app/
 │   ├── controllers/
 │   ├── core/
@@ -21,7 +21,6 @@ backend/
 ## Rodando localmente
 
 ```bash
-cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -32,7 +31,6 @@ uvicorn app.main:app --reload
 ## Rodando com Docker
 
 ```bash
-cd backend
 cp .env.example .env
 docker compose up --build
 ```
@@ -42,4 +40,3 @@ docker compose up --build
 - `GET /api/v1/health`
 - `GET /api/v1/leads`
 - `POST /api/v1/leads`
-
