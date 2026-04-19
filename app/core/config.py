@@ -1,15 +1,16 @@
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "Advocacia API"
-    app_version: str = "0.1.0"
-    app_env: str = "development"
-    debug: bool = True
-    api_v1_prefix: str = "/api/v1"
-    frontend_url: str = "http://localhost:5173"
+    app_name: str = Field("Advocacia API", validation_alias="APP_NAME")
+    app_version: str = Field("0.1.0", validation_alias="APP_VERSION")
+    app_env: str = Field("development", validation_alias="APP_ENV")
+    debug: bool = Field(True, validation_alias="APP_DEBUG")
+    api_v1_prefix: str = Field("/api/v1", validation_alias="API_V1_PREFIX")
+    frontend_url: str = Field("http://localhost:5173", validation_alias="FRONTEND_URL")
 
     postgres_user: str = "postgres"
     postgres_password: str = "postgres"
@@ -35,4 +36,3 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
-
