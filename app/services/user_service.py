@@ -1,19 +1,11 @@
 import logging
 import secrets
 import string
-from math import ceil
-
 import bcrypt
 
 from app.models.user import Role
 from app.repositories.user_repository import UserRepository
-from app.schemas.user import (
-    PaginationMeta,
-    UserCreate,
-    UserListResponse,
-    UserRead,
-    UserUpdate,
-)
+from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.utils.exceptions import EmailAlreadyExistsError, UserNotFoundError
 
 logger = logging.getLogger(__name__)
@@ -29,15 +21,11 @@ class UserService:
         is_active: bool | None,
         page: int,
         limit: int,
-    ) -> UserListResponse:
+    ) -> tuple[list[UserRead], int]:
         users, total = self.repository.get_all(
             role=role, is_active=is_active, page=page, limit=limit
         )
-        pages = ceil(total / limit) if total else 1
-        return UserListResponse(
-            items=[UserRead.model_validate(u) for u in users],
-            meta=PaginationMeta(total=total, page=page, limit=limit, pages=pages),
-        )
+        return [UserRead.model_validate(u) for u in users], total
 
     def get_user(self, user_id: int) -> UserRead:
         user = self.repository.get_by_id(user_id)

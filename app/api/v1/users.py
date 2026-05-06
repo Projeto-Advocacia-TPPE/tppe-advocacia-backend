@@ -4,16 +4,16 @@ from sqlalchemy.orm import Session
 from app.controllers.user_controller import UserController
 from app.db.database import get_db
 from app.models.user import Role, User
-from app.schemas.user import UserCreate, UserListResponse, UserRead, UserUpdate
+from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.utils.auth_deps import require_admin
-from app.utils.responses import SuccessResponse, error_responses, ok
+from app.utils.responses import PaginatedResponse, SuccessResponse, error_responses, ok, paginated
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
 
 @router.get(
     "",
-    response_model=SuccessResponse[UserListResponse],
+    response_model=PaginatedResponse[UserRead],
     responses=error_responses(401, 403),
     summary="List users with filters and pagination",
 )
@@ -24,12 +24,11 @@ def list_users(
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
     _: User = Depends(require_admin),
-) -> SuccessResponse[UserListResponse]:
-    return ok(
-        UserController(db).list_users(
-            role=role, is_active=is_active, page=page, limit=limit
-        )
+) -> PaginatedResponse[UserRead]:
+    items, total = UserController(db).list_users(
+        role=role, is_active=is_active, page=page, limit=limit
     )
+    return paginated(items, total=total, page=page, limit=limit)
 
 
 @router.post(

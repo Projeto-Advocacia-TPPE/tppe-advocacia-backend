@@ -28,15 +28,3 @@ class UserRead(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
-
-
-class PaginationMeta(BaseModel):
-    total: int
-    page: int
-    limit: int
-    pages: int
-
-
-class UserListResponse(BaseModel):
-    items: list[UserRead]
-    meta: PaginationMeta
