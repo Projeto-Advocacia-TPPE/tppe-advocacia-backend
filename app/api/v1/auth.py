@@ -15,5 +15,7 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
     responses=error_responses(401, 403, 422),
     summary="Authenticate user and return JWT",
 )
-def login(payload: LoginRequest, db: Session = Depends(get_db)) -> SuccessResponse[TokenResponse]:
+def login(
+    payload: LoginRequest, db: Session = Depends(get_db)
+) -> SuccessResponse[TokenResponse]:
     return ok(AuthController(db).login(payload))

@@ -26,5 +26,7 @@ def read_leads(db: Session = Depends(get_db)) -> SuccessResponse[list[LeadRead]]
     responses=error_responses(422),
     summary="Cria um novo lead",
 )
-def create_new_lead(payload: LeadCreate, db: Session = Depends(get_db)) -> SuccessResponse[LeadRead]:
+def create_new_lead(
+    payload: LeadCreate, db: Session = Depends(get_db)
+) -> SuccessResponse[LeadRead]:
     return ok(LeadController(db).create_lead(payload))
