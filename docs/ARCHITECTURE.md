@@ -18,6 +18,9 @@ app/
 ├── repositories/            # acesso a dados e queries
 ├── services/                # regras de negócio
 ├── controllers/             # orquestração entre camadas
+├── utils/                   # utilitários transversais
+│   ├── exceptions.py        # exceções customizadas da aplicação
+│   └── responses.py         # envelope padrão de resposta da API
 └── api/
     └── v1/                  # rotas HTTP versionadas
 ```
@@ -44,6 +47,9 @@ Definem o esquema do banco de dados via ORM. Representam as entidades persistida
 ### `schemas/` — Contratos de entrada e saída
 Schemas Pydantic que definem o formato esperado nas requisições e nas respostas da API. Funcionam como DTOs (Data Transfer Objects) e desacoplam a camada HTTP dos models internos.
 
+### `utils/` — Utilitários transversais
+Código compartilhado entre camadas que não pertence ao domínio. Inclui as exceções customizadas da aplicação (`AppException` e subclasses) e o envelope padrão de resposta (`APIResponse[T]`). Todas as rotas devem retornar `APIResponse[T]`; todos os erros de negócio devem ser lançados como subclasses de `AppException`.
+
 ### `config/` — Configurações
 Centraliza variáveis de ambiente e configurações da aplicação (usando `pydantic-settings`).
 
@@ -67,6 +73,22 @@ HTTP Request
 
 ---
 
+## Padrão de resposta
+
+Todas as respostas da API seguem o envelope `APIResponse[T]` definido em `app/utils/responses.py`:
+
+```json
+// sucesso
+{ "success": true, "data": { ... }, "error": null }
+
+// erro de negócio ou autenticação
+{ "success": false, "data": null, "error": { "code": "ERROR_CODE", "message": "mensagem legível" } }
+```
+
+Erros de validação de entrada (422) seguem o mesmo envelope com `code: "VALIDATION_ERROR"`.
+
+---
+
 ## Princípios que guiam as decisões
 
 - **Uma responsabilidade por camada:** cada camada conhece apenas a camada imediatamente abaixo.
@@ -74,3 +96,5 @@ HTTP Request
 - **Schemas desacoplados dos models:** nunca expor diretamente um model ORM na resposta da API.
 - **Repository como única porta para o banco:** nenhuma query fora do repository.
 - **Versionamento de rotas:** toda rota pública fica sob `/api/v1/` para permitir evolução sem quebrar contratos.
+- **Erros via exceções customizadas:** toda falha de negócio deve ser lançada como subclasse de `AppException`; nunca usar `HTTPException` diretamente nos services.
+- **Resposta padronizada:** toda rota retorna `APIResponse[T]` usando o helper `ok(data)`.
