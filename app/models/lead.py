@@ -14,6 +14,8 @@ class Lead(Base):
     email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     message: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # TODO: Change to enum
     status: Mapped[str] = mapped_column(String(30), nullable=False, default="novo")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

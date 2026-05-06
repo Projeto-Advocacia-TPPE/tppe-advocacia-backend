@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     app_env: str = Field("development", validation_alias="APP_ENV")
     api_v1_prefix: str = Field("/api/v1", validation_alias="API_V1_PREFIX")
     frontend_url: str = Field("http://localhost:5173", validation_alias="FRONTEND_URL")
+    frontend_url_alt: str = Field("http://127.0.0.1:5173", validation_alias="FRONTEND_URL_ALT")
 
     api_port: int = Field(8000, validation_alias="API_HOST_PORT")
 

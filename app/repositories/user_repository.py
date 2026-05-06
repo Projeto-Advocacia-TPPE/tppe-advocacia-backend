@@ -1,3 +1,4 @@
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.user import User
@@ -8,4 +9,5 @@ class UserRepository:
         self.db = db
 
     def get_by_email(self, email: str) -> User | None:
-        return self.db.query(User).filter(User.email == email).first()
+        statement = select(User).where(User.email == email)
+        return self.db.scalars(statement).first()
