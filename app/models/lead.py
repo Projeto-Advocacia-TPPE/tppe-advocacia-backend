@@ -20,4 +20,3 @@ class Lead(Base):
         server_default=func.now(),
         nullable=False,
     )
-

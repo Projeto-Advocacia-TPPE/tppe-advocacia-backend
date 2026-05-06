@@ -1,16 +1,16 @@
 from sqlalchemy.orm import Session
 
 from app.models.lead import Lead
+from app.repositories.lead_repository import LeadRepository
 from app.schemas.lead import LeadCreate
-from app.services.lead_service import LeadService
 
 
-class LeadController:
+class LeadService:
     def __init__(self, db: Session) -> None:
-        self.service = LeadService(db)
+        self.repository = LeadRepository(db)
 
     def list_leads(self) -> list[Lead]:
-        return self.service.list_leads()
+        return self.repository.get_all()
 
     def create_lead(self, payload: LeadCreate) -> Lead:
-        return self.service.create_lead(payload)
+        return self.repository.create(payload)

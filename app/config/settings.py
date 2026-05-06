@@ -5,12 +5,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = Field("Advocacia API", validation_alias="APP_NAME")
-    app_version: str = Field("0.1.0", validation_alias="APP_VERSION")
     app_env: str = Field("development", validation_alias="APP_ENV")
-    debug: bool = Field(True, validation_alias="APP_DEBUG")
     api_v1_prefix: str = Field("/api/v1", validation_alias="API_V1_PREFIX")
     frontend_url: str = Field("http://localhost:5173", validation_alias="FRONTEND_URL")
+
+    api_port: int = Field(8000, validation_alias="API_HOST_PORT")
+
+    app_name: str = Field("Advocacia API", validation_alias="APP_NAME")
+    app_version: str = Field("0.1.0", validation_alias="APP_VERSION")
 
     postgres_user: str = "postgres"
     postgres_password: str = "postgres"

@@ -3,7 +3,7 @@ from collections.abc import Generator
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
-from app.core.config import get_settings
+from app.config.settings import get_settings
 from app.models.base import Base
 
 settings = get_settings()
@@ -13,7 +13,9 @@ engine = create_engine(
     future=True,
     pool_pre_ping=True,
 )
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, class_=Session)
+SessionLocal = sessionmaker(
+    bind=engine, autoflush=False, autocommit=False, class_=Session
+)
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -37,4 +39,3 @@ def check_database_connection() -> bool:
         return True
     except Exception:
         return False
-

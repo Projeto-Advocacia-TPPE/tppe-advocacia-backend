@@ -1,22 +1,6 @@
 # Backend
 
-API base em FastAPI com organização MVC e Postgres.
-
-## Estrutura
-
-```text
-.
-├── app/
-│   ├── controllers/
-│   ├── core/
-│   ├── models/
-│   ├── routes/
-│   ├── schemas/
-│   └── views/
-├── docker-compose.yml
-├── Dockerfile
-└── requirements.txt
-```
+API base em FastAPI com organização MVC + Camadas e Postgres.
 
 ## Rodando localmente
 
@@ -39,9 +23,3 @@ docker compose up --build
 ```
 
 Se as portas `8000` ou `5432` já estiverem em uso, ajuste `API_HOST_PORT` e `POSTGRES_PORT` no `.env` antes de subir os containers.
-
-## Endpoints iniciais
-
-- `GET /api/v1/health`
-- `GET /api/v1/leads`
-- `POST /api/v1/leads`

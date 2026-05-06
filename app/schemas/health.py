@@ -6,4 +6,3 @@ class HealthResponse(BaseModel):
     app_name: str
     version: str
     database: str
-

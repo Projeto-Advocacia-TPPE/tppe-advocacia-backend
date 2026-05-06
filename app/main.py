@@ -3,9 +3,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.config import get_settings
-from app.core.database import init_db
-from app.routes.api import api_router
+from app.api.router import api_router
+from app.config.settings import get_settings
+from app.db.database import init_db
 
 settings = get_settings()
 
@@ -16,11 +16,16 @@ async def lifespan(_: FastAPI):
     yield
 
 
+_is_prod = settings.app_env == "production"
+
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
-    debug=settings.debug,
+    debug=not _is_prod,
     lifespan=lifespan,
+    docs_url=None if _is_prod else "/docs",
+    redoc_url=None if _is_prod else "/redoc",
+    openapi_url=None if _is_prod else "/openapi.json",
 )
 
 app.add_middleware(
@@ -40,4 +45,3 @@ def read_root() -> dict[str, str]:
         "message": f"{settings.app_name} online.",
         "docs_url": "/docs",
     }
-

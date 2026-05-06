@@ -1,2 +1,0 @@
-"""Modelos ORM da aplicação."""
-
