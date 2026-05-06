@@ -1,0 +1,96 @@
+name: 📖 História de Usuário
+description: Crie uma nova história de usuário com critérios de aceite detalhados
+title: '[STORY] '
+labels: ['story']
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        # 📖 História de Usuário
+
+        Descreva uma nova história seguindo o padrão abaixo.
+
+  - type: textarea
+    id: history
+    attributes:
+      label: 'História'
+      description: |
+        Descreva no formato:
+        **Como** [persona],
+        **quero** [ação/funcionalidade],
+        **para** [benefício/objetivo].
+      placeholder: |
+        **Como** Advogado associado,
+        **quero** fazer login com meu e-mail e senha,
+        **para** que eu acesse as funcionalidades autorizadas ao meu perfil.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: 'Critérios de Aceite'
+      description: |
+        Liste os critérios que precisam ser atendidos para a história ser considerada completa.
+        Use o formato de checklist [ ] para cada item.
+      placeholder: |
+        - [ ] O endpoint POST /api/v1/auth/login recebe email e password
+        - [ ] Credenciais inválidas retornam 401 Unauthorized com mensagem genérica
+        - [ ] Credenciais válidas retornam um JWT com access_token e token_type
+        - [ ] O token JWT contém o user_id e o role do usuário no payload
+        - [ ] O token possui tempo de expiração configurável via variável de ambiente
+        - [ ] Usuário desativado não consegue fazer login (retorna 403 Forbidden)
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical_scope
+    attributes:
+      label: 'Escopo Técnico'
+      description: |
+        Detalhe os componentes técnicos necessários para implementar a história.
+        Inclua: Models, Schemas, Services, Controllers/Routers, considerações de segurança, etc.
+      placeholder: |
+        - **Model**: Usuario com campos email, hashed_password, role, is_active
+        - **Schema (Pydantic)**: LoginRequest e TokenResponse
+        - **Service**: lógica de verificação de senha (passlib/bcrypt) e geração do JWT (python-jose ou PyJWT)
+        - **Controller/Router**: POST /api/v1/auth/login
+        - **Segurança**: senha nunca trafega em claro, hash com bcrypt
+      render: markdown
+    validations:
+      required: false
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: 'Dependências'
+      description: |
+        Liste outras histórias ou tarefas que devem ser concluídas antes desta.
+        Se não houver dependências, escreva "Nenhuma".
+      placeholder: |
+        Nenhuma (primeira história do Épico 1)
+      render: markdown
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: 'Notas Adicionais'
+      description: Qualquer informação extra relevante para a implementação
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: validation
+    attributes:
+      label: '✓ Validação'
+      options:
+        - label: Procurei por histórias similares
+          required: true
+        - label: A história está bem definida e sem ambiguidades
+          required: true
+        - label: Os critérios de aceite são testáveis
+          required: true
