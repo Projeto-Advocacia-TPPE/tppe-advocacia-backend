@@ -13,7 +13,7 @@ fix/us-<id>-<descricao-curta>
 feat/<descricao-curta>
 ```
 
-> Use `feature/` para código transversal que uma ou mais US vão precisar, mas que não representa uma US por si só (ex: serviço de e-mail, integração com storage, cliente HTTP externo).
+> Use `feat/` para código transversal que uma ou mais US vão precisar, mas que não representa uma US por si só (ex: serviço de e-mail, integração com storage, cliente HTTP externo).
 
 ### Outros
 ```
@@ -63,7 +63,7 @@ feat(email): add email sending service
 main
  └── dev
        ├── feat/us-01-login         ← funcionalidade de US
-       ├── feat/email-service    ← infraestrutura sem US
+       ├── feat/email-service       ← infraestrutura sem US
        └── fix/us-01-inactive-user
 ```
 
