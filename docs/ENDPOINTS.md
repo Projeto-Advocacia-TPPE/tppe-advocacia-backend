@@ -44,10 +44,10 @@ Lista todos os leads cadastrados.
       "phone": "11999999999",
       "message": "Preciso de ajuda.",
       "status": "novo",
-      "created_at": "2026-05-06T12:00:00Z"
+      "created_at": "2026-05-06T12:00:00Z",
+      "updated_at": "2026-05-06T12:00:00Z"
     }
-  ],
-  "error": null
+  ]
 }
 ```
 
@@ -78,9 +78,9 @@ Cria um novo lead.
     "phone": "11999999999",
     "message": "Preciso de ajuda.",
     "status": "novo",
-    "created_at": "2026-05-06T12:00:00Z"
-  },
-  "error": null
+    "created_at": "2026-05-06T12:00:00Z",
+    "updated_at": "2026-05-06T12:00:00Z"
+  }
 }
 ```
 
@@ -107,8 +107,7 @@ Autentica um usuário com e-mail e senha e retorna um JWT de acesso.
   "data": {
     "access_token": "<jwt>",
     "token_type": "bearer"
-  },
-  "error": null
+  }
 }
 ```
 
@@ -124,7 +123,6 @@ Autentica um usuário com e-mail e senha e retorna um JWT de acesso.
 ```json
 {
   "success": false,
-  "data": null,
   "error": {
     "code": "INVALID_CREDENTIALS",
     "message": "Invalid credentials"
