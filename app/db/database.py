@@ -28,6 +28,7 @@ def get_db() -> Generator[Session, None, None]:
 
 def init_db() -> None:
     from app.models.lead import Lead  # noqa: F401
+    from app.models.user import User  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
 

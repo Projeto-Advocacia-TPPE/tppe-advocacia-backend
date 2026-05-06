@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     postgres_port: int = 5432
     postgres_db: str = "advocacia_db"
 
+    jwt_secret_key: str = Field("change-me-in-production", validation_alias="JWT_SECRET_KEY")
+    jwt_expire_minutes: int = Field(60, validation_alias="JWT_EXPIRE_MINUTES")
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
