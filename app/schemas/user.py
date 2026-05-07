@@ -8,7 +8,6 @@ from app.models.user import Role
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
-    role: Role = Role.USER
 
 
 class UserUpdate(BaseModel):

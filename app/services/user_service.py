@@ -46,7 +46,7 @@ class UserService:
             name=payload.name,
             email=payload.email,
             hashed_password=hashed,
-            role=payload.role,
+            role=Role.USER,
         )
         logger.info("Temporary password for %s: %s", payload.email, temp_password)
         return UserRead.model_validate(user)
