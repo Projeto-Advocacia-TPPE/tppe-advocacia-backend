@@ -72,6 +72,49 @@ def inactive_user(db_session):
 
 
 @pytest.fixture
+def admin_user(db_session):
+    password = "Valid@1234"
+    user = UserRepository(db_session).create(
+        name="Admin User",
+        email="e2e_admin@test.com",
+        hashed_password=_hash(password),
+        role=Role.ADMIN,
+    )
+    yield {"id": user.id, "email": user.email, "password": password}
+    db_session.execute(delete(User).where(User.id == user.id))
+    db_session.commit()
+
+
+@pytest.fixture
+def admin_headers(client, admin_user):
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": admin_user["email"], "password": admin_user["password"]},
+    )
+    token = response.json()["data"]["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def user_headers(client, active_user):
+    response = client.post(
+        "/api/v1/auth/login",
+        json={"email": active_user["email"], "password": active_user["password"]},
+    )
+    token = response.json()["data"]["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def created_user_ids(db_session):
+    ids = []
+    yield ids
+    for uid in ids:
+        db_session.execute(delete(User).where(User.id == uid))
+    db_session.commit()
+
+
+@pytest.fixture
 def client():
     with TestClient(app) as c:
         yield c
