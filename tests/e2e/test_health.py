@@ -4,7 +4,7 @@ HEALTH_URL = "/api/v1/health"
 DB_CHECK = "app.controllers.health_controller.check_database_connection"
 
 
-class TestHealthEndpointDBUp:
+class TestGetHealth:
     def test_returns_200(self, client):
         response = client.get(HEALTH_URL)
 
@@ -35,27 +35,25 @@ class TestHealthEndpointDBUp:
 
         assert isinstance(response.json()["data"]["version"], str)
 
-
-class TestHealthEndpointDBDown:
-    def test_returns_200_even_when_db_down(self, client):
+    def test_returns_200_when_db_down(self, client):
         with patch(DB_CHECK, return_value=False):
             response = client.get(HEALTH_URL)
 
         assert response.status_code == 200
 
-    def test_status_is_degraded(self, client):
+    def test_status_is_degraded_when_db_down(self, client):
         with patch(DB_CHECK, return_value=False):
             response = client.get(HEALTH_URL)
 
         assert response.json()["data"]["status"] == "degraded"
 
-    def test_database_is_unavailable(self, client):
+    def test_database_is_unavailable_when_db_down(self, client):
         with patch(DB_CHECK, return_value=False):
             response = client.get(HEALTH_URL)
 
         assert response.json()["data"]["database"] == "unavailable"
 
-    def test_success_is_still_true(self, client):
+    def test_success_is_true_when_db_down(self, client):
         with patch(DB_CHECK, return_value=False):
             response = client.get(HEALTH_URL)
 

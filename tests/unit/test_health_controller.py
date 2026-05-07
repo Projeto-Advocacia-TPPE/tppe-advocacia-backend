@@ -4,7 +4,7 @@ from app.controllers.health_controller import HealthController
 
 
 @patch("app.controllers.health_controller.check_database_connection")
-class TestHealthControllerStatus:
+class TestGetStatus:
     def test_status_ok_when_db_connected(self, mock_db):
         mock_db.return_value = True
 

@@ -3,7 +3,7 @@ import pytest
 from app.utils.responses import paginated
 
 
-class TestPaginatedPages:
+class TestPaginated:
     def test_zero_total_returns_one_page(self):
         result = paginated([], total=0, page=1, limit=10)
 
@@ -34,8 +34,6 @@ class TestPaginatedPages:
 
         assert result.meta.pages == 1
 
-
-class TestPaginatedMeta:
     def test_meta_carries_total(self):
         result = paginated([], total=42, page=1, limit=10)
 
@@ -51,8 +49,6 @@ class TestPaginatedMeta:
 
         assert result.meta.limit == 25
 
-
-class TestPaginatedStructure:
     def test_success_is_true(self):
         result = paginated([], total=0, page=1, limit=10)
 

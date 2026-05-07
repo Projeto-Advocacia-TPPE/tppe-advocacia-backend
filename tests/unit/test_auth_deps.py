@@ -39,7 +39,7 @@ def db():
     return MagicMock()
 
 
-class TestGetCurrentUserInvalidToken:
+class TestGetCurrentUser:
     def test_raises_on_invalid_signature(self, db):
         token = jwt.encode({"sub": "1"}, "wrong-secret", algorithm="HS256")
 
@@ -63,8 +63,6 @@ class TestGetCurrentUserInvalidToken:
         with pytest.raises(UnauthorizedError):
             get_current_user(make_credentials(token), db)
 
-
-class TestGetCurrentUserUserLookup:
     def test_raises_when_user_not_found(self, db):
         token = make_valid_token(user_id=99)
 

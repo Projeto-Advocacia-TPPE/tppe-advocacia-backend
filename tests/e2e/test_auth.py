@@ -3,7 +3,7 @@ import pytest
 LOGIN_URL = "/api/v1/auth/login"
 
 
-class TestLoginSuccess:
+class TestLogin:
     def test_returns_200(self, client, active_user):
         response = client.post(
             LOGIN_URL, json={"email": active_user["email"], "password": active_user["password"]}
@@ -33,8 +33,6 @@ class TestLoginSuccess:
 
         assert response.json()["data"]["token_type"] == "bearer"
 
-
-class TestLoginInvalidCredentials:
     def test_wrong_password_returns_401(self, client, active_user):
         response = client.post(
             LOGIN_URL, json={"email": active_user["email"], "password": "wrong_password"}
@@ -66,8 +64,6 @@ class TestLoginInvalidCredentials:
 
         assert wrong_pass.json()["error"]["code"] == unknown.json()["error"]["code"]
 
-
-class TestLoginInactiveUser:
     def test_inactive_user_returns_403(self, client, inactive_user):
         response = client.post(
             LOGIN_URL,
@@ -84,8 +80,6 @@ class TestLoginInactiveUser:
 
         assert response.json()["error"]["code"] == "INACTIVE_USER"
 
-
-class TestLoginValidation:
     def test_missing_email_returns_422(self, client):
         response = client.post(LOGIN_URL, json={"password": "any_password"})
 
