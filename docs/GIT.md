@@ -3,12 +3,14 @@
 ## Branches
 
 ### US (funcionalidade ligada ao backlog)
+
 ```
 feat/us-<id>-<descricao-curta>
 fix/us-<id>-<descricao-curta>
 ```
 
 ### Feature de infraestrutura (sem US, mas dependência de US futura)
+
 ```
 feat/<descricao-curta>
 ```
@@ -16,6 +18,7 @@ feat/<descricao-curta>
 > Use `feat/` para código transversal que uma ou mais US vão precisar, mas que não representa uma US por si só (ex: serviço de e-mail, integração com storage, cliente HTTP externo).
 
 ### Outros
+
 ```
 chore/<descricao-curta>     # configuração, dependências, infraestrutura
 docs/<descricao-curta>      # documentação
@@ -23,6 +26,7 @@ refactor/<descricao-curta>  # refatoração sem mudança de comportamento
 ```
 
 **Exemplos**
+
 ```
 feat/us-01-login
 feat/us-02-password-reset
@@ -46,6 +50,7 @@ docs/update-endpoints
 - **mensagem**: descrição curta do que foi feito, no imperativo **em inglês**
 
 **Exemplos**
+
 ```
 feat(auth): add JWT login endpoint
 fix(auth): return 403 for inactive users

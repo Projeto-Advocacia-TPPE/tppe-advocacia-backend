@@ -11,6 +11,7 @@ Todas as respostas seguem o envelope `APIResponse[T]`. Ver [ARCHITECTURE.md](./A
 Verifica a saúde da API e a conectividade com o banco de dados.
 
 **Resposta 200**
+
 ```json
 {
   "success": true,
@@ -19,8 +20,7 @@ Verifica a saúde da API e a conectividade com o banco de dados.
     "app_name": "Advocacia API",
     "version": "0.1.0",
     "database": "ok"
-  },
-  "error": null
+  }
 }
 ```
 
@@ -33,6 +33,7 @@ Verifica a saúde da API e a conectividade com o banco de dados.
 Lista todos os leads cadastrados.
 
 **Resposta 200**
+
 ```json
 {
   "success": true,
@@ -58,6 +59,7 @@ Lista todos os leads cadastrados.
 Cria um novo lead.
 
 **Body**
+
 ```json
 {
   "name": "João Silva",
@@ -68,6 +70,7 @@ Cria um novo lead.
 ```
 
 **Resposta 201**
+
 ```json
 {
   "success": true,
@@ -93,6 +96,7 @@ Cria um novo lead.
 Autentica um usuário com e-mail e senha e retorna um JWT de acesso.
 
 **Body**
+
 ```json
 {
   "email": "usuario@email.com",
@@ -101,6 +105,7 @@ Autentica um usuário com e-mail e senha e retorna um JWT de acesso.
 ```
 
 **Resposta 200**
+
 ```json
 {
   "success": true,
@@ -113,13 +118,14 @@ Autentica um usuário com e-mail e senha e retorna um JWT de acesso.
 
 **Erros**
 
-| Status | Code | Situação |
-|--------|------|----------|
-| 401 | `INVALID_CREDENTIALS` | E-mail não encontrado ou senha incorreta |
-| 403 | `INACTIVE_USER` | Usuário desativado |
-| 422 | `VALIDATION_ERROR` | Body inválido (e-mail malformado, campos ausentes) |
+| Status | Code                  | Situação                                           |
+| ------ | --------------------- | -------------------------------------------------- |
+| 401    | `INVALID_CREDENTIALS` | E-mail não encontrado ou senha incorreta           |
+| 403    | `INACTIVE_USER`       | Usuário desativado                                 |
+| 422    | `VALIDATION_ERROR`    | Body inválido (e-mail malformado, campos ausentes) |
 
 **Resposta de erro (exemplo)**
+
 ```json
 {
   "success": false,
@@ -145,14 +151,15 @@ Lista usuários com filtros opcionais e paginação.
 
 **Query params**
 
-| Parâmetro | Tipo | Obrigatório | Descrição |
-|-----------|------|-------------|-----------|
-| `role` | `ADMIN` \| `USER` | Não | Filtra por papel |
-| `is_active` | `boolean` | Não | Filtra por status de ativação |
-| `page` | `integer` (≥ 1) | Não | Página atual (default: `1`) |
-| `limit` | `integer` (1–100) | Não | Itens por página (default: `20`) |
+| Parâmetro   | Tipo              | Obrigatório | Descrição                        |
+| ----------- | ----------------- | ----------- | -------------------------------- |
+| `role`      | `ADMIN` \| `USER` | Não         | Filtra por papel                 |
+| `is_active` | `boolean`         | Não         | Filtra por status de ativação    |
+| `page`      | `integer` (≥ 1)   | Não         | Página atual (default: `1`)      |
+| `limit`     | `integer` (1–100) | Não         | Itens por página (default: `20`) |
 
 **Resposta 200**
+
 ```json
 {
   "success": true,
@@ -178,10 +185,10 @@ Lista usuários com filtros opcionais e paginação.
 
 **Erros**
 
-| Status | Code | Situação |
-|--------|------|----------|
-| 401 | `UNAUTHORIZED` | Token ausente ou inválido |
-| 403 | `FORBIDDEN` | Usuário autenticado não é ADMIN |
+| Status | Code           | Situação                        |
+| ------ | -------------- | ------------------------------- |
+| 401    | `UNAUTHORIZED` | Token ausente ou inválido       |
+| 403    | `FORBIDDEN`    | Usuário autenticado não é ADMIN |
 
 ---
 
@@ -190,15 +197,16 @@ Lista usuários com filtros opcionais e paginação.
 Cria um novo usuário. O sistema gera a senha temporária e a registra no log do servidor.
 
 **Body**
+
 ```json
 {
   "name": "Carlos Souza",
-  "email": "carlos@escritorio.com",
-  "role": "USER"
+  "email": "carlos@escritorio.com"
 }
 ```
 
 **Resposta 201**
+
 ```json
 {
   "success": true,
@@ -216,12 +224,12 @@ Cria um novo usuário. O sistema gera a senha temporária e a registra no log do
 
 **Erros**
 
-| Status | Code | Situação |
-|--------|------|----------|
-| 401 | `UNAUTHORIZED` | Token ausente ou inválido |
-| 403 | `FORBIDDEN` | Usuário autenticado não é ADMIN |
-| 409 | `EMAIL_ALREADY_EXISTS` | E-mail já cadastrado |
-| 422 | `VALIDATION_ERROR` | Body inválido |
+| Status | Code                   | Situação                        |
+| ------ | ---------------------- | ------------------------------- |
+| 401    | `UNAUTHORIZED`         | Token ausente ou inválido       |
+| 403    | `FORBIDDEN`            | Usuário autenticado não é ADMIN |
+| 409    | `EMAIL_ALREADY_EXISTS` | E-mail já cadastrado            |
+| 422    | `VALIDATION_ERROR`     | Body inválido                   |
 
 ---
 
@@ -230,6 +238,7 @@ Cria um novo usuário. O sistema gera a senha temporária e a registra no log do
 Retorna os dados de um usuário específico.
 
 **Resposta 200**
+
 ```json
 {
   "success": true,
@@ -247,11 +256,11 @@ Retorna os dados de um usuário específico.
 
 **Erros**
 
-| Status | Code | Situação |
-|--------|------|----------|
-| 401 | `UNAUTHORIZED` | Token ausente ou inválido |
-| 403 | `FORBIDDEN` | Usuário autenticado não é ADMIN |
-| 404 | `USER_NOT_FOUND` | ID não encontrado |
+| Status | Code             | Situação                        |
+| ------ | ---------------- | ------------------------------- |
+| 401    | `UNAUTHORIZED`   | Token ausente ou inválido       |
+| 403    | `FORBIDDEN`      | Usuário autenticado não é ADMIN |
+| 404    | `USER_NOT_FOUND` | ID não encontrado               |
 
 ---
 
@@ -261,6 +270,7 @@ Atualiza parcialmente os dados de um usuário. Todos os campos são opcionais.
 Usado também para **desativar** (`is_active: false`) e **alterar o papel** (`role`).
 
 **Body**
+
 ```json
 {
   "name": "Carlos Souza Atualizado",
@@ -271,6 +281,7 @@ Usado também para **desativar** (`is_active: false`) e **alterar o papel** (`ro
 ```
 
 **Resposta 200**
+
 ```json
 {
   "success": true,
@@ -285,13 +296,3 @@ Usado também para **desativar** (`is_active: false`) e **alterar o papel** (`ro
   }
 }
 ```
-
-**Erros**
-
-| Status | Code | Situação |
-|--------|------|----------|
-| 401 | `UNAUTHORIZED` | Token ausente ou inválido |
-| 403 | `FORBIDDEN` | Usuário autenticado não é ADMIN |
-| 404 | `USER_NOT_FOUND` | ID não encontrado |
-| 409 | `EMAIL_ALREADY_EXISTS` | Novo e-mail já está em uso por outro usuário |
-| 422 | `VALIDATION_ERROR` | Body inválido |
