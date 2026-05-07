@@ -17,15 +17,13 @@ class Settings(BaseSettings):
     app_name: str = Field("Advocacia API", validation_alias="APP_NAME")
     app_version: str = Field("0.1.0", validation_alias="APP_VERSION")
 
-    postgres_user: str = "postgres"
-    postgres_password: str = "postgres"
-    postgres_host: str = "localhost"
-    postgres_port: int = 5432
-    postgres_db: str = "advocacia_db"
+    postgres_user: str = Field("postgres", validation_alias="POSTGRES_USER")
+    postgres_password: str = Field("postgres", validation_alias="POSTGRES_PASSWORD")
+    postgres_host: str = Field("localhost", validation_alias="POSTGRES_HOST")
+    postgres_port: int = Field(5432, validation_alias="POSTGRES_PORT")
+    postgres_db: str = Field("advocacia_db", validation_alias="POSTGRES_DB")
 
-    jwt_secret_key: str = Field(
-        "change-me-in-production", validation_alias="JWT_SECRET_KEY"
-    )
+    jwt_secret_key: str = Field(validation_alias="JWT_SECRET_KEY")
     jwt_expire_minutes: int = Field(60, validation_alias="JWT_EXPIRE_MINUTES")
 
     model_config = SettingsConfigDict(
