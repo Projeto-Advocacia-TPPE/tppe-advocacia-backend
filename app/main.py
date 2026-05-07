@@ -61,11 +61,3 @@ async def validation_exception_handler(
             "error": {"code": "VALIDATION_ERROR", "message": exc.errors()},
         },
     )
-
-
-@app.get("/", tags=["root"])
-def read_root() -> dict[str, str]:
-    return {
-        "message": f"{settings.app_name} online.",
-        "docs_url": "/docs",
-    }
