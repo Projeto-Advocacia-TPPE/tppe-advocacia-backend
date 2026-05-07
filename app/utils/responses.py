@@ -38,9 +38,13 @@ def ok(data: T) -> SuccessResponse[T]:
     return SuccessResponse(data=data)
 
 
-def paginated(items: list[T], total: int, page: int, limit: int) -> PaginatedResponse[T]:
+def paginated(
+    items: list[T], total: int, page: int, limit: int
+) -> PaginatedResponse[T]:
     pages = ceil(total / limit) if total else 1
-    return PaginatedResponse(data=items, meta=PageMeta(total=total, page=page, limit=limit, pages=pages))
+    return PaginatedResponse(
+        data=items, meta=PageMeta(total=total, page=page, limit=limit, pages=pages)
+    )
 
 
 def error_responses(*codes: int) -> dict[int, dict]:

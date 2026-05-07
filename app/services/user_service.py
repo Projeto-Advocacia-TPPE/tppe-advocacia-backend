@@ -1,6 +1,7 @@
 import logging
 import secrets
 import string
+
 import bcrypt
 
 from app.models.user import Role

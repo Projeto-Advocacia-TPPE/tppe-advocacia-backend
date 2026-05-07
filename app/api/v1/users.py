@@ -6,7 +6,13 @@ from app.db.database import get_db
 from app.models.user import Role, User
 from app.schemas.user import UserCreate, UserRead, UserUpdate
 from app.utils.auth_deps import require_admin
-from app.utils.responses import PaginatedResponse, SuccessResponse, error_responses, ok, paginated
+from app.utils.responses import (
+    PaginatedResponse,
+    SuccessResponse,
+    error_responses,
+    ok,
+    paginated,
+)
 
 router = APIRouter(prefix="/users", tags=["Users"])
 
