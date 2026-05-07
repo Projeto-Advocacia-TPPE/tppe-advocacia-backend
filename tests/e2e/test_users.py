@@ -7,10 +7,10 @@ class TestListUsers:
 
         assert response.status_code == 200
 
-    def test_returns_403_without_token(self, client):
+    def test_returns_401_without_token(self, client):
         response = client.get(USERS_URL)
 
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_returns_403_with_user_token(self, client, user_headers):
         response = client.get(USERS_URL, headers=user_headers)
@@ -64,10 +64,10 @@ class TestCreateUser:
 
         assert response.status_code == 201
 
-    def test_returns_403_without_token(self, client):
+    def test_returns_401_without_token(self, client):
         response = client.post(USERS_URL, json={"name": "X", "email": "x@test.com"})
 
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_returns_403_with_user_token(self, client, user_headers):
         response = client.post(
@@ -141,10 +141,10 @@ class TestGetUser:
 
         assert response.status_code == 200
 
-    def test_returns_403_without_token(self, client, active_user):
+    def test_returns_401_without_token(self, client, active_user):
         response = client.get(f"{USERS_URL}/{active_user['id']}")
 
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_returns_403_with_user_token(self, client, user_headers, active_user):
         response = client.get(f"{USERS_URL}/{active_user['id']}", headers=user_headers)
@@ -179,10 +179,10 @@ class TestUpdateUser:
 
         assert response.status_code == 200
 
-    def test_returns_403_without_token(self, client, active_user):
+    def test_returns_401_without_token(self, client, active_user):
         response = client.patch(f"{USERS_URL}/{active_user['id']}", json={"name": "X"})
 
-        assert response.status_code == 403
+        assert response.status_code == 401
 
     def test_returns_403_with_user_token(self, client, user_headers, active_user):
         response = client.patch(
