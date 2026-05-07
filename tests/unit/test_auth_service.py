@@ -56,7 +56,7 @@ class TestLogin:
 
         with pytest.raises(InvalidCredentialsError):
             service.login(make_payload("wrong"))
-    
+
     def test_raises_on_wrong_password(self, service, repo):
         repo.get_by_email.return_value = make_user()
 
@@ -68,7 +68,7 @@ class TestLogin:
 
         result = service.login(make_payload("correct_password"))
 
-        assert result.access_token is not None    
+        assert result.access_token is not None
 
     def test_raises_when_user_inactive(self, service, repo):
         repo.get_by_email.return_value = make_user(is_active=False)
@@ -80,7 +80,7 @@ class TestLogin:
         repo.get_by_email.return_value = make_user(is_active=False)
 
         with pytest.raises(InactiveUserError):
-            service.login(make_payload("correct_password"))    
+            service.login(make_payload("correct_password"))
 
     def test_returns_token_response(self, service, repo):
         repo.get_by_email.return_value = make_user()
@@ -128,4 +128,4 @@ class TestLogin:
         payload = jwt.decode(
             result.access_token, settings.jwt_secret_key, algorithms=["HS256"]
         )
-        assert "exp" in payload    
+        assert "exp" in payload

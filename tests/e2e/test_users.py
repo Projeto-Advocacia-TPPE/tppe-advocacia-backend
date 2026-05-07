@@ -1,5 +1,3 @@
-import pytest
-
 USERS_URL = "/api/v1/users"
 
 
@@ -102,7 +100,9 @@ class TestCreateUser:
 
         assert response.status_code == 409
 
-    def test_duplicate_email_returns_error_code(self, client, admin_headers, active_user):
+    def test_duplicate_email_returns_error_code(
+        self, client, admin_headers, active_user
+    ):
         response = client.post(
             USERS_URL,
             json={"name": "Duplicate", "email": active_user["email"]},
@@ -147,9 +147,7 @@ class TestGetUser:
         assert response.status_code == 403
 
     def test_returns_403_with_user_token(self, client, user_headers, active_user):
-        response = client.get(
-            f"{USERS_URL}/{active_user['id']}", headers=user_headers
-        )
+        response = client.get(f"{USERS_URL}/{active_user['id']}", headers=user_headers)
 
         assert response.status_code == 403
 

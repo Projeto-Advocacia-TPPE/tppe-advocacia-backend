@@ -28,6 +28,7 @@ def require_database():
 @pytest.fixture(scope="session")
 def db_engine():
     from app.db.database import engine
+
     return engine
 
 

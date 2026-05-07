@@ -1,5 +1,5 @@
 import string
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import bcrypt
@@ -12,7 +12,7 @@ from app.utils.exceptions import EmailAlreadyExistsError, UserNotFoundError
 
 
 def make_user(**kwargs) -> User:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     defaults = {
         "id": 1,
         "name": "Test User",

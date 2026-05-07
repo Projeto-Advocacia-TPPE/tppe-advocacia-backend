@@ -76,7 +76,9 @@ class TestGetCurrentUser:
         token = make_valid_token(user_id=1)
 
         with patch("app.utils.auth_deps.UserRepository") as mock_repo_cls:
-            mock_repo_cls.return_value.get_by_id.return_value = make_user(is_active=False)
+            mock_repo_cls.return_value.get_by_id.return_value = make_user(
+                is_active=False
+            )
 
             with pytest.raises(UnauthorizedError):
                 get_current_user(make_credentials(token), db)

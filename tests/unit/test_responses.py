@@ -1,5 +1,3 @@
-import pytest
-
 from app.utils.responses import paginated
 
 

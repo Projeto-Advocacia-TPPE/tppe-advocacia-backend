@@ -1,26 +1,27 @@
-import pytest
-
 LOGIN_URL = "/api/v1/auth/login"
 
 
 class TestLogin:
     def test_returns_200(self, client, active_user):
         response = client.post(
-            LOGIN_URL, json={"email": active_user["email"], "password": active_user["password"]}
+            LOGIN_URL,
+            json={"email": active_user["email"], "password": active_user["password"]},
         )
 
         assert response.status_code == 200
 
     def test_success_is_true(self, client, active_user):
         response = client.post(
-            LOGIN_URL, json={"email": active_user["email"], "password": active_user["password"]}
+            LOGIN_URL,
+            json={"email": active_user["email"], "password": active_user["password"]},
         )
 
         assert response.json()["success"] is True
 
     def test_returns_access_token(self, client, active_user):
         response = client.post(
-            LOGIN_URL, json={"email": active_user["email"], "password": active_user["password"]}
+            LOGIN_URL,
+            json={"email": active_user["email"], "password": active_user["password"]},
         )
 
         assert "access_token" in response.json()["data"]
@@ -28,21 +29,24 @@ class TestLogin:
 
     def test_token_type_is_bearer(self, client, active_user):
         response = client.post(
-            LOGIN_URL, json={"email": active_user["email"], "password": active_user["password"]}
+            LOGIN_URL,
+            json={"email": active_user["email"], "password": active_user["password"]},
         )
 
         assert response.json()["data"]["token_type"] == "bearer"
 
     def test_wrong_password_returns_401(self, client, active_user):
         response = client.post(
-            LOGIN_URL, json={"email": active_user["email"], "password": "wrong_password"}
+            LOGIN_URL,
+            json={"email": active_user["email"], "password": "wrong_password"},
         )
 
         assert response.status_code == 401
 
     def test_wrong_password_returns_error_code(self, client, active_user):
         response = client.post(
-            LOGIN_URL, json={"email": active_user["email"], "password": "wrong_password"}
+            LOGIN_URL,
+            json={"email": active_user["email"], "password": "wrong_password"},
         )
 
         assert response.json()["error"]["code"] == "INVALID_CREDENTIALS"
@@ -67,7 +71,10 @@ class TestLogin:
     def test_inactive_user_returns_403(self, client, inactive_user):
         response = client.post(
             LOGIN_URL,
-            json={"email": inactive_user["email"], "password": inactive_user["password"]},
+            json={
+                "email": inactive_user["email"],
+                "password": inactive_user["password"],
+            },
         )
 
         assert response.status_code == 403
@@ -75,7 +82,10 @@ class TestLogin:
     def test_inactive_user_returns_error_code(self, client, inactive_user):
         response = client.post(
             LOGIN_URL,
-            json={"email": inactive_user["email"], "password": inactive_user["password"]},
+            json={
+                "email": inactive_user["email"],
+                "password": inactive_user["password"],
+            },
         )
 
         assert response.json()["error"]["code"] == "INACTIVE_USER"
