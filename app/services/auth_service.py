@@ -1,13 +1,13 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import bcrypt
 import jwt
 from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
-from app.utils.exceptions import InactiveUserError, InvalidCredentialsError
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import LoginRequest, TokenResponse
+from app.utils.exceptions import InactiveUserError, InvalidCredentialsError
 
 settings = get_settings()
 
@@ -32,7 +32,7 @@ class AuthService:
         if not user.is_active:
             raise InactiveUserError()
 
-        expire = datetime.now(timezone.utc) + timedelta(minutes=settings.jwt_expire_minutes)
+        expire = datetime.now(UTC) + timedelta(minutes=settings.jwt_expire_minutes)
         token_data = {
             "sub": str(user.id),
             "role": user.role.value,

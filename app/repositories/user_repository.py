@@ -1,7 +1,7 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models.user import User
+from app.models.user import Role, User
 
 
 class UserRepository:
@@ -9,5 +9,52 @@ class UserRepository:
         self.db = db
 
     def get_by_email(self, email: str) -> User | None:
+        return self.db.scalars(select(User).where(User.email == email)).first()
+
+    def get_by_id(self, user_id: int) -> User | None:
+        return self.db.scalars(select(User).where(User.id == user_id)).first()
+
+    def email_exists(self, email: str, exclude_id: int | None = None) -> bool:
         statement = select(User).where(User.email == email)
-        return self.db.scalars(statement).first()
+        if exclude_id is not None:
+            statement = statement.where(User.id != exclude_id)
+        return self.db.scalars(statement).first() is not None
+
+    def get_all(
+        self,
+        role: Role | None = None,
+        is_active: bool | None = None,
+        page: int = 1,
+        limit: int = 20,
+    ) -> tuple[list[User], int]:
+        statement = select(User)
+        count_statement = select(func.count()).select_from(User)
+
+        if role is not None:
+            statement = statement.where(User.role == role)
+            count_statement = count_statement.where(User.role == role)
+
+        if is_active is not None:
+            statement = statement.where(User.is_active == is_active)
+            count_statement = count_statement.where(User.is_active == is_active)
+
+        total = self.db.scalar(count_statement) or 0
+        users = list(
+            self.db.scalars(statement.offset((page - 1) * limit).limit(limit)).all()
+        )
+
+        return users, total
+
+    def create(self, name: str, email: str, hashed_password: str, role: Role) -> User:
+        user = User(name=name, email=email, hashed_password=hashed_password, role=role)
+        self.db.add(user)
+        self.db.commit()
+        self.db.refresh(user)
+        return user
+
+    def update(self, user: User, data: dict) -> User:
+        for key, value in data.items():
+            setattr(user, key, value)
+        self.db.commit()
+        self.db.refresh(user)
+        return user
