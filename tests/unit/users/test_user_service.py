@@ -36,9 +36,17 @@ def repo():
 
 
 @pytest.fixture
-def service(repo):
+def email():
+    from app.modules.email.fake_service import FakeEmailService
+
+    return FakeEmailService()
+
+
+@pytest.fixture
+def service(repo, email):
     svc = UserService.__new__(UserService)
     svc.repository = repo
+    svc.email = email
     return svc
 
 

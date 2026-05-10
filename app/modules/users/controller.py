@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from app.modules.email.protocol import EmailService
 from app.modules.users.model import Role
 from app.modules.users.repository import UserRepository
 from app.modules.users.schema import UserCreate, UserRead, UserUpdate
@@ -7,8 +8,8 @@ from app.modules.users.service import UserService
 
 
 class UserController:
-    def __init__(self, db: Session) -> None:
-        self.service = UserService(UserRepository(db))
+    def __init__(self, db: Session, email: EmailService) -> None:
+        self.service = UserService(UserRepository(db), email)
 
     def list_users(
         self,

@@ -2,10 +2,12 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.modules.email.protocol import EmailService
 from app.modules.users.controller import UserController
 from app.modules.users.model import Role, User
 from app.modules.users.schema import UserCreate, UserRead, UserUpdate
 from app.shared.auth_deps import require_admin
+from app.shared.email_deps import get_email_service
 from app.shared.responses import (
     PaginatedResponse,
     SuccessResponse,
@@ -29,9 +31,10 @@ def list_users(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
+    email: EmailService = Depends(get_email_service),
     _: User = Depends(require_admin),
 ) -> PaginatedResponse[UserRead]:
-    items, total = UserController(db).list_users(
+    items, total = UserController(db, email).list_users(
         role=role, is_active=is_active, page=page, limit=limit
     )
     return paginated(items, total=total, page=page, limit=limit)
@@ -47,9 +50,10 @@ def list_users(
 def create_user(
     payload: UserCreate,
     db: Session = Depends(get_db),
+    email: EmailService = Depends(get_email_service),
     _: User = Depends(require_admin),
 ) -> SuccessResponse[UserRead]:
-    return ok(UserController(db).create_user(payload))
+    return ok(UserController(db, email).create_user(payload))
 
 
 @router.get(
@@ -61,9 +65,10 @@ def create_user(
 def get_user(
     user_id: int,
     db: Session = Depends(get_db),
+    email: EmailService = Depends(get_email_service),
     _: User = Depends(require_admin),
 ) -> SuccessResponse[UserRead]:
-    return ok(UserController(db).get_user(user_id))
+    return ok(UserController(db, email).get_user(user_id))
 
 
 @router.patch(
@@ -76,6 +81,7 @@ def update_user(
     user_id: int,
     payload: UserUpdate,
     db: Session = Depends(get_db),
+    email: EmailService = Depends(get_email_service),
     _: User = Depends(require_admin),
 ) -> SuccessResponse[UserRead]:
-    return ok(UserController(db).update_user(user_id, payload))
+    return ok(UserController(db, email).update_user(user_id, payload))

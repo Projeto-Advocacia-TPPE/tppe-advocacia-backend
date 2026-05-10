@@ -1,20 +1,19 @@
-import logging
 import secrets
 import string
 
 import bcrypt
 
+from app.modules.email.protocol import EmailService
 from app.modules.users.model import Role
 from app.modules.users.repository import UserRepository
 from app.modules.users.schema import UserCreate, UserRead, UserUpdate
 from app.shared.exceptions import EmailAlreadyExistsError, UserNotFoundError
 
-logger = logging.getLogger(__name__)
-
 
 class UserService:
-    def __init__(self, repository: UserRepository) -> None:
+    def __init__(self, repository: UserRepository, email: EmailService) -> None:
         self.repository = repository
+        self.email = email
 
     def list_users(
         self,
@@ -49,7 +48,11 @@ class UserService:
             hashed_password=hashed,
             role=Role.USER,
         )
-        logger.info("Temporary password for %s: %s", payload.email, temp_password)
+        self.email.send(
+            to=payload.email,
+            subject="Bem-vindo ao sistema",
+            html=f"<p>Olá, <b>{payload.name}</b>!</p><p>Sua senha temporária: <b>{temp_password}</b></p>",
+        )
         return UserRead.model_validate(user)
 
     def update_user(self, user_id: int, payload: UserUpdate) -> UserRead:
