@@ -23,6 +23,8 @@ class UserRead(BaseModel):
     email: str
     role: Role
     is_active: bool
+    created_by: int | None
+    updated_by: int | None
     created_at: datetime
     updated_at: datetime
 

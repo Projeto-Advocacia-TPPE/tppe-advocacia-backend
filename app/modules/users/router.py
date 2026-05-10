@@ -51,9 +51,9 @@ def create_user(
     payload: UserCreate,
     db: Session = Depends(get_db),
     email: EmailService = Depends(get_email_service),
-    _: User = Depends(require_admin),
+    current_user: User = Depends(require_admin),
 ) -> SuccessResponse[UserRead]:
-    return ok(UserController(db, email).create_user(payload))
+    return ok(UserController(db, email).create_user(payload, created_by=current_user.id))
 
 
 @router.get(
@@ -82,6 +82,6 @@ def update_user(
     payload: UserUpdate,
     db: Session = Depends(get_db),
     email: EmailService = Depends(get_email_service),
-    _: User = Depends(require_admin),
+    current_user: User = Depends(require_admin),
 ) -> SuccessResponse[UserRead]:
-    return ok(UserController(db, email).update_user(user_id, payload))
+    return ok(UserController(db, email).update_user(user_id, payload, updated_by=current_user.id))

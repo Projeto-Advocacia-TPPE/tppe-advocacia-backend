@@ -33,7 +33,7 @@ class UserService:
             raise UserNotFoundError()
         return UserRead.model_validate(user)
 
-    def create_user(self, payload: UserCreate) -> UserRead:
+    def create_user(self, payload: UserCreate, created_by: int) -> UserRead:
         if self.repository.email_exists(payload.email):
             raise EmailAlreadyExistsError()
 
@@ -47,6 +47,7 @@ class UserService:
             email=payload.email,
             hashed_password=hashed,
             role=Role.USER,
+            created_by=created_by,
         )
         self.email.send(
             to=payload.email,
@@ -55,12 +56,13 @@ class UserService:
         )
         return UserRead.model_validate(user)
 
-    def update_user(self, user_id: int, payload: UserUpdate) -> UserRead:
+    def update_user(self, user_id: int, payload: UserUpdate, updated_by: int) -> UserRead:
         user = self.repository.get_by_id(user_id)
         if user is None:
             raise UserNotFoundError()
 
         updates = payload.model_dump(exclude_none=True)
+        updates["updated_by"] = updated_by
 
         if "email" in updates and updates["email"] != user.email:
             if self.repository.email_exists(updates["email"], exclude_id=user_id):

@@ -20,6 +20,8 @@ def make_user(**kwargs) -> User:
         "hashed_password": "hashed",
         "role": Role.USER,
         "is_active": True,
+        "created_by": None,
+        "updated_by": None,
         "created_at": now,
         "updated_at": now,
     }
@@ -117,13 +119,13 @@ class TestCreateUser:
         repo.email_exists.return_value = True
 
         with pytest.raises(EmailAlreadyExistsError):
-            service.create_user(UserCreate(name="Alice", email="alice@test.com"))
+            service.create_user(UserCreate(name="Alice", email="alice@test.com"), created_by=1)
 
     def test_does_not_call_repo_create_when_email_exists(self, service, repo):
         repo.email_exists.return_value = True
 
         with pytest.raises(EmailAlreadyExistsError):
-            service.create_user(UserCreate(name="Alice", email="alice@test.com"))
+            service.create_user(UserCreate(name="Alice", email="alice@test.com"), created_by=1)
 
         repo.create.assert_not_called()
 
@@ -131,7 +133,7 @@ class TestCreateUser:
         repo.email_exists.return_value = False
         repo.create.return_value = make_user()
 
-        service.create_user(UserCreate(name="Alice", email="alice@test.com"))
+        service.create_user(UserCreate(name="Alice", email="alice@test.com"), created_by=1)
 
         hashed = repo.create.call_args.kwargs["hashed_password"]
         assert hashed.startswith("$2b$")
@@ -140,7 +142,7 @@ class TestCreateUser:
         repo.email_exists.return_value = False
         repo.create.return_value = make_user()
 
-        service.create_user(UserCreate(name="Alice", email="alice@test.com"))
+        service.create_user(UserCreate(name="Alice", email="alice@test.com"), created_by=1)
 
         hashed = repo.create.call_args.kwargs["hashed_password"]
         # bcrypt.checkpw doesn't raise, meaning it's a valid hash format
@@ -150,7 +152,7 @@ class TestCreateUser:
         repo.email_exists.return_value = False
         repo.create.return_value = make_user()
 
-        service.create_user(UserCreate(name="Alice", email="alice@test.com"))
+        service.create_user(UserCreate(name="Alice", email="alice@test.com"), created_by=1)
 
         assert repo.create.call_args.kwargs["role"] == Role.USER
 
@@ -158,7 +160,7 @@ class TestCreateUser:
         repo.email_exists.return_value = False
         repo.create.return_value = make_user()
 
-        service.create_user(UserCreate(name="Bob", email="bob@test.com"))
+        service.create_user(UserCreate(name="Bob", email="bob@test.com"), created_by=1)
 
         kwargs = repo.create.call_args.kwargs
         assert kwargs["name"] == "Bob"
@@ -170,7 +172,7 @@ class TestCreateUser:
             id=10, name="Alice", email="alice@test.com"
         )
 
-        result = service.create_user(UserCreate(name="Alice", email="alice@test.com"))
+        result = service.create_user(UserCreate(name="Alice", email="alice@test.com"), created_by=1)
 
         assert result.id == 10
         assert result.name == "Alice"
@@ -182,13 +184,13 @@ class TestUpdateUser:
         repo.get_by_id.return_value = None
 
         with pytest.raises(UserNotFoundError):
-            service.update_user(999, UserUpdate(name="New Name"))
+            service.update_user(999, UserUpdate(name="New Name"), updated_by=1)
 
     def test_does_not_call_repo_update_when_user_missing(self, service, repo):
         repo.get_by_id.return_value = None
 
         with pytest.raises(UserNotFoundError):
-            service.update_user(999, UserUpdate(name="New Name"))
+            service.update_user(999, UserUpdate(name="New Name"), updated_by=1)
 
         repo.update.assert_not_called()
 
@@ -197,14 +199,14 @@ class TestUpdateUser:
         repo.email_exists.return_value = True
 
         with pytest.raises(EmailAlreadyExistsError):
-            service.update_user(1, UserUpdate(email="taken@test.com"))
+            service.update_user(1, UserUpdate(email="taken@test.com"), updated_by=1)
 
     def test_does_not_check_email_conflict_when_email_unchanged(self, service, repo):
         existing = make_user(email="same@test.com")
         repo.get_by_id.return_value = existing
         repo.update.return_value = existing
 
-        service.update_user(1, UserUpdate(email="same@test.com"))
+        service.update_user(1, UserUpdate(email="same@test.com"), updated_by=1)
 
         repo.email_exists.assert_not_called()
 
@@ -212,7 +214,7 @@ class TestUpdateUser:
         repo.get_by_id.return_value = make_user(id=1, name="Old")
         repo.update.return_value = make_user(id=1, name="New")
 
-        result = service.update_user(1, UserUpdate(name="New"))
+        result = service.update_user(1, UserUpdate(name="New"), updated_by=1)
 
         assert result.name == "New"
 
@@ -221,7 +223,7 @@ class TestUpdateUser:
         repo.get_by_id.return_value = existing
         repo.update.return_value = existing
 
-        service.update_user(1, UserUpdate(name="Updated"))
+        service.update_user(1, UserUpdate(name="Updated"), updated_by=1)
 
         updates = repo.update.call_args[0][1]
         assert "name" in updates
@@ -233,7 +235,7 @@ class TestUpdateUser:
         repo.get_by_id.return_value = make_user(is_active=True)
         repo.update.return_value = make_user(is_active=False)
 
-        result = service.update_user(1, UserUpdate(is_active=False))
+        result = service.update_user(1, UserUpdate(is_active=False), updated_by=1)
 
         assert result.is_active is False
 
@@ -241,7 +243,7 @@ class TestUpdateUser:
         repo.get_by_id.return_value = make_user(role=Role.USER)
         repo.update.return_value = make_user(role=Role.ADMIN)
 
-        result = service.update_user(1, UserUpdate(role=Role.ADMIN))
+        result = service.update_user(1, UserUpdate(role=Role.ADMIN), updated_by=1)
 
         assert result.role == Role.ADMIN
 
@@ -251,7 +253,7 @@ class TestUpdateUser:
         repo.email_exists.return_value = False
         repo.update.return_value = existing
 
-        service.update_user(1, UserUpdate(email="new@test.com"))
+        service.update_user(1, UserUpdate(email="new@test.com"), updated_by=1)
 
         repo.email_exists.assert_called_once_with("new@test.com", exclude_id=1)
 

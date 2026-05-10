@@ -45,8 +45,21 @@ class UserRepository:
 
         return users, total
 
-    def create(self, name: str, email: str, hashed_password: str, role: Role) -> User:
-        user = User(name=name, email=email, hashed_password=hashed_password, role=role)
+    def create(
+        self,
+        name: str,
+        email: str,
+        hashed_password: str,
+        role: Role,
+        created_by: int | None = None,
+    ) -> User:
+        user = User(
+            name=name,
+            email=email,
+            hashed_password=hashed_password,
+            role=role,
+            created_by=created_by,
+        )
         self.db.add(user)
         self.db.commit()
         self.db.refresh(user)
