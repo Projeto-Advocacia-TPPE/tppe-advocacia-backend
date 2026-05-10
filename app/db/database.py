@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config.settings import get_settings
-from app.models.base import Base
+from app.shared.base_model import Base
 
 settings = get_settings()
 
@@ -30,8 +30,8 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    from app.models.lead import Lead  # noqa: F401
-    from app.models.user import User  # noqa: F401
+    from app.modules.leads.model import Lead  # noqa: F401
+    from app.modules.users.model import User  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
 

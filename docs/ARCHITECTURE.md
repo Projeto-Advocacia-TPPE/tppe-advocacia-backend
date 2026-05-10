@@ -1,6 +1,6 @@
 # Arquitetura
 
-Este projeto segue uma arquitetura em camadas inspirada no padrão MVC, adaptada para APIs REST com FastAPI. O objetivo é separar responsabilidades de forma clara, facilitando manutenção, testes e evolução do sistema.
+Este projeto segue o padrão **Modular Monolith** com camadas internas por módulo. Cada domínio (users, leads, auth, health) é uma pasta autônoma com suas próprias camadas — model, schema, repository, service, controller e router. Código verdadeiramente compartilhado entre módulos fica em `shared/`.
 
 ---
 
@@ -8,62 +8,99 @@ Este projeto segue uma arquitetura em camadas inspirada no padrão MVC, adaptada
 
 ```
 app/
-├── main.py                  # ponto de entrada da aplicação
+├── main.py                        # ponto de entrada da aplicação
 ├── config/
-│   └── settings.py          # configurações e variáveis de ambiente
+│   └── settings.py                # configurações e variáveis de ambiente
 ├── db/
-│   └── database.py          # conexão com o banco de dados
-├── models/                  # modelos ORM (mapeamento banco ↔ objeto)
-├── schemas/                 # schemas Pydantic (contratos de entrada/saída)
-├── repositories/            # acesso a dados e queries
-├── services/                # regras de negócio
-├── controllers/             # orquestração entre camadas
-├── utils/                   # utilitários transversais
-│   ├── exceptions.py        # exceções customizadas da aplicação
-│   └── responses.py         # envelope padrão de resposta da API
+│   └── database.py                # conexão com o banco de dados
+├── shared/                        # código transversal entre módulos
+│   ├── base_model.py              # DeclarativeBase do SQLAlchemy
+│   ├── exceptions.py              # exceções customizadas (AppException e subclasses)
+│   ├── responses.py               # envelope padrão de resposta da API
+│   └── auth_deps.py               # dependências de autenticação (get_current_user, require_admin)
+├── modules/
+│   ├── users/                     # domínio de usuários
+│   │   ├── model.py               # ORM: User, Role
+│   │   ├── schema.py              # DTOs: UserCreate, UserRead, UserUpdate
+│   │   ├── repository.py          # queries de usuário
+│   │   ├── service.py             # regras de negócio de usuário
+│   │   ├── controller.py          # orquestração
+│   │   └── router.py              # rotas HTTP /users
+│   ├── leads/                     # domínio de leads
+│   │   ├── model.py
+│   │   ├── schema.py
+│   │   ├── repository.py
+│   │   ├── service.py
+│   │   ├── controller.py
+│   │   └── router.py
+│   ├── auth/                      # autenticação
+│   │   ├── schema.py
+│   │   ├── service.py
+│   │   ├── controller.py
+│   │   └── router.py
+│   └── health/                    # health check
+│       ├── schema.py
+│       ├── controller.py
+│       └── router.py
 └── api/
-    └── v1/                  # rotas HTTP versionadas
+    └── router.py                  # agrega todos os modules/*/router.py
+```
+
+```
+tests/
+├── unit/
+│   ├── users/      test_user_service.py
+│   ├── auth/       test_auth_service.py, test_auth_deps.py
+│   ├── health/     test_health_controller.py
+│   └── shared/     test_responses.py
+├── integration/
+│   └── users/      test_user_repository.py
+└── e2e/
+    ├── users/      test_users.py
+    ├── auth/       test_auth.py
+    └── health/     test_health.py
 ```
 
 ---
 
 ## Camadas e responsabilidades
 
-### `api/` — Rotas (entrada HTTP)
+Cada módulo em `modules/` contém as mesmas camadas internas:
 
-Ponto de entrada de cada requisição. Define os endpoints, aplica os schemas de validação de entrada e delega ao controller correspondente. Não contém lógica de negócio.
+### `router.py` — Rotas (entrada HTTP)
 
-### `controllers/` — Orquestração
+Ponto de entrada de cada requisição. Define os endpoints, aplica os schemas de validação de entrada e delega ao controller. Não contém lógica de negócio.
 
-Coordena o fluxo entre services e schemas. Recebe dados já validados da rota, chama os services necessários e retorna a resposta serializada. Não acessa o banco diretamente.
+### `controller.py` — Orquestração
 
-### `services/` — Regras de negócio
+Coordena o fluxo entre service e schemas. Recebe dados já validados da rota, chama o service e retorna a resposta serializada. Não acessa o banco diretamente.
 
-Concentra a lógica do domínio: validações de negócio, cálculos, decisões. Usa repositories para persistência. É a camada mais importante e a que deve ter maior cobertura de testes.
+### `service.py` — Regras de negócio
 
-### `repositories/` — Acesso a dados
+Concentra a lógica do domínio: validações de negócio, cálculos, decisões. Usa o repository para persistência. É a camada mais importante e deve ter maior cobertura de testes.
 
-Responsável exclusivamente por interagir com o banco de dados: queries, inserções, atualizações e deleções. Recebe e retorna models ORM. Não conhece regras de negócio.
+### `repository.py` — Acesso a dados
 
-### `models/` — Modelos ORM
+Responsável exclusivamente por interagir com o banco: queries, inserções, atualizações e deleções. Recebe e retorna models ORM. Não conhece regras de negócio.
 
-Definem o esquema do banco de dados via ORM. Representam as entidades persistidas.
+### `model.py` — Modelo ORM
 
-### `schemas/` — Contratos de entrada e saída
+Define o esquema do banco de dados via SQLAlchemy. Representa a entidade persistida. Herda de `shared/base_model.py`.
 
-Schemas Pydantic que definem o formato esperado nas requisições e nas respostas da API. Funcionam como DTOs (Data Transfer Objects) e desacoplam a camada HTTP dos models internos.
+### `schema.py` — Contratos de entrada e saída
 
-### `utils/` — Utilitários transversais
+Schemas Pydantic que definem o formato esperado nas requisições e nas respostas. Funcionam como DTOs e desacoplam a camada HTTP dos models internos.
 
-Código compartilhado entre camadas que não pertence ao domínio. Inclui as exceções customizadas (`AppException` e subclasses) e os envelopes de resposta (`SuccessResponse[T]`, `PaginatedResponse[T]`, `ErrorResponse`). Todas as rotas devem usar os helpers `ok()` ou `paginated()`; todos os erros de negócio devem ser lançados como subclasses de `AppException`.
+---
 
-### `config/` — Configurações
+## `shared/` — Código transversal
 
-Centraliza variáveis de ambiente e configurações da aplicação (usando `pydantic-settings`).
+Código que pertence a nenhum módulo específico, mas é usado por vários:
 
-### `db/` — Banco de dados
-
-Gerencia a conexão com o banco e a criação de sessões.
+- **`base_model.py`** — `DeclarativeBase` do SQLAlchemy; todos os models herdam daqui
+- **`exceptions.py`** — `AppException` e subclasses; lançadas nos services, convertidas pelo handler global
+- **`responses.py`** — `SuccessResponse[T]`, `PaginatedResponse[T]`, `ErrorResponse`; helpers `ok()`, `paginated()`, `error_responses()`
+- **`auth_deps.py`** — `get_current_user()` e `require_admin()`; injetados via `Depends()` nas rotas
 
 ---
 
@@ -71,20 +108,20 @@ Gerencia a conexão com o banco e a criação de sessões.
 
 ```
 HTTP Request
-  └─► api/v1/                        valida entrada com schema
-        └─► controller/              orquestra a operação
-              └─► service/           aplica regras de negócio
-                    └─► repository/  executa query no banco
-                          └─► model/ entidade ORM
+  └─► modules/*/router.py                      valida entrada com schema
+        └─► modules/*/controller               orquestra a operação
+              └─► modules/*/service            aplica regras de negócio
+                    └─► modules/*/repository   executa query no banco
+                          └─► modules/*/model  entidade ORM
   ◄── HTTP Response
-        schema/          serializa a saída
+        schema serializa a saída
 ```
 
 ---
 
 ## Padrão de resposta
 
-Definido em `app/utils/responses.py`. Três tipos de envelope:
+Definido em `app/shared/responses.py`. Três tipos de envelope:
 
 ### Sucesso simples — `SuccessResponse[T]`
 
@@ -112,7 +149,7 @@ Usar o helper `paginated(items, total, page, limit)` nas rotas.
 { "success": false, "error": { "code": "ERROR_CODE", "message": "mensagem legível" } }
 ```
 
-Erros de negócio devem ser lançados como subclasses de `AppException` (definidas em `app/utils/exceptions.py`). O handler global converte para `ErrorResponse` automaticamente. Nunca usar `HTTPException` diretamente nos services.
+Erros de negócio devem ser lançados como subclasses de `AppException` (definidas em `app/shared/exceptions.py`). O handler global converte para `ErrorResponse` automaticamente. Nunca usar `HTTPException` diretamente nos services.
 
 Erros disponíveis:
 
@@ -133,11 +170,25 @@ Para documentar respostas de erro no Swagger, usar o helper `error_responses(*co
 
 ---
 
+## Adicionando um novo módulo
+
+Para cada nova história de usuário que introduz um novo domínio (ex: `email`):
+
+1. Criar pasta `app/modules/email/`
+2. Criar os arquivos: `model.py`, `schema.py`, `repository.py`, `service.py`, `controller.py`, `router.py`
+3. Registrar o router em `app/api/router.py`
+4. Criar testes em `tests/unit/email/`, `tests/integration/email/`, `tests/e2e/email/`
+
+Zero toque em código de outros módulos.
+
+---
+
 ## Princípios que guiam as decisões
 
-- **Uma responsabilidade por camada:** cada camada conhece apenas a camada imediatamente abaixo.
+- **Módulo autônomo:** cada módulo contém todas as suas camadas; mudança em um módulo não toca outros.
 - **Regras de negócio no service:** nenhuma lógica de domínio nos controllers, rotas ou repositories.
 - **Schemas desacoplados dos models:** nunca expor diretamente um model ORM na resposta da API.
 - **Repository como única porta para o banco:** nenhuma query fora do repository.
-- **Versionamento de rotas:** toda rota pública fica sob `/api/v1/` para permitir evolução sem quebrar contratos.
+- **Dependências entre módulos apenas quando semânticas e unidirecionais:** evitar acoplamento arbitrário entre módulos. Dependências circulares são proibidas. Dependências com relação de domínio clara são permitidas (ex: `auth` depende de `users` porque autentica usuários, já o inverso não existe).
 - **Erros via exceções customizadas:** toda falha de negócio deve ser lançada como subclasse de `AppException`; nunca usar `HTTPException` diretamente nos services.
+- **Versionamento de rotas:** toda rota pública fica sob `/api/v1/` para permitir evolução sem quebrar contratos.

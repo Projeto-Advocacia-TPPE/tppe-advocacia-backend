@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
 from app.main import app
-from app.models.user import Role, User
-from app.repositories.user_repository import UserRepository
+from app.modules.users.model import Role, User
+from app.modules.users.repository import UserRepository
 
 
 @pytest.fixture(scope="session", autouse=True)
