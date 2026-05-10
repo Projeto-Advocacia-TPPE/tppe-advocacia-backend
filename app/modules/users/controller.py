@@ -28,5 +28,7 @@ class UserController:
     def create_user(self, payload: UserCreate, created_by: int) -> UserRead:
         return self.service.create_user(payload, created_by=created_by)
 
-    def update_user(self, user_id: int, payload: UserUpdate, updated_by: int) -> UserRead:
+    def update_user(
+        self, user_id: int, payload: UserUpdate, updated_by: int
+    ) -> UserRead:
         return self.service.update_user(user_id, payload, updated_by=updated_by)

@@ -119,13 +119,17 @@ class TestCreateUser:
         repo.email_exists.return_value = True
 
         with pytest.raises(EmailAlreadyExistsError):
-            service.create_user(UserCreate(name="Alice", email="alice@test.com"), created_by=1)
+            service.create_user(
+                UserCreate(name="Alice", email="alice@test.com"), created_by=1
+            )
 
     def test_does_not_call_repo_create_when_email_exists(self, service, repo):
         repo.email_exists.return_value = True
 
         with pytest.raises(EmailAlreadyExistsError):
-            service.create_user(UserCreate(name="Alice", email="alice@test.com"), created_by=1)
+            service.create_user(
+                UserCreate(name="Alice", email="alice@test.com"), created_by=1
+            )
 
         repo.create.assert_not_called()
 
@@ -133,7 +137,9 @@ class TestCreateUser:
         repo.email_exists.return_value = False
         repo.create.return_value = make_user()
 
-        service.create_user(UserCreate(name="Alice", email="alice@test.com"), created_by=1)
+        service.create_user(
+            UserCreate(name="Alice", email="alice@test.com"), created_by=1
+        )
 
         hashed = repo.create.call_args.kwargs["hashed_password"]
         assert hashed.startswith("$2b$")
@@ -142,7 +148,9 @@ class TestCreateUser:
         repo.email_exists.return_value = False
         repo.create.return_value = make_user()
 
-        service.create_user(UserCreate(name="Alice", email="alice@test.com"), created_by=1)
+        service.create_user(
+            UserCreate(name="Alice", email="alice@test.com"), created_by=1
+        )
 
         hashed = repo.create.call_args.kwargs["hashed_password"]
         # bcrypt.checkpw doesn't raise, meaning it's a valid hash format
@@ -152,7 +160,9 @@ class TestCreateUser:
         repo.email_exists.return_value = False
         repo.create.return_value = make_user()
 
-        service.create_user(UserCreate(name="Alice", email="alice@test.com"), created_by=1)
+        service.create_user(
+            UserCreate(name="Alice", email="alice@test.com"), created_by=1
+        )
 
         assert repo.create.call_args.kwargs["role"] == Role.USER
 
@@ -172,7 +182,9 @@ class TestCreateUser:
             id=10, name="Alice", email="alice@test.com"
         )
 
-        result = service.create_user(UserCreate(name="Alice", email="alice@test.com"), created_by=1)
+        result = service.create_user(
+            UserCreate(name="Alice", email="alice@test.com"), created_by=1
+        )
 
         assert result.id == 10
         assert result.name == "Alice"
