@@ -6,7 +6,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 import bcrypt
 
 from app.db.database import SessionLocal, init_db
-from app.models.user import Role, User
+from app.modules.users.model import Role, User
 
 
 def create_admin(name: str, email: str, password: str) -> None:
