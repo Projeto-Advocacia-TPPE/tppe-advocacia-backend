@@ -25,6 +25,7 @@ class Settings(BaseSettings):
 
     jwt_secret_key: str = Field(validation_alias="JWT_SECRET_KEY")
     jwt_expire_minutes: int = Field(60, validation_alias="JWT_EXPIRE_MINUTES")
+    password_reset_expire_minutes: int = Field(30, validation_alias="PASSWORD_RESET_EXPIRE_MINUTES")
 
     resend_api_key: str = Field(validation_alias="RESEND_API_KEY")
     resend_from_email: str = Field(
