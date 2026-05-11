@@ -154,6 +154,31 @@ class TestGetAll:
         assert users == []
 
 
+class TestGetByResetTokenHash:
+    def test_returns_user_when_hash_matches(self, db: Session):
+        repo = UserRepository(db)
+        user = make_user(repo, email="reset@test.com")
+        repo.update(user, {"reset_token_hash": "abc123hash"})
+
+        found = repo.get_by_reset_token_hash("abc123hash")
+
+        assert found is not None
+        assert found.id == user.id
+
+    def test_returns_none_when_hash_not_found(self, db: Session):
+        repo = UserRepository(db)
+
+        assert repo.get_by_reset_token_hash("nonexistent") is None
+
+    def test_returns_none_after_token_is_cleared(self, db: Session):
+        repo = UserRepository(db)
+        user = make_user(repo, email="cleared@test.com")
+        repo.update(user, {"reset_token_hash": "willbecleared"})
+        repo.update(user, {"reset_token_hash": None})
+
+        assert repo.get_by_reset_token_hash("willbecleared") is None
+
+
 class TestUpdate:
     def test_updates_name(self, db: Session):
         repo = UserRepository(db)
