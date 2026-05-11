@@ -45,10 +45,16 @@ def email():
 
 
 @pytest.fixture
-def service(repo, email):
+def audit():
+    return MagicMock()
+
+
+@pytest.fixture
+def service(repo, email, audit):
     svc = UserService.__new__(UserService)
     svc.repository = repo
     svc.email = email
+    svc.audit = audit
     return svc
 
 
@@ -120,7 +126,8 @@ class TestCreateUser:
 
         with pytest.raises(EmailAlreadyExistsError):
             service.create_user(
-                UserCreate(name="Alice", email="alice@test.com"), created_by=1
+                UserCreate(name="Alice", email="alice@test.com"),
+                created_by=make_user(id=1),
             )
 
     def test_does_not_call_repo_create_when_email_exists(self, service, repo):
@@ -128,7 +135,8 @@ class TestCreateUser:
 
         with pytest.raises(EmailAlreadyExistsError):
             service.create_user(
-                UserCreate(name="Alice", email="alice@test.com"), created_by=1
+                UserCreate(name="Alice", email="alice@test.com"),
+                created_by=make_user(id=1),
             )
 
         repo.create.assert_not_called()
@@ -138,7 +146,7 @@ class TestCreateUser:
         repo.create.return_value = make_user()
 
         service.create_user(
-            UserCreate(name="Alice", email="alice@test.com"), created_by=1
+            UserCreate(name="Alice", email="alice@test.com"), created_by=make_user(id=1)
         )
 
         hashed = repo.create.call_args.kwargs["hashed_password"]
@@ -149,7 +157,7 @@ class TestCreateUser:
         repo.create.return_value = make_user()
 
         service.create_user(
-            UserCreate(name="Alice", email="alice@test.com"), created_by=1
+            UserCreate(name="Alice", email="alice@test.com"), created_by=make_user(id=1)
         )
 
         hashed = repo.create.call_args.kwargs["hashed_password"]
@@ -161,7 +169,7 @@ class TestCreateUser:
         repo.create.return_value = make_user()
 
         service.create_user(
-            UserCreate(name="Alice", email="alice@test.com"), created_by=1
+            UserCreate(name="Alice", email="alice@test.com"), created_by=make_user(id=1)
         )
 
         assert repo.create.call_args.kwargs["role"] == Role.USER
@@ -170,7 +178,9 @@ class TestCreateUser:
         repo.email_exists.return_value = False
         repo.create.return_value = make_user()
 
-        service.create_user(UserCreate(name="Bob", email="bob@test.com"), created_by=1)
+        service.create_user(
+            UserCreate(name="Bob", email="bob@test.com"), created_by=make_user(id=1)
+        )
 
         kwargs = repo.create.call_args.kwargs
         assert kwargs["name"] == "Bob"
@@ -183,12 +193,35 @@ class TestCreateUser:
         )
 
         result = service.create_user(
-            UserCreate(name="Alice", email="alice@test.com"), created_by=1
+            UserCreate(name="Alice", email="alice@test.com"), created_by=make_user(id=1)
         )
 
         assert result.id == 10
         assert result.name == "Alice"
         assert result.email == "alice@test.com"
+
+    def test_logs_user_created_after_user_creation(self, service, repo, audit):
+        repo.email_exists.return_value = False
+        user = make_user(id=10)
+        repo.create.return_value = user
+        admin = make_user(id=1, name="Admin")
+
+        service.create_user(
+            UserCreate(name="Alice", email="alice@test.com"), created_by=admin
+        )
+
+        audit.log_user_created.assert_called_once_with(user, admin)
+
+    def test_does_not_log_when_email_already_exists(self, service, repo, audit):
+        repo.email_exists.return_value = True
+
+        with pytest.raises(EmailAlreadyExistsError):
+            service.create_user(
+                UserCreate(name="Alice", email="alice@test.com"),
+                created_by=make_user(id=1),
+            )
+
+        audit.log_user_created.assert_not_called()
 
 
 class TestUpdateUser:
@@ -196,13 +229,17 @@ class TestUpdateUser:
         repo.get_by_id.return_value = None
 
         with pytest.raises(UserNotFoundError):
-            service.update_user(999, UserUpdate(name="New Name"), updated_by=1)
+            service.update_user(
+                999, UserUpdate(name="New Name"), updated_by=make_user(id=1)
+            )
 
     def test_does_not_call_repo_update_when_user_missing(self, service, repo):
         repo.get_by_id.return_value = None
 
         with pytest.raises(UserNotFoundError):
-            service.update_user(999, UserUpdate(name="New Name"), updated_by=1)
+            service.update_user(
+                999, UserUpdate(name="New Name"), updated_by=make_user(id=1)
+            )
 
         repo.update.assert_not_called()
 
@@ -211,14 +248,18 @@ class TestUpdateUser:
         repo.email_exists.return_value = True
 
         with pytest.raises(EmailAlreadyExistsError):
-            service.update_user(1, UserUpdate(email="taken@test.com"), updated_by=1)
+            service.update_user(
+                1, UserUpdate(email="taken@test.com"), updated_by=make_user(id=1)
+            )
 
     def test_does_not_check_email_conflict_when_email_unchanged(self, service, repo):
         existing = make_user(email="same@test.com")
         repo.get_by_id.return_value = existing
         repo.update.return_value = existing
 
-        service.update_user(1, UserUpdate(email="same@test.com"), updated_by=1)
+        service.update_user(
+            1, UserUpdate(email="same@test.com"), updated_by=make_user(id=1)
+        )
 
         repo.email_exists.assert_not_called()
 
@@ -226,7 +267,9 @@ class TestUpdateUser:
         repo.get_by_id.return_value = make_user(id=1, name="Old")
         repo.update.return_value = make_user(id=1, name="New")
 
-        result = service.update_user(1, UserUpdate(name="New"), updated_by=1)
+        result = service.update_user(
+            1, UserUpdate(name="New"), updated_by=make_user(id=1)
+        )
 
         assert result.name == "New"
 
@@ -235,7 +278,7 @@ class TestUpdateUser:
         repo.get_by_id.return_value = existing
         repo.update.return_value = existing
 
-        service.update_user(1, UserUpdate(name="Updated"), updated_by=1)
+        service.update_user(1, UserUpdate(name="Updated"), updated_by=make_user(id=1))
 
         updates = repo.update.call_args[0][1]
         assert "name" in updates
@@ -247,7 +290,9 @@ class TestUpdateUser:
         repo.get_by_id.return_value = make_user(is_active=True)
         repo.update.return_value = make_user(is_active=False)
 
-        result = service.update_user(1, UserUpdate(is_active=False), updated_by=1)
+        result = service.update_user(
+            1, UserUpdate(is_active=False), updated_by=make_user(id=1)
+        )
 
         assert result.is_active is False
 
@@ -255,7 +300,9 @@ class TestUpdateUser:
         repo.get_by_id.return_value = make_user(role=Role.USER)
         repo.update.return_value = make_user(role=Role.ADMIN)
 
-        result = service.update_user(1, UserUpdate(role=Role.ADMIN), updated_by=1)
+        result = service.update_user(
+            1, UserUpdate(role=Role.ADMIN), updated_by=make_user(id=1)
+        )
 
         assert result.role == Role.ADMIN
 
@@ -265,9 +312,40 @@ class TestUpdateUser:
         repo.email_exists.return_value = False
         repo.update.return_value = existing
 
-        service.update_user(1, UserUpdate(email="new@test.com"), updated_by=1)
+        service.update_user(
+            1, UserUpdate(email="new@test.com"), updated_by=make_user(id=1)
+        )
 
         repo.email_exists.assert_called_once_with("new@test.com", exclude_id=1)
+
+    def test_logs_user_deactivated_when_active_user_is_deactivated(
+        self, service, repo, audit
+    ):
+        repo.get_by_id.return_value = make_user(is_active=True)
+        updated = make_user(is_active=False)
+        repo.update.return_value = updated
+        admin = make_user(id=5, name="Admin")
+
+        service.update_user(1, UserUpdate(is_active=False), updated_by=admin)
+
+        audit.log_user_deactivated.assert_called_once_with(updated, admin)
+
+    def test_does_not_log_when_user_already_inactive(self, service, repo, audit):
+        repo.get_by_id.return_value = make_user(is_active=False)
+        repo.update.return_value = make_user(is_active=False)
+
+        service.update_user(1, UserUpdate(is_active=False), updated_by=make_user(id=5))
+
+        audit.log_user_deactivated.assert_not_called()
+
+    def test_does_not_log_when_only_name_updated(self, service, repo, audit):
+        existing = make_user(is_active=True)
+        repo.get_by_id.return_value = existing
+        repo.update.return_value = existing
+
+        service.update_user(1, UserUpdate(name="New Name"), updated_by=make_user(id=5))
+
+        audit.log_user_deactivated.assert_not_called()
 
 
 class TestGeneratePassword:
