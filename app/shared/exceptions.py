@@ -50,12 +50,16 @@ class EmailAlreadyExistsError(AppException):
 class InvalidResetTokenError(AppException):
     def __init__(self) -> None:
         super().__init__(
-            status.HTTP_400_BAD_REQUEST, "INVALID_RESET_TOKEN", "Invalid or expired token"
+            status.HTTP_400_BAD_REQUEST,
+            "INVALID_RESET_TOKEN",
+            "Invalid or expired token",
         )
 
 
 class ExpiredResetTokenError(AppException):
     def __init__(self) -> None:
         super().__init__(
-            status.HTTP_400_BAD_REQUEST, "INVALID_RESET_TOKEN", "Invalid or expired token"
+            status.HTTP_400_BAD_REQUEST,
+            "INVALID_RESET_TOKEN",
+            "Invalid or expired token",
         )

@@ -57,7 +57,9 @@ class AuthService:
 
         return TokenResponse(access_token=token)
 
-    def request_reset(self, payload: PasswordResetRequest, email_service: EmailService) -> None:
+    def request_reset(
+        self, payload: PasswordResetRequest, email_service: EmailService
+    ) -> None:
         user = self.repository.get_by_email(payload.email)
         if user is None or not user.is_active:
             return
@@ -67,10 +69,13 @@ class AuthService:
         expires_at = datetime.now(timezone.utc) + timedelta(
             minutes=settings.password_reset_expire_minutes
         )
-        self.repository.update(user, {
-            "reset_token_hash": token_hash,
-            "reset_token_expires_at": expires_at,
-        })
+        self.repository.update(
+            user,
+            {
+                "reset_token_hash": token_hash,
+                "reset_token_expires_at": expires_at,
+            },
+        )
 
         reset_link = f"{settings.frontend_url}/reset-password?token={token}"
         email_service.send(
@@ -96,9 +101,14 @@ class AuthService:
         if expires_at < datetime.now(timezone.utc):
             raise ExpiredResetTokenError()
 
-        new_hashed = bcrypt.hashpw(payload.new_password.encode(), bcrypt.gensalt()).decode()
-        self.repository.update(user, {
-            "hashed_password": new_hashed,
-            "reset_token_hash": None,
-            "reset_token_expires_at": None,
-        })
+        new_hashed = bcrypt.hashpw(
+            payload.new_password.encode(), bcrypt.gensalt()
+        ).decode()
+        self.repository.update(
+            user,
+            {
+                "hashed_password": new_hashed,
+                "reset_token_hash": None,
+                "reset_token_expires_at": None,
+            },
+        )
