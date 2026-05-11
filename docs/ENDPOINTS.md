@@ -138,6 +138,68 @@ Autentica um usuário com e-mail e senha e retorna um JWT de acesso.
 
 ---
 
+### `POST /api/v1/auth/password-reset/request`
+
+Solicita o envio de e-mail com link para redefinição de senha. Sempre retorna 200, mesmo que o e-mail não exista, para não expor se o usuário está cadastrado.
+
+**Body**
+
+```json
+{
+  "email": "usuario@email.com"
+}
+```
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": null
+}
+```
+
+**Erros**
+
+| Status | Code               | Situação      |
+| ------ | ------------------ | ------------- |
+| 422    | `VALIDATION_ERROR` | Body inválido |
+
+---
+
+### `POST /api/v1/auth/password-reset/confirm`
+
+Confirma a redefinição de senha usando o token recebido por e-mail. O token é de uso único e expira após o prazo configurado.
+
+**Body**
+
+```json
+{
+  "token": "<token-recebido-por-email>",
+  "new_password": "novaSenha123"
+}
+```
+
+> `new_password` deve ter no mínimo 8 caracteres.
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": null
+}
+```
+
+**Erros**
+
+| Status | Code                  | Situação                                |
+| ------ | --------------------- | --------------------------------------- |
+| 400    | `INVALID_RESET_TOKEN` | Token inválido, inexistente ou expirado |
+| 422    | `VALIDATION_ERROR`    | Body inválido                           |
+
+---
+
 ## Users
 
 > Todos os endpoints abaixo exigem autenticação com role `ADMIN`.
@@ -296,3 +358,4 @@ Usado também para **desativar** (`is_active: false`) e **alterar o papel** (`ro
   }
 }
 ```
+
