@@ -65,6 +65,11 @@ class UserRepository:
         self.db.refresh(user)
         return user
 
+    def get_by_reset_token_hash(self, token_hash: str) -> User | None:
+        return self.db.scalars(
+            select(User).where(User.reset_token_hash == token_hash)
+        ).first()
+
     def update(self, user: User, data: dict) -> User:
         for key, value in data.items():
             setattr(user, key, value)
