@@ -5,7 +5,11 @@ import bcrypt
 import jwt
 import pytest
 
-from app.modules.auth.schema import LoginRequest, PasswordResetConfirm, PasswordResetRequest
+from app.modules.auth.schema import (
+    LoginRequest,
+    PasswordResetConfirm,
+    PasswordResetRequest,
+)
 from app.modules.auth.service import AuthService
 from app.modules.email.fake_service import FakeEmailService
 from app.modules.users.model import Role, User
@@ -22,7 +26,9 @@ def make_user(**kwargs) -> User:
         "id": 1,
         "name": "Test User",
         "email": "test@test.com",
-        "hashed_password": bcrypt.hashpw(b"correct_password", bcrypt.gensalt()).decode(),
+        "hashed_password": bcrypt.hashpw(
+            b"correct_password", bcrypt.gensalt()
+        ).decode(),
         "role": Role.USER,
         "is_active": True,
         "reset_token_hash": None,
@@ -147,7 +153,9 @@ class TestRequestReset:
     def test_does_nothing_when_email_not_found(self, service, repo, fake_email):
         repo.get_by_email.return_value = None
 
-        service.request_reset(PasswordResetRequest(email="unknown@test.com"), fake_email)
+        service.request_reset(
+            PasswordResetRequest(email="unknown@test.com"), fake_email
+        )
 
         repo.update.assert_not_called()
         assert len(fake_email.sent) == 0
@@ -204,7 +212,9 @@ class TestConfirmReset:
         repo.get_by_reset_token_hash.return_value = None
 
         with pytest.raises(InvalidResetTokenError):
-            service.confirm_reset(PasswordResetConfirm(token="invalid", new_password="newpass1"))
+            service.confirm_reset(
+                PasswordResetConfirm(token="invalid", new_password="newpass1")
+            )
 
     def test_raises_when_token_expired(self, service, repo):
         repo.get_by_reset_token_hash.return_value = make_user(
@@ -213,7 +223,9 @@ class TestConfirmReset:
         )
 
         with pytest.raises(ExpiredResetTokenError):
-            service.confirm_reset(PasswordResetConfirm(token="sometoken", new_password="newpass1"))
+            service.confirm_reset(
+                PasswordResetConfirm(token="sometoken", new_password="newpass1")
+            )
 
     def test_updates_password_on_valid_token(self, service, repo):
         repo.get_by_reset_token_hash.return_value = make_user(
@@ -221,7 +233,9 @@ class TestConfirmReset:
             reset_token_expires_at=self._valid_expires_at(),
         )
 
-        service.confirm_reset(PasswordResetConfirm(token="sometoken", new_password="newpass123"))
+        service.confirm_reset(
+            PasswordResetConfirm(token="sometoken", new_password="newpass123")
+        )
 
         update_data = repo.update.call_args[0][1]
         assert "hashed_password" in update_data
@@ -233,7 +247,9 @@ class TestConfirmReset:
             reset_token_expires_at=self._valid_expires_at(),
         )
 
-        service.confirm_reset(PasswordResetConfirm(token="sometoken", new_password="newpass123"))
+        service.confirm_reset(
+            PasswordResetConfirm(token="sometoken", new_password="newpass123")
+        )
 
         update_data = repo.update.call_args[0][1]
         assert update_data["reset_token_hash"] is None

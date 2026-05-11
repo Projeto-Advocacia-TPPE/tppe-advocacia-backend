@@ -120,6 +120,14 @@ def created_user_ids(db_session):
 
 
 @pytest.fixture
+def fake_email():
+    svc = FakeEmailService()
+    app.dependency_overrides[get_email_service] = lambda: svc
+    yield svc
+    app.dependency_overrides[get_email_service] = lambda: FakeEmailService()
+
+
+@pytest.fixture
 def client():
     with TestClient(app) as c:
         yield c
