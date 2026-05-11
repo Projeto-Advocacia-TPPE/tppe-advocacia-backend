@@ -101,6 +101,7 @@ jobs:
       POSTGRES_DB: advocacia_db
       JWT_SECRET_KEY: test-secret-key-for-ci-minimum-32-bytes!!
       JWT_EXPIRE_MINUTES: "60"
+      RESEND_API_KEY: test-resend-api-key-for-ci-placeholder
     steps:
       - uses: actions/checkout@v4
 
@@ -158,6 +159,7 @@ jobs:
       POSTGRES_DB: advocacia_db
       JWT_SECRET_KEY: test-secret-key-for-ci-minimum-32-bytes!!
       JWT_EXPIRE_MINUTES: "60"
+      RESEND_API_KEY: test-resend-api-key-for-ci-placeholder
     steps:
       - uses: actions/checkout@v4
 

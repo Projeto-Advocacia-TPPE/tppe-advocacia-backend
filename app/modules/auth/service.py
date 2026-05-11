@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
@@ -32,7 +32,9 @@ class AuthService:
         if not user.is_active:
             raise InactiveUserError()
 
-        expire = datetime.now(UTC) + timedelta(minutes=settings.jwt_expire_minutes)
+        expire = datetime.now(timezone.utc) + timedelta(
+            minutes=settings.jwt_expire_minutes
+        )
         token_data = {
             "sub": str(user.id),
             "role": user.role.value,
