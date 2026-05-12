@@ -47,15 +47,13 @@ def repo():
 
 
 @pytest.fixture
-def service(repo):
-    svc = AuthService.__new__(AuthService)
-    svc.repository = repo
-    return svc
+def fake_email():
+    return FakeEmailService()
 
 
 @pytest.fixture
-def fake_email():
-    return FakeEmailService()
+def service(repo, fake_email):
+    return AuthService(repo, fake_email)
 
 
 def make_login_payload(password="correct_password"):
@@ -153,9 +151,7 @@ class TestRequestReset:
     def test_does_nothing_when_email_not_found(self, service, repo, fake_email):
         repo.get_by_email.return_value = None
 
-        service.request_reset(
-            PasswordResetRequest(email="unknown@test.com"), fake_email
-        )
+        service.request_reset(PasswordResetRequest(email="unknown@test.com"))
 
         repo.update.assert_not_called()
         assert len(fake_email.sent) == 0
@@ -163,7 +159,7 @@ class TestRequestReset:
     def test_does_nothing_when_user_inactive(self, service, repo, fake_email):
         repo.get_by_email.return_value = make_user(is_active=False)
 
-        service.request_reset(PasswordResetRequest(email="test@test.com"), fake_email)
+        service.request_reset(PasswordResetRequest(email="test@test.com"))
 
         repo.update.assert_not_called()
         assert len(fake_email.sent) == 0
@@ -171,7 +167,7 @@ class TestRequestReset:
     def test_stores_token_hash_for_active_user(self, service, repo, fake_email):
         repo.get_by_email.return_value = make_user()
 
-        service.request_reset(PasswordResetRequest(email="test@test.com"), fake_email)
+        service.request_reset(PasswordResetRequest(email="test@test.com"))
 
         update_data = repo.update.call_args[0][1]
         assert update_data["reset_token_hash"] is not None
@@ -180,7 +176,7 @@ class TestRequestReset:
     def test_stores_expiry_for_active_user(self, service, repo, fake_email):
         repo.get_by_email.return_value = make_user()
 
-        service.request_reset(PasswordResetRequest(email="test@test.com"), fake_email)
+        service.request_reset(PasswordResetRequest(email="test@test.com"))
 
         update_data = repo.update.call_args[0][1]
         assert update_data["reset_token_expires_at"] > datetime.now(timezone.utc)
@@ -188,7 +184,7 @@ class TestRequestReset:
     def test_sends_email_to_user(self, service, repo, fake_email):
         repo.get_by_email.return_value = make_user(email="test@test.com")
 
-        service.request_reset(PasswordResetRequest(email="test@test.com"), fake_email)
+        service.request_reset(PasswordResetRequest(email="test@test.com"))
 
         assert len(fake_email.sent) == 1
         assert fake_email.sent[0]["to"] == "test@test.com"
@@ -196,7 +192,7 @@ class TestRequestReset:
     def test_email_contains_reset_link(self, service, repo, fake_email):
         repo.get_by_email.return_value = make_user()
 
-        service.request_reset(PasswordResetRequest(email="test@test.com"), fake_email)
+        service.request_reset(PasswordResetRequest(email="test@test.com"))
 
         assert "reset-password?token=" in fake_email.sent[0]["html"]
 

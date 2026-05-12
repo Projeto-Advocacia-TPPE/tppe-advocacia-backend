@@ -4,7 +4,6 @@ from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
-from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
 from app.modules.auth.schema import (
@@ -26,11 +25,12 @@ settings = get_settings()
 
 
 class AuthService:
-    def __init__(self, db: Session) -> None:
-        self.repository = UserRepository(db)
+    def __init__(self, user_repository: UserRepository, email: EmailService) -> None:
+        self.user_repository = user_repository
+        self.email = email
 
     def login(self, payload: LoginRequest) -> TokenResponse:
-        user = self.repository.get_by_email(payload.email)
+        user = self.user_repository.get_by_email(payload.email)
 
         if user is None:
             raise InvalidCredentialsError()
@@ -57,10 +57,8 @@ class AuthService:
 
         return TokenResponse(access_token=token)
 
-    def request_reset(
-        self, payload: PasswordResetRequest, email_service: EmailService
-    ) -> None:
-        user = self.repository.get_by_email(payload.email)
+    def request_reset(self, payload: PasswordResetRequest) -> None:
+        user = self.user_repository.get_by_email(payload.email)
         if user is None or not user.is_active:
             return
 
@@ -69,7 +67,7 @@ class AuthService:
         expires_at = datetime.now(timezone.utc) + timedelta(
             minutes=settings.password_reset_expire_minutes
         )
-        self.repository.update(
+        self.user_repository.update(
             user,
             {
                 "reset_token_hash": token_hash,
@@ -78,7 +76,7 @@ class AuthService:
         )
 
         reset_link = f"{settings.frontend_url}/reset-password?token={token}"
-        email_service.send(
+        self.email.send(
             to=user.email,
             subject="Redefinição de senha",
             html=(
@@ -90,7 +88,7 @@ class AuthService:
 
     def confirm_reset(self, payload: PasswordResetConfirm) -> None:
         token_hash = hashlib.sha256(payload.token.encode()).hexdigest()
-        user = self.repository.get_by_reset_token_hash(token_hash)
+        user = self.user_repository.get_by_reset_token_hash(token_hash)
 
         if user is None:
             raise InvalidResetTokenError()
@@ -104,7 +102,7 @@ class AuthService:
         new_hashed = bcrypt.hashpw(
             payload.new_password.encode(), bcrypt.gensalt()
         ).decode()
-        self.repository.update(
+        self.user_repository.update(
             user,
             {
                 "hashed_password": new_hashed,

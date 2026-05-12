@@ -23,9 +23,11 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
     summary="Authenticate user and return JWT",
 )
 def login(
-    payload: LoginRequest, db: Session = Depends(get_db)
+    payload: LoginRequest,
+    db: Session = Depends(get_db),
+    email: EmailService = Depends(get_email_service),
 ) -> SuccessResponse[TokenResponse]:
-    return ok(AuthController(db).login(payload))
+    return ok(AuthController(db, email).login(payload))
 
 
 @router.post(
@@ -37,9 +39,9 @@ def login(
 def request_password_reset(
     payload: PasswordResetRequest,
     db: Session = Depends(get_db),
-    email_service: EmailService = Depends(get_email_service),
+    email: EmailService = Depends(get_email_service),
 ) -> SuccessResponse[None]:
-    AuthController(db).request_password_reset(payload, email_service)
+    AuthController(db, email).request_password_reset(payload)
     return ok(None)
 
 
@@ -50,7 +52,9 @@ def request_password_reset(
     summary="Confirm password reset with token",
 )
 def confirm_password_reset(
-    payload: PasswordResetConfirm, db: Session = Depends(get_db)
+    payload: PasswordResetConfirm,
+    db: Session = Depends(get_db),
+    email: EmailService = Depends(get_email_service),
 ) -> SuccessResponse[None]:
-    AuthController(db).confirm_password_reset(payload)
+    AuthController(db, email).confirm_password_reset(payload)
     return ok(None)
