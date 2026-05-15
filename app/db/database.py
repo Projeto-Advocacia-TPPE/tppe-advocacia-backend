@@ -32,9 +32,18 @@ def get_db() -> Generator[Session, None, None]:
 def init_db() -> None:
     from app.modules.audit_logs.model import AuditLog  # noqa: F401
     from app.modules.leads.model import Lead  # noqa: F401
+    from app.modules.office_config.model import OfficeConfig  # noqa: F401
     from app.modules.users.model import User  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+
+    with SessionLocal() as db:
+        from sqlalchemy import select
+
+        existing = db.scalars(select(OfficeConfig).where(OfficeConfig.id == 1)).first()
+        if existing is None:
+            db.add(OfficeConfig(id=1, differentials=[], areas_of_practice=[]))
+            db.commit()
 
 
 def check_database_connection() -> bool:
