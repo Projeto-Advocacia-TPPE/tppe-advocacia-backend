@@ -1,9 +1,14 @@
-from pydantic import BaseModel, ConfigDict, field_validator
+from typing import Annotated
+
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator
 
 
 class ListItem(BaseModel):
-    title: str
-    description: str
+    title: str = Field(max_length=200)
+    description: str = Field(max_length=1000)
+
+
+_ListField = Annotated[list[ListItem], Field(max_length=50)]
 
 
 class OfficeConfigUpdate(BaseModel):
@@ -12,25 +17,25 @@ class OfficeConfigUpdate(BaseModel):
     address: str | None = None
     phone: str | None = None
     email: str | None = None
-    instagram_url: str | None = None
-    linkedin_url: str | None = None
-    whatsapp_url: str | None = None
+    instagram_url: AnyHttpUrl | None = None
+    linkedin_url: AnyHttpUrl | None = None
+    whatsapp_url: AnyHttpUrl | None = None
 
     hero_title: str | None = None
-    hero_subtitle: str | None = None
-    hero_image_url: str | None = None
+    hero_subtitle: str | None = Field(None, max_length=1000)
+    hero_image_url: AnyHttpUrl | None = None
 
     about_title: str | None = None
-    about_description: str | None = None
-    about_image_url: str | None = None
+    about_description: str | None = Field(None, max_length=5000)
+    about_image_url: AnyHttpUrl | None = None
 
     lawyer_name: str | None = None
     lawyer_oab: str | None = None
-    lawyer_description: str | None = None
-    lawyer_image_url: str | None = None
+    lawyer_description: str | None = Field(None, max_length=5000)
+    lawyer_image_url: AnyHttpUrl | None = None
 
-    differentials: list[ListItem] | None = None
-    areas_of_practice: list[ListItem] | None = None
+    differentials: _ListField | None = None
+    areas_of_practice: _ListField | None = None
 
 
 class OfficeConfigRead(BaseModel):
