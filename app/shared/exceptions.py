@@ -93,3 +93,17 @@ class ArticleNotFoundError(AppException):
         super().__init__(
             status.HTTP_404_NOT_FOUND, "ARTICLE_NOT_FOUND", "Article not found"
         )
+
+
+class LeadNotFoundError(AppException):
+    def __init__(self) -> None:
+        super().__init__(status.HTTP_404_NOT_FOUND, "LEAD_NOT_FOUND", "Lead not found")
+
+
+class LeadDuplicateError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_409_CONFLICT,
+            "LEAD_DUPLICATE",
+            "A lead with this email was already submitted recently",
+        )
