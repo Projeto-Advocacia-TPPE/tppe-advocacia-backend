@@ -128,7 +128,7 @@ jobs:
           path: coverage.xml
 
   test-integration:
-    name: Integration & E2E Tests
+    name: Integration Tests
     needs: [test-unit]
     runs-on: ubuntu-latest
     services:
@@ -176,11 +176,70 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Run integration and e2e tests
-        run: pytest tests/integration tests/e2e -v --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+      - name: Run integration tests
+        run: pytest tests/integration -v --cov=app --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
           name: coverage-integration
+          path: coverage.xml
+
+  test-e2e:
+    name: E2E Tests
+    needs: [test-integration]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: advocacia_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      APP_ENV: test
+      APP_NAME: Advocacia API
+      APP_VERSION: 0.1.0
+      API_V1_PREFIX: /api/v1
+      FRONTEND_URL: http://localhost:5173
+      FRONTEND_URL_ALT: http://127.0.0.1:5173
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: advocacia_db
+      JWT_SECRET_KEY: test-secret-key-for-ci-minimum-32-bytes!!
+      JWT_EXPIRE_MINUTES: "60"
+      RESEND_API_KEY: test-resend-api-key-for-ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
+          restore-keys: pip-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run e2e tests
+        run: pytest tests/e2e -v --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-e2e
           path: coverage.xml
