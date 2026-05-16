@@ -361,6 +361,69 @@ Usado também para **desativar** (`is_active: false`) e **alterar o papel** (`ro
 
 ---
 
+## Media
+
+> Upload exige autenticação (qualquer role).
+> Header obrigatório: `Authorization: Bearer <token>`
+
+### `POST /api/v1/media/upload`
+
+Faz upload de uma imagem. Retorna a URL pública para acesso ao arquivo.
+
+**Content-Type:** `multipart/form-data`
+
+**Body**
+
+| Campo  | Tipo   | Obrigatório | Descrição         |
+| ------ | ------ | ----------- | ----------------- |
+| `file` | `file` | Sim         | Arquivo de imagem |
+
+**Tamanho máximo:** configurável via `MAX_FILE_SIZE_MB` (padrão: 5 MB)
+
+**Resposta 201**
+
+```json
+{
+  "success": true,
+  "data": {
+    "url": "http://localhost:8000/api/v1/media/3f2a1b4c-uuid.jpg"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                | Situação                                  |
+| ------ | ------------------- | ----------------------------------------- |
+| 401    | `UNAUTHORIZED`      | Token ausente ou inválido                 |
+| 413    | `FILE_TOO_LARGE`    | Arquivo excede o tamanho máximo permitido |
+| 415    | `INVALID_MIME_TYPE` | Tipo de arquivo não permitido             |
+| 422    | `VALIDATION_ERROR`  | Campo `file` ausente                      |
+
+---
+
+### `GET /api/v1/media/{filename}`
+
+Serve o arquivo de imagem pelo nome retornado no upload. Público — não exige autenticação.
+
+**Path param**
+
+| Parâmetro  | Tipo     | Descrição                           |
+| ---------- | -------- | ----------------------------------- |
+| `filename` | `string` | Nome do arquivo retornado no upload |
+
+**Resposta 200**
+
+Retorna o binário do arquivo com o `Content-Type` correspondente.
+
+**Erros**
+
+| Status | Code              | Situação               |
+| ------ | ----------------- | ---------------------- |
+| 404    | `MEDIA_NOT_FOUND` | Arquivo não encontrado |
+
+---
+
 ## Office Config
 
 ### `GET /api/v1/office-config`
@@ -392,12 +455,8 @@ Retorna a configuração atual do escritório. Público — não exige autentica
     "lawyer_oab": "OAB/SP 123456",
     "lawyer_description": "Especialista em direito civil...",
     "lawyer_image_url": "https://cdn.exemplo.com/lawyer.jpg",
-    "differentials": [
-      { "title": "Atendimento humanizado", "description": "..." }
-    ],
-    "areas_of_practice": [
-      { "title": "Direito Civil", "description": "..." }
-    ]
+    "differentials": [{ "title": "Atendimento humanizado", "description": "..." }],
+    "areas_of_practice": [{ "title": "Direito Civil", "description": "..." }]
   }
 }
 ```
@@ -433,12 +492,8 @@ Atualiza parcialmente a configuração do escritório. Todos os campos são opci
   "lawyer_oab": "OAB/SP 654321",
   "lawyer_description": "Especialista em direito de família...",
   "lawyer_image_url": "https://cdn.exemplo.com/lawyer-novo.jpg",
-  "differentials": [
-    { "title": "Agilidade", "description": "Respostas rápidas" }
-  ],
-  "areas_of_practice": [
-    { "title": "Direito de Família", "description": "..." }
-  ]
+  "differentials": [{ "title": "Agilidade", "description": "Respostas rápidas" }],
+  "areas_of_practice": [{ "title": "Direito de Família", "description": "..." }]
 }
 ```
 
