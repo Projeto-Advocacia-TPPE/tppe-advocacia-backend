@@ -52,6 +52,15 @@ async def app_exception_handler(request: Request, exc: AppException) -> JSONResp
     )
 
 
+def _serialize_validation_errors(errors: list) -> list:
+    result = []
+    for err in errors:
+        if "ctx" in err and "error" in err["ctx"]:
+            err = {**err, "ctx": {**err["ctx"], "error": str(err["ctx"]["error"])}}
+        result.append(err)
+    return result
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(
     request: Request, exc: RequestValidationError
@@ -60,6 +69,9 @@ async def validation_exception_handler(
         status_code=422,
         content={
             "success": False,
-            "error": {"code": "VALIDATION_ERROR", "message": exc.errors()},
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": _serialize_validation_errors(exc.errors())[0],
+            },
         },
     )

@@ -30,7 +30,9 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
+    from app.modules.articles.model import Article  # noqa: F401
     from app.modules.audit_logs.model import AuditLog  # noqa: F401
+    from app.modules.clients.model import Client  # noqa: F401
     from app.modules.leads.model import Lead  # noqa: F401
     from app.modules.office_config.model import OfficeConfig  # noqa: F401
     from app.modules.users.model import User  # noqa: F401
