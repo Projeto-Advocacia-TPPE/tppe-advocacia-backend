@@ -38,6 +38,32 @@ app/
 │   │   ├── service.py
 │   │   ├── controller.py
 │   │   └── router.py
+│   ├── office_config/             # configurações institucionais
+│   │   ├── model.py
+│   │   ├── schema.py
+│   │   ├── repository.py
+│   │   ├── service.py
+│   │   ├── controller.py
+│   │   └── router.py
+│   ├── audit_logs/                # log de auditoria
+│   │   ├── model.py
+│   │   ├── schema.py
+│   │   ├── repository.py
+│   │   ├── service.py
+│   │   ├── controller.py
+│   │   └── router.py
+│   ├── media/                     # upload e servimento de arquivos
+│   │   ├── schema.py
+│   │   ├── service.py
+│   │   ├── controller.py
+│   │   ├── router.py
+│   │   └── storage/
+│   │       ├── protocol.py        # StorageProvider (Protocol)
+│   │       └── local.py           # LocalStorageProvider
+│   ├── email/                     # envio de e-mail
+│   │   ├── protocol.py            # EmailService (Protocol)
+│   │   ├── resend_service.py      # implementação Resend
+│   │   └── fake_service.py        # implementação fake para testes
 │   └── health/                    # health check
 │       ├── schema.py
 │       ├── controller.py
@@ -49,16 +75,22 @@ app/
 ```
 tests/
 ├── unit/
-│   ├── users/      test_user_service.py
-│   ├── auth/       test_auth_service.py, test_auth_deps.py
-│   ├── health/     test_health_controller.py
-│   └── shared/     test_responses.py
+│   ├── users/         test_user_service.py
+│   ├── auth/          test_auth_service.py
+│   ├── health/        test_health_controller.py
+│   ├── media/         test_media_service.py, test_local_storage.py
+│   ├── office_config/ test_office_config_service.py
+│   ├── audit_logs/    test_audit_log_service.py
+│   └── shared/        test_responses.py, test_auth_deps.py
 ├── integration/
-│   └── users/      test_user_repository.py
+│   ├── users/         test_user_repository.py
+│   ├── office_config/ test_office_config_repository.py
 └── e2e/
-    ├── users/      test_users.py
-    ├── auth/       test_auth.py
-    └── health/     test_health.py
+    ├── users/         test_users.py
+    ├── auth/          test_auth.py
+    ├── health/        test_health.py
+    ├── media/         test_media.py
+    └── office_config/ test_office_config.py
 ```
 
 ---
@@ -167,6 +199,80 @@ Para documentar respostas de erro no Swagger, usar o helper `error_responses(*co
 ```python
 @router.get("/exemplo", responses=error_responses(401, 403, 404))
 ```
+
+---
+
+## Injeção de dependência
+
+O projeto usa injeção manual (sem framework de DI). O padrão é:
+
+```
+router.py  →  resolve dependências via Depends()  →  instancia Controller inline
+controller.py  →  constrói o grafo (Repository → Service)  →  expõe métodos
+service.py  →  recebe dependências já construídas no __init__
+```
+
+### Regras
+
+**Router** — resolve dependências externas via `Depends` (db, email, auth) e instancia o controller diretamente no corpo da rota:
+
+```python
+def create_user(
+    payload: UserCreate,
+    db: Session = Depends(get_db),
+    email: EmailService = Depends(get_email_service),
+    current_user: User = Depends(require_admin),
+) -> SuccessResponse[UserRead]:
+    return ok(UserController(db, email).create_user(payload, created_by=current_user))
+```
+
+**Controller** — recebe dependências resolvidas, monta o grafo internamente, não acessa `Session` diretamente após o `__init__`:
+
+```python
+class UserController:
+    def __init__(self, db: Session, email: EmailService) -> None:
+        self.service = UserService(
+            UserRepository(db),
+            email,
+            AuditLogService(AuditLogRepository(db)),
+        )
+```
+
+**Service** — recebe repositórios e serviços já construídos, nunca recebe `Session`:
+
+```python
+class UserService:
+    def __init__(self, repository: UserRepository, email: EmailService, audit: AuditLogService) -> None:
+        self.repository = repository
+        self.email = email
+        self.audit = audit
+```
+
+**Repository** — único ponto que recebe `Session`:
+
+```python
+class UserRepository:
+    def __init__(self, db: Session) -> None:
+        self.db = db
+```
+
+### Módulos sem banco de dados
+
+Módulos sem persistência (ex: `media`) não recebem `db`. O controller aceita a dependência de infraestrutura como parâmetro opcional, com o provider padrão como fallback:
+
+```python
+class MediaController:
+    def __init__(self, storage: StorageProvider | None = None) -> None:
+        self.service = MediaService(storage or LocalStorageProvider())
+```
+
+Isso mantém o controller testável (passa mock de `storage`) sem exigir injeção via FastAPI.
+
+### O que não fazer
+
+- **Service receber `Session` diretamente** — quem constrói repositories é o controller, não o service
+- **Controller hardcodar providers internamente sem parâmetro** — impede mock em testes
+- **Router instanciar repositories ou services** — responsabilidade do controller
 
 ---
 
