@@ -571,3 +571,257 @@ Atualiza parcialmente a configuração do escritório. Todos os campos são opci
 | ------ | -------------- | ------------------------------- |
 | 401    | `UNAUTHORIZED` | Token ausente ou inválido       |
 | 403    | `FORBIDDEN`    | Usuário autenticado não é ADMIN |
+
+---
+
+## Articles
+
+### `POST /api/v1/articles`
+
+Cria um novo artigo. O autor é o usuário autenticado.
+
+> Exige autenticação. Header: `Authorization: Bearer <token>`
+
+**Body**
+
+```json
+{
+  "title": "Direitos do Consumidor",
+  "content": "Conteúdo completo do artigo...",
+  "category": "Direito Civil",
+  "summary": "Resumo opcional do artigo",
+  "cover_image_url": "https://cdn.exemplo.com/capa.jpg",
+  "status": "draft"
+}
+```
+
+> `status`: `"draft"` (padrão) ou `"published"`. Campo `cover_image_url` é opcional.
+
+**Resposta 201**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "Direitos do Consumidor",
+    "content": "Conteúdo completo do artigo...",
+    "category": "Direito Civil",
+    "summary": "Resumo opcional do artigo",
+    "cover_image_url": "https://cdn.exemplo.com/capa.jpg",
+    "status": "draft",
+    "author_id": 3,
+    "author_name": "Dr. João Silva",
+    "created_at": "2026-05-16T14:00:00Z",
+    "updated_at": "2026-05-16T14:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code               | Situação                  |
+| ------ | ------------------ | ------------------------- |
+| 401    | `UNAUTHORIZED`     | Token ausente ou inválido |
+| 422    | `VALIDATION_ERROR` | Body inválido             |
+
+---
+
+### `PATCH /api/v1/articles/{article_id}`
+
+Atualiza parcialmente um artigo. Todos os campos são opcionais. Usado também para publicar (`status: "published"`) ou reverter para rascunho (`status: "draft"`).
+
+> Exige autenticação. Header: `Authorization: Bearer <token>`
+
+**Body**
+
+```json
+{
+  "title": "Título Atualizado",
+  "content": "Novo conteúdo...",
+  "category": "Direito Trabalhista",
+  "summary": "Novo resumo",
+  "cover_image_url": "https://cdn.exemplo.com/nova-capa.jpg",
+  "status": "published"
+}
+```
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "Título Atualizado",
+    "content": "Novo conteúdo...",
+    "category": "Direito Trabalhista",
+    "summary": "Novo resumo",
+    "cover_image_url": "https://cdn.exemplo.com/nova-capa.jpg",
+    "status": "published",
+    "author_id": 3,
+    "author_name": "Dr. João Silva",
+    "created_at": "2026-05-16T14:00:00Z",
+    "updated_at": "2026-05-16T15:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                | Situação                  |
+| ------ | ------------------- | ------------------------- |
+| 401    | `UNAUTHORIZED`      | Token ausente ou inválido |
+| 404    | `ARTICLE_NOT_FOUND` | Artigo não encontrado     |
+| 422    | `VALIDATION_ERROR`  | Body inválido             |
+
+---
+
+### `GET /api/v1/articles`
+
+Lista artigos publicados com paginação. Público — não exige autenticação.
+
+**Query params**
+
+| Parâmetro | Tipo              | Obrigatório | Descrição                        |
+| --------- | ----------------- | ----------- | -------------------------------- |
+| `page`    | `integer` (≥ 1)   | Não         | Página atual (default: `1`)      |
+| `limit`   | `integer` (1–100) | Não         | Itens por página (default: `20`) |
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "title": "Direitos do Consumidor",
+      "summary": "Resumo do artigo",
+      "status": "published",
+      "created_at": "2026-05-16T14:00:00Z",
+      "url": "http://api.exemplo.com/api/v1/articles/1"
+    }
+  ],
+  "meta": {
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "pages": 1
+  }
+}
+```
+
+---
+
+### `GET /api/v1/articles/{article_id}`
+
+Retorna um artigo publicado pelo ID. Público — não exige autenticação. Retorna 404 se o artigo for rascunho.
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "Direitos do Consumidor",
+    "content": "Conteúdo completo do artigo...",
+    "category": "Direito Civil",
+    "summary": "Resumo do artigo",
+    "cover_image_url": "https://cdn.exemplo.com/capa.jpg",
+    "status": "published",
+    "author_id": 3,
+    "author_name": "Dr. João Silva",
+    "created_at": "2026-05-16T14:00:00Z",
+    "updated_at": "2026-05-16T14:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                | Situação                                |
+| ------ | ------------------- | --------------------------------------- |
+| 404    | `ARTICLE_NOT_FOUND` | Artigo não encontrado ou ainda rascunho |
+
+---
+
+### `GET /api/v1/articles/{article_id}/preview`
+
+Retorna um artigo independente do status (rascunho ou publicado). Usado para preview antes de publicar.
+
+> Exige autenticação. Header: `Authorization: Bearer <token>`
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "Direitos do Consumidor",
+    "content": "Conteúdo completo do artigo...",
+    "category": "Direito Civil",
+    "summary": null,
+    "cover_image_url": null,
+    "status": "draft",
+    "author_id": 3,
+    "author_name": "Dr. João Silva",
+    "created_at": "2026-05-16T14:00:00Z",
+    "updated_at": "2026-05-16T14:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                | Situação                  |
+| ------ | ------------------- | ------------------------- |
+| 401    | `UNAUTHORIZED`      | Token ausente ou inválido |
+| 404    | `ARTICLE_NOT_FOUND` | Artigo não encontrado     |
+
+---
+
+### `GET /api/v1/articles/admin`
+
+Lista todos os artigos incluindo rascunhos, com paginação. URLs dos itens apontam para o endpoint de preview.
+
+> Exige autenticação. Header: `Authorization: Bearer <token>`
+
+**Query params**
+
+| Parâmetro | Tipo              | Obrigatório | Descrição                        |
+| --------- | ----------------- | ----------- | -------------------------------- |
+| `page`    | `integer` (≥ 1)   | Não         | Página atual (default: `1`)      |
+| `limit`   | `integer` (1–100) | Não         | Itens por página (default: `20`) |
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 2,
+      "title": "Artigo em Rascunho",
+      "summary": null,
+      "status": "draft",
+      "created_at": "2026-05-16T13:00:00Z",
+      "url": "http://api.exemplo.com/api/v1/articles/2/preview"
+    }
+  ],
+  "meta": {
+    "total": 5,
+    "page": 1,
+    "limit": 20,
+    "pages": 1
+  }
+}
+```
+
+**Erros**
+
+| Status | Code           | Situação                  |
+| ------ | -------------- | ------------------------- |
+| 401    | `UNAUTHORIZED` | Token ausente ou inválido |
