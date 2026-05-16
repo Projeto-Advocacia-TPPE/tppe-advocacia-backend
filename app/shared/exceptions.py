@@ -112,3 +112,28 @@ class LeadDuplicateError(AppException):
 class AssigneeNotFoundError(AppException):
     def __init__(self) -> None:
         super().__init__(422, "ASSIGNEE_NOT_FOUND", "Assigned user does not exist")
+
+
+class ClientNotFoundError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_404_NOT_FOUND, "CLIENT_NOT_FOUND", "Client not found"
+        )
+
+
+class ClientCpfAlreadyExistsError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_409_CONFLICT,
+            "CLIENT_CPF_ALREADY_EXISTS",
+            "A client with this CPF already exists",
+        )
+
+
+class ClientCnpjAlreadyExistsError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_409_CONFLICT,
+            "CLIENT_CNPJ_ALREADY_EXISTS",
+            "A client with this CNPJ already exists",
+        )
