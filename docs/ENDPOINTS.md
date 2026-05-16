@@ -424,6 +424,61 @@ Retorna o binário do arquivo com o `Content-Type` correspondente.
 
 ---
 
+## Audit Logs
+
+> Exige autenticação com role `ADMIN`.
+> Header obrigatório: `Authorization: Bearer <token>`
+
+### `GET /api/v1/audit-logs`
+
+Lista logs de auditoria com filtros opcionais e paginação.
+
+**Query params**
+
+| Parâmetro   | Tipo                                 | Obrigatório | Descrição                            |
+| ----------- | ------------------------------------ | ----------- | ------------------------------------ |
+| `action`    | `USER_CREATED` \| `USER_DEACTIVATED` | Não         | Filtra por tipo de ação              |
+| `date_from` | `datetime` (ISO 8601)                | Não         | Filtra registros a partir desta data |
+| `date_to`   | `datetime` (ISO 8601)                | Não         | Filtra registros até esta data       |
+| `page`      | `integer` (≥ 1)                      | Não         | Página atual (default: `1`)          |
+| `limit`     | `integer` (1–100)                    | Não         | Itens por página (default: `20`)     |
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "action": "USER_CREATED",
+      "performed_by_id": 1,
+      "performed_by_name": "Ana Lima",
+      "target_user_id": 2,
+      "target_user_name": "Carlos Souza",
+      "target_user_email": "carlos@escritorio.com",
+      "target_user_role": "USER",
+      "created_at": "2026-05-16T14:00:00Z"
+    }
+  ],
+  "meta": {
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "pages": 1
+  }
+}
+```
+
+**Erros**
+
+| Status | Code           | Situação                        |
+| ------ | -------------- | ------------------------------- |
+| 401    | `UNAUTHORIZED` | Token ausente ou inválido       |
+| 403    | `FORBIDDEN`    | Usuário autenticado não é ADMIN |
+
+---
+
 ## Office Config
 
 ### `GET /api/v1/office-config`
