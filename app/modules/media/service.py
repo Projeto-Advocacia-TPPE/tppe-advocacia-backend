@@ -15,6 +15,7 @@ class MediaService:
 
     def upload(self, file: UploadFile, base_url: str) -> MediaUploadResponse:
         filename = self.storage.save(file)
+        # TODO: Implement proper URL construction
         url = f"{base_url.rstrip('/')}/api/v1/media/{filename}"
         return MediaUploadResponse(url=url)
 

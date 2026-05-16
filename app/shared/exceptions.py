@@ -86,3 +86,10 @@ class InvalidMimeTypeError(AppException):
 class MediaNotFoundError(AppException):
     def __init__(self) -> None:
         super().__init__(status.HTTP_404_NOT_FOUND, "MEDIA_NOT_FOUND", "File not found")
+
+
+class ArticleNotFoundError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_404_NOT_FOUND, "ARTICLE_NOT_FOUND", "Article not found"
+        )
