@@ -214,3 +214,29 @@ class TestUpdateClient:
 
         call_data = repo.update.call_args[0][1]
         assert call_data["updated_by"] == 42
+
+    def test_nullifies_cnpj_when_cpf_updated(self, service, repo):
+        client = make_client(cpf=None, cnpj="11111111000111")
+        repo.get_by_id.return_value = client
+        repo.get_by_cpf.return_value = None
+        repo.update.return_value = client
+        payload = ClientUpdate(cpf="12345678901")
+
+        service.update_client(1, payload, updated_by=make_user())
+
+        call_data = repo.update.call_args[0][1]
+        assert call_data["cpf"] == "12345678901"
+        assert call_data["cnpj"] is None
+
+    def test_nullifies_cpf_when_cnpj_updated(self, service, repo):
+        client = make_client(cpf="12345678901", cnpj=None)
+        repo.get_by_id.return_value = client
+        repo.get_by_cnpj.return_value = None
+        repo.update.return_value = client
+        payload = ClientUpdate(cnpj="11111111000111")
+
+        service.update_client(1, payload, updated_by=make_user())
+
+        call_data = repo.update.call_args[0][1]
+        assert call_data["cnpj"] == "11111111000111"
+        assert call_data["cpf"] is None

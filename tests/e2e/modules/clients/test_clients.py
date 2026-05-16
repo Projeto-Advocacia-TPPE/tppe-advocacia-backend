@@ -242,3 +242,15 @@ class TestUpdateClient:
         )
 
         assert response.status_code == 422
+
+    def test_switching_to_cnpj_nullifies_cpf(self, client, user_headers, client_cpf):
+        response = client.patch(
+            f"{CLIENTS_URL}/{client_cpf.id}",
+            json={"cnpj": "99988877000166"},
+            headers=user_headers,
+        )
+
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert data["cnpj"] == "99988877000166"
+        assert data["cpf"] is None
