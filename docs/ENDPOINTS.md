@@ -30,7 +30,19 @@ Verifica a saúde da API e a conectividade com o banco de dados.
 
 ### `GET /api/v1/leads`
 
-Lista todos os leads cadastrados.
+Lista leads com filtros opcionais e paginação.
+
+> Exige autenticação com role `ADMIN`.
+> Header obrigatório: `Authorization: Bearer <token>`
+
+**Query params**
+
+| Parâmetro     | Tipo                                                             | Obrigatório | Descrição                        |
+| ------------- | ---------------------------------------------------------------- | ----------- | -------------------------------- |
+| `status`      | `novo` \| `em_atendimento` \| `fechado` \| `descartado`          | Não         | Filtra por status                |
+| `assigned_to` | `integer`                                                        | Não         | Filtra por ID do responsável     |
+| `page`        | `integer` (≥ 1)                                                  | Não         | Página atual (default: `1`)      |
+| `limit`       | `integer` (1–100)                                                | Não         | Itens por página (default: `20`) |
 
 **Resposta 200**
 
@@ -45,18 +57,34 @@ Lista todos os leads cadastrados.
       "phone": "11999999999",
       "message": "Preciso de ajuda.",
       "status": "novo",
+      "assigned_to": null,
       "created_at": "2026-05-06T12:00:00Z",
       "updated_at": "2026-05-06T12:00:00Z"
     }
-  ]
+  ],
+  "meta": {
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "pages": 1
+  }
 }
 ```
+
+**Erros**
+
+| Status | Code           | Situação                        |
+| ------ | -------------- | ------------------------------- |
+| 401    | `UNAUTHORIZED` | Token ausente ou inválido       |
+| 403    | `FORBIDDEN`    | Usuário autenticado não é ADMIN |
 
 ---
 
 ### `POST /api/v1/leads`
 
-Cria um novo lead.
+Cria um novo lead originado do formulário de contato. Público — não exige autenticação.
+
+Leads com o mesmo e-mail enviados dentro da janela configurada (`LEAD_DEDUP_WINDOW_HOURS`, padrão: `1h`) são rejeitados com 409.
 
 **Body**
 
@@ -68,6 +96,8 @@ Cria um novo lead.
   "message": "Preciso de ajuda."
 }
 ```
+
+> `phone` e `message` são opcionais.
 
 **Resposta 201**
 
@@ -81,11 +111,68 @@ Cria um novo lead.
     "phone": "11999999999",
     "message": "Preciso de ajuda.",
     "status": "novo",
+    "assigned_to": null,
     "created_at": "2026-05-06T12:00:00Z",
     "updated_at": "2026-05-06T12:00:00Z"
   }
 }
 ```
+
+**Erros**
+
+| Status | Code               | Situação                                         |
+| ------ | ------------------ | ------------------------------------------------ |
+| 409    | `LEAD_DUPLICATE`   | Mesmo e-mail submetido dentro da janela de dedup |
+| 422    | `VALIDATION_ERROR` | Body inválido                                    |
+
+---
+
+### `PATCH /api/v1/leads/{lead_id}`
+
+Atualiza o status ou o responsável de um lead. Todos os campos são opcionais.
+
+> Exige autenticação com role `ADMIN`.
+> Header obrigatório: `Authorization: Bearer <token>`
+
+**Body**
+
+```json
+{
+  "status": "em_atendimento",
+  "assigned_to": 2
+}
+```
+
+> `status`: `"novo"` | `"em_atendimento"` | `"fechado"` | `"descartado"`
+> `assigned_to`: ID de um usuário cadastrado, ou `null` para desatribuir.
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "João Silva",
+    "email": "joao@email.com",
+    "phone": "11999999999",
+    "message": "Preciso de ajuda.",
+    "status": "em_atendimento",
+    "assigned_to": 2,
+    "created_at": "2026-05-06T12:00:00Z",
+    "updated_at": "2026-05-06T13:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code             | Situação                        |
+| ------ | ---------------- | ------------------------------- |
+| 401    | `UNAUTHORIZED`   | Token ausente ou inválido       |
+| 403    | `FORBIDDEN`      | Usuário autenticado não é ADMIN |
+| 404    | `LEAD_NOT_FOUND` | Lead não encontrado             |
+| 422    | `VALIDATION_ERROR` | Body inválido                 |
 
 ---
 
