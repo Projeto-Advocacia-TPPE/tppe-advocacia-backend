@@ -2,14 +2,22 @@ from app.config.settings import get_settings
 from app.modules.leads.model import Lead, LeadStatus
 from app.modules.leads.repository import LeadRepository
 from app.modules.leads.schema import LeadCreate, LeadUpdate
-from app.shared.exceptions import LeadDuplicateError, LeadNotFoundError
+from app.modules.users.repository import UserRepository
+from app.shared.exceptions import (
+    AssigneeNotFoundError,
+    LeadDuplicateError,
+    LeadNotFoundError,
+)
 
 settings = get_settings()
 
 
 class LeadService:
-    def __init__(self, repository: LeadRepository) -> None:
+    def __init__(
+        self, repository: LeadRepository, user_repository: UserRepository
+    ) -> None:
         self.repository = repository
+        self.user_repository = user_repository
 
     def list_leads(
         self,
@@ -45,4 +53,9 @@ class LeadService:
         data = payload.model_dump(exclude_none=True)
         if not data:
             return lead
+        if (
+            "assigned_to" in data
+            and self.user_repository.get_by_id(data["assigned_to"]) is None
+        ):
+            raise AssigneeNotFoundError()
         return self.repository.update(lead, data)

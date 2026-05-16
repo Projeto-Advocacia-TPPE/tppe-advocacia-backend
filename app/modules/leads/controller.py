@@ -4,11 +4,12 @@ from app.modules.leads.model import Lead, LeadStatus
 from app.modules.leads.repository import LeadRepository
 from app.modules.leads.schema import LeadCreate, LeadUpdate
 from app.modules.leads.service import LeadService
+from app.modules.users.repository import UserRepository
 
 
 class LeadController:
     def __init__(self, db: Session) -> None:
-        self.service = LeadService(LeadRepository(db))
+        self.service = LeadService(LeadRepository(db), UserRepository(db))
 
     def list_leads(
         self,

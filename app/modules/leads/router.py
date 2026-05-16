@@ -55,7 +55,7 @@ def create_new_lead(
     "/{lead_id}",
     response_model=SuccessResponse[LeadRead],
     responses=error_responses(401, 403, 404, 422),
-    summary="Atualiza status ou responsável do lead (admin)",
+    summary="Atualiza status ou responsável do lead (admin). Retorna 422 se assigned_to não existir.",
 )
 def update_lead(
     lead_id: int,

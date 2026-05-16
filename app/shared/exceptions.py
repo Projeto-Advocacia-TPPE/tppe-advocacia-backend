@@ -107,3 +107,8 @@ class LeadDuplicateError(AppException):
             "LEAD_DUPLICATE",
             "A lead with this email was already submitted recently",
         )
+
+
+class AssigneeNotFoundError(AppException):
+    def __init__(self) -> None:
+        super().__init__(422, "ASSIGNEE_NOT_FOUND", "Assigned user does not exist")
