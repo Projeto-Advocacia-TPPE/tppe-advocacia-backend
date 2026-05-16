@@ -33,6 +33,15 @@ class ClientRepository:
         self.db.refresh(client)
         return client
 
+    def get_by_id(self, client_id: int) -> Client | None:
+        return self.db.scalars(select(Client).where(Client.id == client_id)).first()
+
+    def get_by_cpf(self, cpf: str) -> Client | None:
+        return self.db.scalars(select(Client).where(Client.cpf == cpf)).first()
+
+    def get_by_cnpj(self, cnpj: str) -> Client | None:
+        return self.db.scalars(select(Client).where(Client.cnpj == cnpj)).first()
+
     def list(
         self,
         search: str | None = None,

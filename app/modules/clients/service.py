@@ -16,8 +16,10 @@ class ClientService:
     def create_client(self, payload: ClientCreate, created_by: User) -> Client:
         if payload.cpf and self.repository.get_by_cpf(payload.cpf):
             raise ClientCpfAlreadyExistsError()
+
         if payload.cnpj and self.repository.get_by_cnpj(payload.cnpj):
             raise ClientCnpjAlreadyExistsError()
+
         return self.repository.create(
             name=payload.name,
             email=payload.email,
@@ -30,8 +32,10 @@ class ClientService:
 
     def get_client(self, client_id: int) -> Client:
         client = self.repository.get_by_id(client_id)
+
         if client is None:
             raise ClientNotFoundError()
+
         return client
 
     def list_clients(
@@ -47,15 +51,20 @@ class ClientService:
     ) -> Client:
         client = self.get_client(client_id)
         data = payload.model_dump(exclude_none=True)
+
         if not data:
             return client
+
         if "cpf" in data and data["cpf"] != client.cpf:
             existing = self.repository.get_by_cpf(data["cpf"])
             if existing and existing.id != client_id:
                 raise ClientCpfAlreadyExistsError()
-        if "cnpj" in data and data["cnpj"] != client.cnpj:
+            data["cnpj"] = None
+        elif "cnpj" in data and data["cnpj"] != client.cnpj:
             existing = self.repository.get_by_cnpj(data["cnpj"])
             if existing and existing.id != client_id:
                 raise ClientCnpjAlreadyExistsError()
+            data["cpf"] = None
+
         data["updated_by"] = updated_by.id
         return self.repository.update(client, data)
