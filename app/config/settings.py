@@ -34,6 +34,13 @@ class Settings(BaseSettings):
         "onboarding@resend.dev", validation_alias="RESEND_FROM_EMAIL"
     )
 
+    upload_dir: str = Field("uploads/media", validation_alias="UPLOAD_DIR")
+    max_file_size_mb: int = Field(5, validation_alias="MAX_FILE_SIZE_MB")
+    allowed_mime_types: list[str] = Field(
+        default=["image/jpeg", "image/png"],
+        validation_alias="ALLOWED_MIME_TYPES",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
