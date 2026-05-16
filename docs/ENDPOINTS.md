@@ -912,3 +912,187 @@ Lista todos os artigos incluindo rascunhos, com paginação. URLs dos itens apon
 | Status | Code           | Situação                  |
 | ------ | -------------- | ------------------------- |
 | 401    | `UNAUTHORIZED` | Token ausente ou inválido |
+
+---
+
+## Clients
+
+> Todos os endpoints exigem autenticação (qualquer role).
+> Header obrigatório: `Authorization: Bearer <token>`
+
+---
+
+### `POST /api/v1/clients`
+
+Cria um novo cliente. CPF e CNPJ são mutuamente exclusivos — exatamente um deve ser informado. Ambos devem ser enviados sem formatação (só dígitos).
+
+**Body**
+
+```json
+{
+  "name": "João Silva",
+  "email": "joao@email.com",
+  "phone": "11999999999",
+  "cpf": "12345678901",
+  "address": "Rua das Flores, 123, São Paulo - SP"
+}
+```
+
+> `email`, `phone` e `address` são opcionais.
+> Usar `cnpj` (14 dígitos) no lugar de `cpf` (11 dígitos) para pessoa jurídica.
+
+**Resposta 201**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "João Silva",
+    "email": "joao@email.com",
+    "phone": "11999999999",
+    "cpf": "12345678901",
+    "cnpj": null,
+    "address": "Rua das Flores, 123, São Paulo - SP",
+    "created_by": 3,
+    "updated_by": 3,
+    "created_at": "2026-05-16T14:00:00Z",
+    "updated_at": "2026-05-16T14:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                        | Situação                          |
+| ------ | --------------------------- | --------------------------------- |
+| 401    | `UNAUTHORIZED`              | Token ausente ou inválido         |
+| 409    | `CLIENT_CPF_ALREADY_EXISTS` | CPF já cadastrado                 |
+| 409    | `CLIENT_CNPJ_ALREADY_EXISTS`| CNPJ já cadastrado                |
+| 422    | `VALIDATION_ERROR`          | Body inválido ou CPF/CNPJ ausente |
+
+---
+
+### `GET /api/v1/clients`
+
+Lista clientes com paginação e busca opcional por nome (parcial, case-insensitive) ou CPF/CNPJ (exato).
+
+**Query params**
+
+| Parâmetro | Tipo              | Obrigatório | Descrição                                              |
+| --------- | ----------------- | ----------- | ------------------------------------------------------ |
+| `search`  | `string`          | Não         | Filtra por nome (parcial) ou CPF/CNPJ (exato)          |
+| `page`    | `integer` (≥ 1)   | Não         | Página atual (default: `1`)                            |
+| `limit`   | `integer` (1–100) | Não         | Itens por página (default: `20`)                       |
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "João Silva",
+      "email": "joao@email.com",
+      "phone": "11999999999",
+      "cpf": "12345678901",
+      "cnpj": null
+    }
+  ],
+  "meta": {
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "pages": 1
+  }
+}
+```
+
+**Erros**
+
+| Status | Code           | Situação                  |
+| ------ | -------------- | ------------------------- |
+| 401    | `UNAUTHORIZED` | Token ausente ou inválido |
+
+---
+
+### `GET /api/v1/clients/{id}`
+
+Retorna dados completos de um cliente.
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "João Silva",
+    "email": "joao@email.com",
+    "phone": "11999999999",
+    "cpf": "12345678901",
+    "cnpj": null,
+    "address": "Rua das Flores, 123, São Paulo - SP",
+    "created_by": 3,
+    "updated_by": 5,
+    "created_at": "2026-05-16T14:00:00Z",
+    "updated_at": "2026-05-16T15:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                 | Situação                  |
+| ------ | -------------------- | ------------------------- |
+| 401    | `UNAUTHORIZED`       | Token ausente ou inválido |
+| 404    | `CLIENT_NOT_FOUND`   | Cliente não encontrado    |
+
+---
+
+### `PATCH /api/v1/clients/{id}`
+
+Atualiza parcialmente um cliente. Todos os campos são opcionais. Não é permitido enviar `cpf` e `cnpj` simultaneamente.
+
+**Body**
+
+```json
+{
+  "name": "João Silva Atualizado",
+  "email": "novo@email.com",
+  "phone": "11988888888",
+  "address": "Av. Paulista, 1000, São Paulo - SP"
+}
+```
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "João Silva Atualizado",
+    "email": "novo@email.com",
+    "phone": "11988888888",
+    "cpf": "12345678901",
+    "cnpj": null,
+    "address": "Av. Paulista, 1000, São Paulo - SP",
+    "created_by": 3,
+    "updated_by": 5,
+    "created_at": "2026-05-16T14:00:00Z",
+    "updated_at": "2026-05-16T15:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                         | Situação                           |
+| ------ | ---------------------------- | ---------------------------------- |
+| 401    | `UNAUTHORIZED`               | Token ausente ou inválido          |
+| 404    | `CLIENT_NOT_FOUND`           | Cliente não encontrado             |
+| 409    | `CLIENT_CPF_ALREADY_EXISTS`  | CPF já pertence a outro cliente    |
+| 409    | `CLIENT_CNPJ_ALREADY_EXISTS` | CNPJ já pertence a outro cliente   |
+| 422    | `VALIDATION_ERROR`           | Body inválido ou CPF e CNPJ juntos |
