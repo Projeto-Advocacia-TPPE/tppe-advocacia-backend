@@ -63,3 +63,26 @@ class ExpiredResetTokenError(AppException):
             "INVALID_RESET_TOKEN",
             "Invalid or expired token",
         )
+
+
+class FileTooLargeError(AppException):
+    def __init__(self, max_mb: int) -> None:
+        super().__init__(
+            status.HTTP_413_CONTENT_TOO_LARGE,
+            "FILE_TOO_LARGE",
+            f"File exceeds maximum allowed size of {max_mb}MB",
+        )
+
+
+class InvalidMimeTypeError(AppException):
+    def __init__(self, allowed: list[str]) -> None:
+        super().__init__(
+            status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            "INVALID_MIME_TYPE",
+            f"File type not allowed. Accepted: {', '.join(allowed)}",
+        )
+
+
+class MediaNotFoundError(AppException):
+    def __init__(self) -> None:
+        super().__init__(status.HTTP_404_NOT_FOUND, "MEDIA_NOT_FOUND", "File not found")

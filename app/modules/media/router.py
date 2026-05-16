@@ -1,0 +1,35 @@
+from fastapi import APIRouter, Depends, Request, UploadFile
+from fastapi.responses import FileResponse
+
+from app.modules.media.controller import MediaController
+from app.modules.media.schema import MediaUploadResponse
+from app.modules.users.model import User
+from app.shared.auth_deps import get_current_user
+from app.shared.responses import SuccessResponse, error_responses, ok
+
+router = APIRouter(prefix="/media", tags=["Media"])
+
+
+@router.post(
+    "/upload",
+    status_code=201,
+    response_model=SuccessResponse[MediaUploadResponse],
+    responses=error_responses(401, 413, 415, 422),
+    summary="Upload an image file",
+)
+def upload_file(
+    request: Request,
+    file: UploadFile,
+    _: User = Depends(get_current_user),
+) -> SuccessResponse[MediaUploadResponse]:
+    return ok(MediaController().upload(file, str(request.base_url)))
+
+
+@router.get(
+    "/{filename}",
+    responses=error_responses(404),
+    summary="Serve an uploaded file",
+)
+def serve_file(filename: str) -> FileResponse:
+    path = MediaController().get_file_path(filename)
+    return FileResponse(path)
