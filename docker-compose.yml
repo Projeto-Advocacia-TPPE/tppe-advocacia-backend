@@ -31,6 +31,7 @@ services:
       POSTGRES_PORT: 5432
     volumes:
       - ./app:/app/app
+      - ./uploads:/app/uploads
     ports:
       - "${API_HOST_PORT:-8000}:8000"
     depends_on:
