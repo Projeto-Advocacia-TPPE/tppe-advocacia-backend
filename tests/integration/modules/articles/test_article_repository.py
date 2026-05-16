@@ -166,7 +166,9 @@ class TestGetAll:
         user = make_user(db, email="author12@test.com")
         repo = ArticleRepository(db)
         for i in range(3):
-            make_article(repo, user.id, status=ArticleStatus.PUBLISHED, title=f"Pub {i}")
+            make_article(
+                repo, user.id, status=ArticleStatus.PUBLISHED, title=f"Pub {i}"
+            )
 
         result, total = repo.get_published(page=1, limit=2)
 

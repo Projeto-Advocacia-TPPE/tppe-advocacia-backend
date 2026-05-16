@@ -2,7 +2,12 @@ from sqlalchemy.orm import Session
 from starlette.requests import Request
 
 from app.modules.articles.repository import ArticleRepository
-from app.modules.articles.schema import ArticleCreate, ArticleListItem, ArticleRead, ArticleUpdate
+from app.modules.articles.schema import (
+    ArticleCreate,
+    ArticleListItem,
+    ArticleRead,
+    ArticleUpdate,
+)
 from app.modules.articles.service import ArticleService
 from app.modules.users.model import User
 

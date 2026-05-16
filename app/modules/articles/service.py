@@ -2,7 +2,12 @@ from starlette.requests import Request
 
 from app.modules.articles.model import ArticleStatus
 from app.modules.articles.repository import ArticleRepository
-from app.modules.articles.schema import ArticleCreate, ArticleListItem, ArticleRead, ArticleUpdate
+from app.modules.articles.schema import (
+    ArticleCreate,
+    ArticleListItem,
+    ArticleRead,
+    ArticleUpdate,
+)
 from app.modules.users.model import User
 from app.shared.exceptions import ArticleNotFoundError
 
@@ -47,13 +52,21 @@ class ArticleService:
         self, request: Request, page: int = 1, limit: int = 20
     ) -> tuple[list[ArticleListItem], int]:
         articles, total = self.repository.get_published(page=page, limit=limit)
-        return [self._to_list_item(a, str(request.url_for("get_article", article_id=a.id))) for a in articles], total
+        return [
+            self._to_list_item(a, str(request.url_for("get_article", article_id=a.id)))
+            for a in articles
+        ], total
 
     def list_all(
         self, request: Request, page: int = 1, limit: int = 20
     ) -> tuple[list[ArticleListItem], int]:
         articles, total = self.repository.get_all(page=page, limit=limit)
-        return [self._to_list_item(a, str(request.url_for("preview_article", article_id=a.id))) for a in articles], total
+        return [
+            self._to_list_item(
+                a, str(request.url_for("preview_article", article_id=a.id))
+            )
+            for a in articles
+        ], total
 
     @staticmethod
     def _to_list_item(article, url: str) -> ArticleListItem:

@@ -3,7 +3,12 @@ from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.modules.articles.controller import ArticleController
-from app.modules.articles.schema import ArticleCreate, ArticleListItem, ArticleRead, ArticleUpdate
+from app.modules.articles.schema import (
+    ArticleCreate,
+    ArticleListItem,
+    ArticleRead,
+    ArticleUpdate,
+)
 from app.modules.users.model import User
 from app.shared.auth_deps import get_current_user
 from app.shared.responses import (

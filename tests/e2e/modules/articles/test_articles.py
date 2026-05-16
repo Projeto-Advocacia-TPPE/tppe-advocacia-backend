@@ -31,7 +31,12 @@ class TestCreateArticle:
     def test_returns_201_with_token(self, client, user_headers, db_session):
         response = client.post(
             BASE_URL,
-            json={"title": "Novo", "content": "Texto", "category": "Civil", "summary": "Resumo do artigo"},
+            json={
+                "title": "Novo",
+                "content": "Texto",
+                "category": "Civil",
+                "summary": "Resumo do artigo",
+            },
             headers=user_headers,
         )
         article_id = response.json()["data"]["id"]
@@ -43,7 +48,12 @@ class TestCreateArticle:
     def test_returns_401_without_token(self, client):
         response = client.post(
             BASE_URL,
-            json={"title": "Novo", "content": "Texto", "category": "Civil", "summary": "Resumo do artigo"},
+            json={
+                "title": "Novo",
+                "content": "Texto",
+                "category": "Civil",
+                "summary": "Resumo do artigo",
+            },
         )
 
         assert response.status_code == 401
@@ -51,7 +61,12 @@ class TestCreateArticle:
     def test_default_status_is_draft(self, client, user_headers, db_session):
         response = client.post(
             BASE_URL,
-            json={"title": "Rascunho", "content": "Texto", "category": "Civil", "summary": "Resumo do artigo"},
+            json={
+                "title": "Rascunho",
+                "content": "Texto",
+                "category": "Civil",
+                "summary": "Resumo do artigo",
+            },
             headers=user_headers,
         )
         article_id = response.json()["data"]["id"]
@@ -81,7 +96,12 @@ class TestCreateArticle:
     def test_returns_author_name(self, client, user_headers, active_user, db_session):
         response = client.post(
             BASE_URL,
-            json={"title": "Autor", "content": "Texto", "category": "Civil", "summary": "Resumo do artigo"},
+            json={
+                "title": "Autor",
+                "content": "Texto",
+                "category": "Civil",
+                "summary": "Resumo do artigo",
+            },
             headers=user_headers,
         )
         article_id = response.json()["data"]["id"]
@@ -223,7 +243,10 @@ class TestListArticles:
 
     def test_list_item_has_status_field(self, client, active_user, db_session):
         article = make_article(
-            db_session, active_user["id"], status=ArticleStatus.PUBLISHED, title="Com Status"
+            db_session,
+            active_user["id"],
+            status=ArticleStatus.PUBLISHED,
+            title="Com Status",
         )
 
         response = client.get(BASE_URL)
@@ -248,7 +271,10 @@ class TestListAllArticles:
 
     def test_includes_drafts(self, client, user_headers, active_user, db_session):
         article = make_article(
-            db_session, active_user["id"], status=ArticleStatus.DRAFT, title="Rascunho Admin"
+            db_session,
+            active_user["id"],
+            status=ArticleStatus.DRAFT,
+            title="Rascunho Admin",
         )
 
         response = client.get(f"{BASE_URL}/admin", headers=user_headers)
@@ -258,8 +284,12 @@ class TestListAllArticles:
         titles = [a["title"] for a in response.json()["data"]]
         assert "Rascunho Admin" in titles
 
-    def test_list_item_has_status_field(self, client, user_headers, active_user, db_session):
-        article = make_article(db_session, active_user["id"], status=ArticleStatus.DRAFT)
+    def test_list_item_has_status_field(
+        self, client, user_headers, active_user, db_session
+    ):
+        article = make_article(
+            db_session, active_user["id"], status=ArticleStatus.DRAFT
+        )
 
         response = client.get(f"{BASE_URL}/admin", headers=user_headers)
         db_session.execute(delete(Article).where(Article.id == article.id))

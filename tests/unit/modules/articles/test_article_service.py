@@ -3,6 +3,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from app.modules.articles.model import ArticleStatus
+from app.modules.articles.schema import ArticleCreate, ArticleUpdate
+from app.modules.articles.service import ArticleService
+from app.modules.users.model import Role
+from app.shared.exceptions import ArticleNotFoundError
+
 
 def make_request(base="http://testserver"):
     request = MagicMock()
@@ -17,12 +23,6 @@ def make_request(base="http://testserver"):
 
     request.url_for.side_effect = url_for
     return request
-
-from app.modules.articles.model import ArticleStatus
-from app.modules.articles.schema import ArticleCreate, ArticleUpdate
-from app.modules.articles.service import ArticleService
-from app.modules.users.model import Role
-from app.shared.exceptions import ArticleNotFoundError
 
 
 def make_author(**kwargs):
@@ -74,7 +74,12 @@ class TestCreate:
         repo.create.return_value = make_article(id=1, title="Novo Artigo")
 
         result = service.create(
-            ArticleCreate(title="Novo Artigo", content="Conteúdo", category="Civil", summary="Resumo do artigo"),
+            ArticleCreate(
+                title="Novo Artigo",
+                content="Conteúdo",
+                category="Civil",
+                summary="Resumo do artigo",
+            ),
             author=make_author(id=1),
         )
 
@@ -85,7 +90,9 @@ class TestCreate:
         repo.create.return_value = make_article(status=ArticleStatus.DRAFT)
 
         service.create(
-            ArticleCreate(title="T", content="C", category="Cat", summary="Resumo do artigo"),
+            ArticleCreate(
+                title="T", content="C", category="Cat", summary="Resumo do artigo"
+            ),
             author=make_author(),
         )
 
@@ -95,7 +102,9 @@ class TestCreate:
         repo.create.return_value = make_article(author_id=5)
 
         service.create(
-            ArticleCreate(title="T", content="C", category="Cat", summary="Resumo do artigo"),
+            ArticleCreate(
+                title="T", content="C", category="Cat", summary="Resumo do artigo"
+            ),
             author=make_author(id=5),
         )
 
@@ -105,7 +114,9 @@ class TestCreate:
         repo.create.return_value = make_article()
 
         result = service.create(
-            ArticleCreate(title="T", content="C", category="Cat", summary="Resumo do artigo"),
+            ArticleCreate(
+                title="T", content="C", category="Cat", summary="Resumo do artigo"
+            ),
             author=make_author(name="Dr. Silva"),
         )
 
@@ -274,7 +285,10 @@ class TestListAll:
         assert result[0].url == "http://testserver/api/v1/articles/7/preview"
 
     def test_returns_status_in_list_item(self, service, repo):
-        repo.get_all.return_value = ([make_article(id=1, status=ArticleStatus.DRAFT)], 1)
+        repo.get_all.return_value = (
+            [make_article(id=1, status=ArticleStatus.DRAFT)],
+            1,
+        )
 
         result, _ = service.list_all(make_request())
 
