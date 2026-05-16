@@ -41,3 +41,5 @@ class Lead(Base):
         onupdate=func.now(),
         nullable=False,
     )
+
+    # TODO: add updated_by field to track which user last updated

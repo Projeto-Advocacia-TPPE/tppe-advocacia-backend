@@ -33,3 +33,6 @@ class OfficeConfig(Base):
 
     differentials: Mapped[list | None] = mapped_column(JSON, nullable=True)
     areas_of_practice: Mapped[list | None] = mapped_column(JSON, nullable=True)
+
+    # TODO: add updated_by field to track which user last updated
+    # TODO: add updated_at field to track which user last updated
