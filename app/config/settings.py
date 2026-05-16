@@ -34,6 +34,8 @@ class Settings(BaseSettings):
         "onboarding@resend.dev", validation_alias="RESEND_FROM_EMAIL"
     )
 
+    lead_dedup_window_hours: int = Field(1, validation_alias="LEAD_DEDUP_WINDOW_HOURS")
+
     upload_dir: str = Field("uploads/media", validation_alias="UPLOAD_DIR")
     max_file_size_mb: int = Field(5, validation_alias="MAX_FILE_SIZE_MB")
     allowed_mime_types: list[str] = Field(
