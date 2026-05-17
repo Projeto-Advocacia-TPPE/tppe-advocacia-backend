@@ -143,7 +143,7 @@ class ProcessService:
             )
             movement = self.repository.create_movement_no_commit(
                 process_id=process.id,
-                title=f"Status alterado: {previous.value} → {payload.status.value}",
+                title=f"Status alterado: {previous.value} -> {payload.status.value}",
                 description=payload.reason,
                 occurred_at=datetime.now(timezone.utc),
                 source=MovementSource.SYSTEM,

@@ -97,7 +97,7 @@ class TestChangeStatus:
         movements = listing.json()["data"]
         match = next((m for m in movements if m["id"] == movement_id), None)
         assert match is not None
-        assert match["title"] == "Status alterado: ATIVO → SUSPENSO"
+        assert match["title"] == "Status alterado: ATIVO -> SUSPENSO"
         assert match["description"] == "Acordo em andamento"
         assert match["source"] == "SYSTEM"
         assert match["created_by"] == active_user["id"]

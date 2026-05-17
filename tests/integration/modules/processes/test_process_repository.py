@@ -168,7 +168,7 @@ class TestAtomicStatusChange:
         repo.update_status_no_commit(process, ProcessStatus.SUSPENSO, updated_by=42)
         movement = repo.create_movement_no_commit(
             process_id=process.id,
-            title="Status alterado: ATIVO → SUSPENSO",
+            title="Status alterado: ATIVO -> SUSPENSO",
             description="motivo",
             occurred_at=datetime.now(timezone.utc),
             source=MovementSource.SYSTEM,
@@ -183,7 +183,7 @@ class TestAtomicStatusChange:
         movements, total = repo.list_movements(process.id, source=MovementSource.SYSTEM)
         assert total == 1
         assert movements[0].id == movement.id
-        assert movements[0].title == "Status alterado: ATIVO → SUSPENSO"
+        assert movements[0].title == "Status alterado: ATIVO -> SUSPENSO"
         assert movements[0].description == "motivo"
 
     def test_rollback_leaves_status_and_movement_unchanged(

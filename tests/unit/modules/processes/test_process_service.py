@@ -316,7 +316,7 @@ class TestChangeStatus:
         )
         mov_kwargs = repo.create_movement_no_commit.call_args.kwargs
         assert mov_kwargs["process_id"] == process.id
-        assert mov_kwargs["title"] == "Status alterado: ATIVO → SUSPENSO"
+        assert mov_kwargs["title"] == "Status alterado: ATIVO -> SUSPENSO"
         assert mov_kwargs["description"] == "Motivo"
         assert mov_kwargs["source"] == MovementSource.SYSTEM
         assert mov_kwargs["created_by"] == 7
