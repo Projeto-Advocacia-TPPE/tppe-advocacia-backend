@@ -146,3 +146,28 @@ class ClientNoteNotFoundError(AppException):
             "CLIENT_NOTE_NOT_FOUND",
             "Client note not found",
         )
+
+
+class ProcessNotFoundError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_404_NOT_FOUND, "PROCESS_NOT_FOUND", "Process not found"
+        )
+
+
+class ProcessNumberAlreadyExistsError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_409_CONFLICT,
+            "PROCESS_NUMBER_ALREADY_EXISTS",
+            "A process with this number already exists",
+        )
+
+
+class ClientNotFoundForProcessError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "CLIENT_NOT_FOUND_FOR_PROCESS",
+            "Referenced client does not exist",
+        )
