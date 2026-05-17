@@ -8,6 +8,7 @@ from app.modules.health.router import router as health_router
 from app.modules.leads.router import router as leads_router
 from app.modules.media.router import router as media_router
 from app.modules.office_config.router import router as office_config_router
+from app.modules.processes.router import router as processes_router
 from app.modules.users.router import router as users_router
 
 api_router = APIRouter()
@@ -20,3 +21,4 @@ api_router.include_router(office_config_router)
 api_router.include_router(media_router)
 api_router.include_router(articles_router)
 api_router.include_router(clients_router)
+api_router.include_router(processes_router)
