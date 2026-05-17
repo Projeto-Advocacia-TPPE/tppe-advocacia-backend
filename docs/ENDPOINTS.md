@@ -1096,3 +1096,145 @@ Atualiza parcialmente um cliente. Todos os campos são opcionais. Não é permit
 | 409    | `CLIENT_CPF_ALREADY_EXISTS`  | CPF já pertence a outro cliente    |
 | 409    | `CLIENT_CNPJ_ALREADY_EXISTS` | CNPJ já pertence a outro cliente   |
 | 422    | `VALIDATION_ERROR`           | Body inválido ou CPF e CNPJ juntos |
+
+---
+
+### `POST /api/v1/clients/{client_id}/notes`
+
+Cria uma observação interna vinculada ao cliente. O autor é o usuário autenticado.
+
+**Body**
+
+```json
+{
+  "content": "Cliente prefere contato por WhatsApp."
+}
+```
+
+**Resposta 201**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "client_id": 7,
+    "created_by": 3,
+    "updated_by": null,
+    "created_by_name": "Ana Lima",
+    "updated_by_name": null,
+    "content": "Cliente prefere contato por WhatsApp.",
+    "created_at": "2026-05-16T14:00:00Z",
+    "updated_at": "2026-05-16T14:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                 | Situação                  |
+| ------ | -------------------- | ------------------------- |
+| 401    | `UNAUTHORIZED`       | Token ausente ou inválido |
+| 404    | `CLIENT_NOT_FOUND`   | Cliente não encontrado    |
+| 422    | `VALIDATION_ERROR`   | `content` ausente ou vazio |
+
+---
+
+### `GET /api/v1/clients/{client_id}/notes`
+
+Lista todas as observações do cliente em ordem cronológica decrescente (mais recente primeiro), com paginação.
+
+**Query params**
+
+| Parâmetro | Tipo              | Obrigatório | Descrição                        |
+| --------- | ----------------- | ----------- | -------------------------------- |
+| `page`    | `integer` (≥ 1)   | Não         | Página atual (default: `1`)      |
+| `limit`   | `integer` (1–100) | Não         | Itens por página (default: `20`) |
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 2,
+      "client_id": 7,
+      "created_by": 5,
+      "updated_by": 3,
+      "created_by_name": "Carlos Souza",
+      "updated_by_name": "Ana Lima",
+      "content": "Reunião agendada para segunda-feira.",
+      "created_at": "2026-05-16T15:00:00Z",
+      "updated_at": "2026-05-16T16:00:00Z"
+    },
+    {
+      "id": 1,
+      "client_id": 7,
+      "created_by": 3,
+      "updated_by": null,
+      "created_by_name": "Ana Lima",
+      "updated_by_name": null,
+      "content": "Cliente prefere contato por WhatsApp.",
+      "created_at": "2026-05-16T14:00:00Z",
+      "updated_at": "2026-05-16T14:00:00Z"
+    }
+  ],
+  "meta": {
+    "total": 2,
+    "page": 1,
+    "limit": 20,
+    "pages": 1
+  }
+}
+```
+
+**Erros**
+
+| Status | Code               | Situação                  |
+| ------ | ------------------ | ------------------------- |
+| 401    | `UNAUTHORIZED`     | Token ausente ou inválido |
+| 404    | `CLIENT_NOT_FOUND` | Cliente não encontrado    |
+
+---
+
+### `PATCH /api/v1/clients/{client_id}/notes/{note_id}`
+
+Edita o conteúdo de uma observação. Apenas o autor original pode editar; usuários com role `ADMIN` podem editar qualquer observação.
+
+**Body**
+
+```json
+{
+  "content": "Cliente prefere contato por e-mail, não WhatsApp."
+}
+```
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "client_id": 7,
+    "created_by": 3,
+    "updated_by": 3,
+    "created_by_name": "Ana Lima",
+    "updated_by_name": "Ana Lima",
+    "content": "Cliente prefere contato por e-mail, não WhatsApp.",
+    "created_at": "2026-05-16T14:00:00Z",
+    "updated_at": "2026-05-16T17:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                      | Situação                                          |
+| ------ | ------------------------- | ------------------------------------------------- |
+| 401    | `UNAUTHORIZED`            | Token ausente ou inválido                         |
+| 403    | `FORBIDDEN`               | Usuário não é o autor nem ADMIN                   |
+| 404    | `CLIENT_NOT_FOUND`        | Cliente não encontrado                            |
+| 404    | `CLIENT_NOTE_NOT_FOUND`   | Observação não encontrada ou não pertence ao cliente |
+| 422    | `VALIDATION_ERROR`        | `content` ausente ou vazio                        |

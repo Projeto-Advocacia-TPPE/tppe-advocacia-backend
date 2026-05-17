@@ -137,3 +137,12 @@ class ClientCnpjAlreadyExistsError(AppException):
             "CLIENT_CNPJ_ALREADY_EXISTS",
             "A client with this CNPJ already exists",
         )
+
+
+class ClientNoteNotFoundError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_404_NOT_FOUND,
+            "CLIENT_NOTE_NOT_FOUND",
+            "Client note not found",
+        )
