@@ -11,6 +11,9 @@ from app.modules.processes.schema import (
     MovementRead,
     ProcessCreate,
     ProcessListItem,
+    ProcessNoteCreate,
+    ProcessNoteRead,
+    ProcessNoteUpdate,
     ProcessRead,
     ProcessStatusChange,
     ProcessStatusChangeResponse,
@@ -145,6 +148,65 @@ def list_movements(
         limit=limit,
     )
     return paginated(items, total=total, page=page, limit=limit)
+
+
+@router.post(
+    "/processes/{process_id}/notes",
+    response_model=SuccessResponse[ProcessNoteRead],
+    status_code=status.HTTP_201_CREATED,
+    responses=error_responses(401, 404, 422),
+    summary="Cria uma anotação interna vinculada ao processo",
+)
+def create_process_note(
+    process_id: int,
+    payload: ProcessNoteCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SuccessResponse[ProcessNoteRead]:
+    return ok(
+        ProcessController(db).create_note(
+            process_id, payload, current_user=current_user
+        )
+    )
+
+
+@router.get(
+    "/processes/{process_id}/notes",
+    response_model=PaginatedResponse[ProcessNoteRead],
+    responses=error_responses(401, 404),
+    summary="Lista anotações internas do processo em ordem cronológica decrescente",
+)
+def list_process_notes(
+    process_id: int,
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> PaginatedResponse[ProcessNoteRead]:
+    items, total = ProcessController(db).list_notes(
+        process_id, page=page, limit=limit
+    )
+    return paginated(items, total=total, page=page, limit=limit)
+
+
+@router.patch(
+    "/processes/{process_id}/notes/{note_id}",
+    response_model=SuccessResponse[ProcessNoteRead],
+    responses=error_responses(401, 403, 404, 422),
+    summary="Edita uma anotação (apenas autor ou admin)",
+)
+def update_process_note(
+    process_id: int,
+    note_id: int,
+    payload: ProcessNoteUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SuccessResponse[ProcessNoteRead]:
+    return ok(
+        ProcessController(db).update_note(
+            process_id, note_id, payload, current_user=current_user
+        )
+    )
 
 
 @router.get(

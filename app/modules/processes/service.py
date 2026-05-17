@@ -7,22 +7,28 @@ from app.modules.processes.model import (
     MovementSource,
     Process,
     ProcessMovement,
+    ProcessNote,
     ProcessStatus,
 )
 from app.modules.processes.repository import ProcessRepository
 from app.modules.processes.schema import (
     MovementCreate,
     ProcessCreate,
+    ProcessNoteCreate,
+    ProcessNoteUpdate,
     ProcessStatusChange,
 )
 from app.modules.users.model import User
 from app.shared.exceptions import (
     ClientNotFoundError,
     ClientNotFoundForProcessError,
+    ForbiddenError,
     ProcessNotFoundError,
+    ProcessNoteNotFoundError,
     ProcessNumberAlreadyExistsError,
     ProcessStatusUnchangedError,
 )
+from app.shared.types import Role
 
 
 class ProcessService:
@@ -157,6 +163,47 @@ class ProcessService:
         refreshed = self.repository.reload_with_client(process.id)
         reloaded_movement = self.repository.reload_movement(movement.id)
         return refreshed, reloaded_movement
+
+    def create_note(
+        self,
+        process_id: int,
+        payload: ProcessNoteCreate,
+        current_user: User,
+    ) -> ProcessNote:
+        self.get_process(process_id)
+        return self.repository.create_note(
+            process_id=process_id,
+            created_by=current_user.id,
+            content=payload.content,
+        )
+
+    def list_notes(
+        self, process_id: int, page: int = 1, limit: int = 20
+    ) -> tuple[list[ProcessNote], int]:
+        self.get_process(process_id)
+        return self.repository.list_notes_by_process(
+            process_id=process_id, page=page, limit=limit
+        )
+
+    def update_note(
+        self,
+        process_id: int,
+        note_id: int,
+        payload: ProcessNoteUpdate,
+        current_user: User,
+    ) -> ProcessNote:
+        self.get_process(process_id)
+        note = self.repository.get_note_by_id(note_id=note_id, process_id=process_id)
+
+        if note is None:
+            raise ProcessNoteNotFoundError()
+
+        if note.created_by != current_user.id and current_user.role != Role.ADMIN:
+            raise ForbiddenError()
+
+        return self.repository.update_note(
+            note=note, content=payload.content, updated_by=current_user.id
+        )
 
     def list_movements(
         self,

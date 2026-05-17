@@ -7,12 +7,15 @@ from app.modules.processes.model import (
     MovementSource,
     Process,
     ProcessMovement,
+    ProcessNote,
     ProcessStatus,
 )
 from app.modules.processes.repository import ProcessRepository
 from app.modules.processes.schema import (
     MovementCreate,
     ProcessCreate,
+    ProcessNoteCreate,
+    ProcessNoteUpdate,
     ProcessStatusChange,
 )
 from app.modules.processes.service import ProcessService
@@ -62,6 +65,30 @@ class ProcessController:
         self, process_id: int, payload: MovementCreate, created_by: User
     ) -> ProcessMovement:
         return self.service.create_movement(process_id, payload, created_by=created_by)
+
+    def create_note(
+        self,
+        process_id: int,
+        payload: ProcessNoteCreate,
+        current_user: User,
+    ) -> ProcessNote:
+        return self.service.create_note(process_id, payload, current_user=current_user)
+
+    def list_notes(
+        self, process_id: int, page: int = 1, limit: int = 20
+    ) -> tuple[list[ProcessNote], int]:
+        return self.service.list_notes(process_id, page=page, limit=limit)
+
+    def update_note(
+        self,
+        process_id: int,
+        note_id: int,
+        payload: ProcessNoteUpdate,
+        current_user: User,
+    ) -> ProcessNote:
+        return self.service.update_note(
+            process_id, note_id, payload, current_user=current_user
+        )
 
     def list_movements(
         self,
