@@ -10,7 +10,11 @@ from app.modules.processes.model import (
     ProcessStatus,
 )
 from app.modules.processes.repository import ProcessRepository
-from app.modules.processes.schema import MovementCreate, ProcessCreate
+from app.modules.processes.schema import (
+    MovementCreate,
+    ProcessCreate,
+    ProcessStatusChange,
+)
 from app.modules.processes.service import ProcessService
 from app.modules.users.model import User
 
@@ -45,6 +49,14 @@ class ProcessController:
         self, client_id: int, page: int = 1, limit: int = 20
     ) -> tuple[list[Process], int]:
         return self.service.list_by_client(client_id, page=page, limit=limit)
+
+    def change_status(
+        self,
+        process_id: int,
+        payload: ProcessStatusChange,
+        current_user: User,
+    ) -> tuple[Process, ProcessMovement]:
+        return self.service.change_status(process_id, payload, current_user)
 
     def create_movement(
         self, process_id: int, payload: MovementCreate, created_by: User

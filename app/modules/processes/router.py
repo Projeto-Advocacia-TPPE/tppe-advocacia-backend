@@ -12,6 +12,8 @@ from app.modules.processes.schema import (
     ProcessCreate,
     ProcessListItem,
     ProcessRead,
+    ProcessStatusChange,
+    ProcessStatusChangeResponse,
 )
 from app.modules.users.model import User
 from app.shared.auth_deps import get_current_user
@@ -78,6 +80,24 @@ def get_process(
     _: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessRead]:
     return ok(ProcessController(db).get_process(process_id))
+
+
+@router.patch(
+    "/processes/{process_id}/status",
+    response_model=SuccessResponse[ProcessStatusChangeResponse],
+    responses=error_responses(401, 404, 409, 422),
+    summary="Altera o status do processo e registra movimentação SYSTEM",
+)
+def change_process_status(
+    process_id: int,
+    payload: ProcessStatusChange,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SuccessResponse[ProcessStatusChangeResponse]:
+    process, movement = ProcessController(db).change_status(
+        process_id, payload, current_user
+    )
+    return ok(ProcessStatusChangeResponse.from_process(process, movement.id))
 
 
 @router.post(

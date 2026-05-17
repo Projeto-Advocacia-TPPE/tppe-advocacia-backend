@@ -10,13 +10,18 @@ from app.modules.processes.model import (
     ProcessStatus,
 )
 from app.modules.processes.repository import ProcessRepository
-from app.modules.processes.schema import MovementCreate, ProcessCreate
+from app.modules.processes.schema import (
+    MovementCreate,
+    ProcessCreate,
+    ProcessStatusChange,
+)
 from app.modules.users.model import User
 from app.shared.exceptions import (
     ClientNotFoundError,
     ClientNotFoundForProcessError,
     ProcessNotFoundError,
     ProcessNumberAlreadyExistsError,
+    ProcessStatusUnchangedError,
 )
 
 
@@ -35,7 +40,7 @@ class ProcessService:
             raise ClientNotFoundForProcessError()
 
         try:
-            return self.repository.create(
+            process = self.repository.create_no_commit(
                 number=payload.number,
                 client_id=payload.client_id,
                 court=payload.court,
@@ -43,9 +48,20 @@ class ProcessService:
                 opposing_party=payload.opposing_party,
                 created_by=created_by.id,
             )
+            self.repository.create_movement_no_commit(
+                process_id=process.id,
+                title="Processo cadastrado",
+                description=None,
+                occurred_at=datetime.now(timezone.utc),
+                source=MovementSource.SYSTEM,
+                created_by=created_by.id,
+            )
+            self.repository.db.commit()
         except IntegrityError as exc:
             self.repository.db.rollback()
             raise ProcessNumberAlreadyExistsError() from exc
+
+        return self.repository.reload_with_client(process.id)
 
     def get_process(self, process_id: int) -> Process:
         process = self.repository.get_by_id(process_id)
@@ -91,6 +107,56 @@ class ProcessService:
             source=MovementSource.MANUAL,
             created_by=created_by.id,
         )
+
+    def create_system_movement(
+        self,
+        process_id: int,
+        title: str,
+        description: str | None = None,
+        created_by: int | None = None,
+    ) -> ProcessMovement:
+        self.get_process(process_id)
+        return self.repository.create_movement(
+            process_id=process_id,
+            title=title,
+            description=description,
+            occurred_at=datetime.now(timezone.utc),
+            source=MovementSource.SYSTEM,
+            created_by=created_by,
+        )
+
+    def change_status(
+        self,
+        process_id: int,
+        payload: ProcessStatusChange,
+        current_user: User,
+    ) -> tuple[Process, ProcessMovement]:
+        process = self.get_process(process_id)
+
+        if process.status == payload.status:
+            raise ProcessStatusUnchangedError()
+
+        previous = process.status
+        try:
+            self.repository.update_status_no_commit(
+                process, payload.status, current_user.id
+            )
+            movement = self.repository.create_movement_no_commit(
+                process_id=process.id,
+                title=f"Status alterado: {previous.value} → {payload.status.value}",
+                description=payload.reason,
+                occurred_at=datetime.now(timezone.utc),
+                source=MovementSource.SYSTEM,
+                created_by=current_user.id,
+            )
+            self.repository.db.commit()
+        except Exception:
+            self.repository.db.rollback()
+            raise
+
+        refreshed = self.repository.reload_with_client(process.id)
+        reloaded_movement = self.repository.reload_movement(movement.id)
+        return refreshed, reloaded_movement
 
     def list_movements(
         self,
