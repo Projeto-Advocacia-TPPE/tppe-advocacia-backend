@@ -1,9 +1,16 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
 from app.modules.clients.repository import ClientRepository
-from app.modules.processes.model import Process, ProcessStatus
+from app.modules.processes.model import (
+    MovementSource,
+    Process,
+    ProcessMovement,
+    ProcessStatus,
+)
 from app.modules.processes.repository import ProcessRepository
-from app.modules.processes.schema import ProcessCreate
+from app.modules.processes.schema import MovementCreate, ProcessCreate
 from app.modules.processes.service import ProcessService
 from app.modules.users.model import User
 
@@ -38,3 +45,26 @@ class ProcessController:
         self, client_id: int, page: int = 1, limit: int = 20
     ) -> tuple[list[Process], int]:
         return self.service.list_by_client(client_id, page=page, limit=limit)
+
+    def create_movement(
+        self, process_id: int, payload: MovementCreate, created_by: User
+    ) -> ProcessMovement:
+        return self.service.create_movement(process_id, payload, created_by=created_by)
+
+    def list_movements(
+        self,
+        process_id: int,
+        source: MovementSource | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        page: int = 1,
+        limit: int = 20,
+    ) -> tuple[list[ProcessMovement], int]:
+        return self.service.list_movements(
+            process_id,
+            source=source,
+            date_from=date_from,
+            date_to=date_to,
+            page=page,
+            limit=limit,
+        )
