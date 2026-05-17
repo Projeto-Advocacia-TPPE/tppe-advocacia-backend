@@ -1,11 +1,11 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import pytest
 from sqlalchemy.exc import IntegrityError
 
-from app.modules.processes.model import Process, ProcessStatus
-from app.modules.processes.schema import ProcessCreate
+from app.modules.processes.model import MovementSource, Process, ProcessStatus
+from app.modules.processes.schema import MovementCreate, ProcessCreate
 from app.modules.processes.service import ProcessService
 from app.modules.users.model import User
 from app.shared.exceptions import (
@@ -189,3 +189,95 @@ class TestListByClient:
             service.list_by_client(99)
 
         repo.list_by_client.assert_not_called()
+
+
+class TestCreateMovement:
+    def test_creates_with_source_manual_and_now_default(self, service, repo):
+        process = make_process()
+        repo.get_by_id.return_value = process
+        repo.create_movement.return_value = MagicMock()
+        payload = MovementCreate(title="Audiência marcada")
+
+        before = datetime.now(timezone.utc)
+        service.create_movement(1, payload, created_by=make_user(7))
+        after = datetime.now(timezone.utc)
+
+        repo.create_movement.assert_called_once()
+        kwargs = repo.create_movement.call_args.kwargs
+        assert kwargs["process_id"] == 1
+        assert kwargs["title"] == "Audiência marcada"
+        assert kwargs["description"] is None
+        assert kwargs["source"] == MovementSource.MANUAL
+        assert kwargs["created_by"] == 7
+        assert before <= kwargs["occurred_at"] <= after
+
+    def test_uses_provided_occurred_at(self, service, repo):
+        repo.get_by_id.return_value = make_process()
+        repo.create_movement.return_value = MagicMock()
+        past = datetime.now(timezone.utc) - timedelta(days=2)
+        payload = MovementCreate(title="Petição protocolada", occurred_at=past)
+
+        service.create_movement(1, payload, created_by=make_user(7))
+
+        assert repo.create_movement.call_args.kwargs["occurred_at"] == past
+
+    def test_raises_when_process_missing(self, service, repo):
+        repo.get_by_id.return_value = None
+
+        with pytest.raises(ProcessNotFoundError):
+            service.create_movement(
+                99, MovementCreate(title="X"), created_by=make_user()
+            )
+
+        repo.create_movement.assert_not_called()
+
+
+class TestListMovements:
+    def test_validates_process_and_delegates(self, service, repo):
+        repo.get_by_id.return_value = make_process()
+        repo.list_movements.return_value = ([], 0)
+
+        result, total = service.list_movements(1)
+
+        repo.list_movements.assert_called_once_with(
+            process_id=1,
+            source=None,
+            date_from=None,
+            date_to=None,
+            page=1,
+            limit=20,
+        )
+        assert result == []
+        assert total == 0
+
+    def test_passes_filters(self, service, repo):
+        repo.get_by_id.return_value = make_process()
+        repo.list_movements.return_value = ([], 0)
+        date_from = datetime.now(timezone.utc) - timedelta(days=10)
+        date_to = datetime.now(timezone.utc)
+
+        service.list_movements(
+            1,
+            source=MovementSource.SYSTEM,
+            date_from=date_from,
+            date_to=date_to,
+            page=2,
+            limit=5,
+        )
+
+        repo.list_movements.assert_called_once_with(
+            process_id=1,
+            source=MovementSource.SYSTEM,
+            date_from=date_from,
+            date_to=date_to,
+            page=2,
+            limit=5,
+        )
+
+    def test_raises_when_process_missing(self, service, repo):
+        repo.get_by_id.return_value = None
+
+        with pytest.raises(ProcessNotFoundError):
+            service.list_movements(99)
+
+        repo.list_movements.assert_not_called()
