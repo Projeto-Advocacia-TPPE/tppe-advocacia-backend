@@ -1,11 +1,18 @@
-from app.modules.clients.model import Client
+from app.modules.clients.model import Client, ClientNote
 from app.modules.clients.repository import ClientRepository
-from app.modules.clients.schema import ClientCreate, ClientUpdate
-from app.modules.users.model import User
+from app.modules.clients.schema import (
+    ClientCreate,
+    ClientNoteCreate,
+    ClientNoteUpdate,
+    ClientUpdate,
+)
+from app.modules.users.model import Role, User
 from app.shared.exceptions import (
     ClientCnpjAlreadyExistsError,
     ClientCpfAlreadyExistsError,
+    ClientNoteNotFoundError,
     ClientNotFoundError,
+    ForbiddenError,
 )
 
 
@@ -68,3 +75,41 @@ class ClientService:
 
         data["updated_by"] = updated_by.id
         return self.repository.update(client, data)
+
+    def create_note(
+        self, client_id: int, payload: ClientNoteCreate, current_user: User
+    ) -> ClientNote:
+        self.get_client(client_id)
+        return self.repository.create_note(
+            client_id=client_id,
+            created_by=current_user.id,
+            content=payload.content,
+        )
+
+    def list_notes(
+        self, client_id: int, page: int = 1, limit: int = 20
+    ) -> tuple[list[ClientNote], int]:
+        self.get_client(client_id)
+        return self.repository.list_notes_by_client(
+            client_id=client_id, page=page, limit=limit
+        )
+
+    def update_note(
+        self,
+        client_id: int,
+        note_id: int,
+        payload: ClientNoteUpdate,
+        current_user: User,
+    ) -> ClientNote:
+        self.get_client(client_id)
+        note = self.repository.get_note_by_id(note_id=note_id, client_id=client_id)
+
+        if note is None:
+            raise ClientNoteNotFoundError()
+
+        if note.created_by != current_user.id and current_user.role != Role.ADMIN:
+            raise ForbiddenError()
+
+        return self.repository.update_note(
+            note=note, content=payload.content, updated_by=current_user.id
+        )

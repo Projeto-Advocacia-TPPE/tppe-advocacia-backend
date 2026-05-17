@@ -1,7 +1,9 @@
-from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session
+from __future__ import annotations
 
-from app.modules.clients.model import Client
+from sqlalchemy import func, or_, select
+from sqlalchemy.orm import Session, joinedload
+
+from app.modules.clients.model import Client, ClientNote
 
 
 class ClientRepository:
@@ -73,3 +75,53 @@ class ClientRepository:
         self.db.commit()
         self.db.refresh(client)
         return client
+
+    def _note_query(self) -> object:
+        return select(ClientNote).options(
+            joinedload(ClientNote.creator),
+            joinedload(ClientNote.updater),
+        )
+
+    def create_note(self, client_id: int, created_by: int, content: str) -> ClientNote:
+        note = ClientNote(client_id=client_id, created_by=created_by, content=content)
+        self.db.add(note)
+        self.db.commit()
+        return self.db.scalars(
+            self._note_query().where(ClientNote.id == note.id)
+        ).first()
+
+    def get_note_by_id(self, note_id: int, client_id: int) -> ClientNote | None:
+        return self.db.scalars(
+            self._note_query().where(
+                ClientNote.id == note_id,
+                ClientNote.client_id == client_id,
+            )
+        ).first()
+
+    def list_notes_by_client(
+        self, client_id: int, page: int = 1, limit: int = 20
+    ) -> tuple[list[ClientNote], int]:
+        base = select(ClientNote).where(ClientNote.client_id == client_id)
+        total = self.db.scalar(select(func.count()).select_from(base.subquery())) or 0
+        notes = list(
+            self.db.scalars(
+                self._note_query()
+                .where(ClientNote.client_id == client_id)
+                .order_by(ClientNote.created_at.desc(), ClientNote.id.desc())
+                .offset((page - 1) * limit)
+                .limit(limit)
+            )
+            .unique()
+            .all()
+        )
+        return notes, total
+
+    def update_note(
+        self, note: ClientNote, content: str, updated_by: int
+    ) -> ClientNote:
+        note.content = content
+        note.updated_by = updated_by
+        self.db.commit()
+        return self.db.scalars(
+            self._note_query().where(ClientNote.id == note.id)
+        ).first()

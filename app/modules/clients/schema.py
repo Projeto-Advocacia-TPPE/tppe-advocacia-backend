@@ -62,3 +62,42 @@ class ClientListItem(BaseModel):
     cnpj: str | None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ClientNoteCreate(BaseModel):
+    content: str = Field(..., min_length=1)
+
+
+class ClientNoteUpdate(BaseModel):
+    content: str = Field(..., min_length=1)
+
+
+class ClientNoteRead(BaseModel):
+    id: int
+    client_id: int
+    created_by: int
+    updated_by: int | None
+    created_by_name: str
+    updated_by_name: str | None
+    content: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_author_names(cls, data: object) -> object:
+        if isinstance(data, dict):
+            return data
+        return {
+            "id": data.id,
+            "client_id": data.client_id,
+            "created_by": data.created_by,
+            "updated_by": data.updated_by,
+            "created_by_name": data.creator.name if data.creator else "",
+            "updated_by_name": data.updater.name if data.updater else None,
+            "content": data.content,
+            "created_at": data.created_at,
+            "updated_at": data.updated_at,
+        }
