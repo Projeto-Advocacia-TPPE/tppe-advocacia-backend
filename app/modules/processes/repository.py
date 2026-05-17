@@ -9,6 +9,7 @@ from app.modules.processes.model import (
     MovementSource,
     Process,
     ProcessMovement,
+    ProcessNote,
     ProcessStatus,
 )
 
@@ -203,3 +204,57 @@ class ProcessRepository:
             .all()
         )
         return items, total
+
+    def _note_query(self):
+        return select(ProcessNote).options(
+            joinedload(ProcessNote.creator),
+            joinedload(ProcessNote.updater),
+        )
+
+    def create_note(
+        self, process_id: int, created_by: int, content: str
+    ) -> ProcessNote:
+        note = ProcessNote(
+            process_id=process_id, created_by=created_by, content=content
+        )
+        self.db.add(note)
+        self.db.commit()
+        return self.db.scalars(
+            self._note_query().where(ProcessNote.id == note.id)
+        ).first()
+
+    def get_note_by_id(self, note_id: int, process_id: int) -> ProcessNote | None:
+        return self.db.scalars(
+            self._note_query().where(
+                ProcessNote.id == note_id,
+                ProcessNote.process_id == process_id,
+            )
+        ).first()
+
+    def list_notes_by_process(
+        self, process_id: int, page: int = 1, limit: int = 20
+    ) -> tuple[list[ProcessNote], int]:
+        base = select(ProcessNote).where(ProcessNote.process_id == process_id)
+        total = self.db.scalar(select(func.count()).select_from(base.subquery())) or 0
+        notes = list(
+            self.db.scalars(
+                self._note_query()
+                .where(ProcessNote.process_id == process_id)
+                .order_by(ProcessNote.created_at.desc(), ProcessNote.id.desc())
+                .offset((page - 1) * limit)
+                .limit(limit)
+            )
+            .unique()
+            .all()
+        )
+        return notes, total
+
+    def update_note(
+        self, note: ProcessNote, content: str, updated_by: int
+    ) -> ProcessNote:
+        note.content = content
+        note.updated_by = updated_by
+        self.db.commit()
+        return self.db.scalars(
+            self._note_query().where(ProcessNote.id == note.id)
+        ).first()

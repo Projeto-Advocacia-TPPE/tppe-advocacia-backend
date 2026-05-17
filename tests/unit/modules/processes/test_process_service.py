@@ -8,6 +8,8 @@ from app.modules.processes.model import MovementSource, Process, ProcessStatus
 from app.modules.processes.schema import (
     MovementCreate,
     ProcessCreate,
+    ProcessNoteCreate,
+    ProcessNoteUpdate,
     ProcessStatusChange,
 )
 from app.modules.processes.service import ProcessService
@@ -15,10 +17,13 @@ from app.modules.users.model import User
 from app.shared.exceptions import (
     ClientNotFoundError,
     ClientNotFoundForProcessError,
+    ForbiddenError,
+    ProcessNoteNotFoundError,
     ProcessNotFoundError,
     ProcessNumberAlreadyExistsError,
     ProcessStatusUnchangedError,
 )
+from app.shared.types import Role
 
 
 def make_process(**kwargs) -> Process:
@@ -43,9 +48,10 @@ def make_process(**kwargs) -> Process:
     return process
 
 
-def make_user(user_id: int = 5) -> User:
+def make_user(user_id: int = 5, role: Role = Role.USER) -> User:
     user = MagicMock(spec=User)
     user.id = user_id
+    user.role = role
     return user
 
 
@@ -400,3 +406,116 @@ class TestListMovements:
             service.list_movements(99)
 
         repo.list_movements.assert_not_called()
+
+
+def make_note(**kwargs):
+    defaults = {"id": 10, "process_id": 1, "created_by": 5, "content": "x"}
+    defaults.update(kwargs)
+    note = MagicMock()
+    for key, value in defaults.items():
+        setattr(note, key, value)
+    return note
+
+
+class TestCreateNote:
+    def test_raises_when_process_missing(self, service, repo):
+        repo.get_by_id.return_value = None
+
+        with pytest.raises(ProcessNotFoundError):
+            service.create_note(99, ProcessNoteCreate(content="oi"), make_user())
+
+        repo.create_note.assert_not_called()
+
+    def test_creates_with_current_user_as_author(self, service, repo):
+        repo.get_by_id.return_value = make_process()
+        repo.create_note.return_value = MagicMock()
+
+        service.create_note(1, ProcessNoteCreate(content="estrategia"), make_user(7))
+
+        repo.create_note.assert_called_once_with(
+            process_id=1, created_by=7, content="estrategia"
+        )
+
+
+class TestListNotes:
+    def test_raises_when_process_missing(self, service, repo):
+        repo.get_by_id.return_value = None
+
+        with pytest.raises(ProcessNotFoundError):
+            service.list_notes(99)
+
+        repo.list_notes_by_process.assert_not_called()
+
+    def test_delegates_with_filters(self, service, repo):
+        repo.get_by_id.return_value = make_process()
+        repo.list_notes_by_process.return_value = ([], 0)
+
+        service.list_notes(1, page=3, limit=5)
+
+        repo.list_notes_by_process.assert_called_once_with(
+            process_id=1, page=3, limit=5
+        )
+
+
+class TestUpdateNote:
+    def _payload(self) -> ProcessNoteUpdate:
+        return ProcessNoteUpdate(content="atualizado")
+
+    def test_raises_when_process_missing(self, service, repo):
+        repo.get_by_id.return_value = None
+
+        with pytest.raises(ProcessNotFoundError):
+            service.update_note(99, 10, self._payload(), make_user())
+
+        repo.update_note.assert_not_called()
+
+    def test_raises_when_note_missing(self, service, repo):
+        repo.get_by_id.return_value = make_process()
+        repo.get_note_by_id.return_value = None
+
+        with pytest.raises(ProcessNoteNotFoundError):
+            service.update_note(1, 999, self._payload(), make_user())
+
+        repo.update_note.assert_not_called()
+
+    def test_raises_when_note_belongs_to_other_process(self, service, repo):
+        repo.get_by_id.return_value = make_process()
+        repo.get_note_by_id.return_value = None
+
+        with pytest.raises(ProcessNoteNotFoundError):
+            service.update_note(1, 99, self._payload(), make_user())
+
+        repo.get_note_by_id.assert_called_once_with(note_id=99, process_id=1)
+
+    def test_author_can_update(self, service, repo):
+        repo.get_by_id.return_value = make_process()
+        note = make_note(created_by=7)
+        repo.get_note_by_id.return_value = note
+        repo.update_note.return_value = note
+
+        service.update_note(1, 10, self._payload(), make_user(7))
+
+        repo.update_note.assert_called_once_with(
+            note=note, content="atualizado", updated_by=7
+        )
+
+    def test_admin_can_update_any_note(self, service, repo):
+        repo.get_by_id.return_value = make_process()
+        note = make_note(created_by=5)
+        repo.get_note_by_id.return_value = note
+        repo.update_note.return_value = note
+
+        service.update_note(1, 10, self._payload(), make_user(99, Role.ADMIN))
+
+        repo.update_note.assert_called_once_with(
+            note=note, content="atualizado", updated_by=99
+        )
+
+    def test_non_author_non_admin_forbidden(self, service, repo):
+        repo.get_by_id.return_value = make_process()
+        repo.get_note_by_id.return_value = make_note(created_by=5)
+
+        with pytest.raises(ForbiddenError):
+            service.update_note(1, 10, self._payload(), make_user(42, Role.USER))
+
+        repo.update_note.assert_not_called()

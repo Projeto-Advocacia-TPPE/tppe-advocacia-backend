@@ -167,6 +167,45 @@ class MovementCreate(BaseModel):
         return value
 
 
+class ProcessNoteCreate(BaseModel):
+    content: str = Field(..., min_length=1, max_length=5000)
+
+
+class ProcessNoteUpdate(BaseModel):
+    content: str = Field(..., min_length=1, max_length=5000)
+
+
+class ProcessNoteRead(BaseModel):
+    id: int
+    process_id: int
+    created_by: int
+    updated_by: int | None
+    created_by_name: str
+    updated_by_name: str | None
+    content: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_author_names(cls, data: object) -> object:
+        if isinstance(data, dict):
+            return data
+        return {
+            "id": data.id,
+            "process_id": data.process_id,
+            "created_by": data.created_by,
+            "updated_by": data.updated_by,
+            "created_by_name": data.creator.name if data.creator else "",
+            "updated_by_name": data.updater.name if data.updater else None,
+            "content": data.content,
+            "created_at": data.created_at,
+            "updated_at": data.updated_at,
+        }
+
+
 class MovementRead(BaseModel):
     id: int
     process_id: int

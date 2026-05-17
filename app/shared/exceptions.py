@@ -173,6 +173,15 @@ class ClientNotFoundForProcessError(AppException):
         )
 
 
+class ProcessNoteNotFoundError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_404_NOT_FOUND,
+            "PROCESS_NOTE_NOT_FOUND",
+            "Process note not found",
+        )
+
+
 class ProcessStatusUnchangedError(AppException):
     def __init__(self) -> None:
         super().__init__(

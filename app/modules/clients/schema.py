@@ -65,11 +65,11 @@ class ClientListItem(BaseModel):
 
 
 class ClientNoteCreate(BaseModel):
-    content: str = Field(..., min_length=1)
+    content: str = Field(..., min_length=1, max_length=5000)
 
 
 class ClientNoteUpdate(BaseModel):
-    content: str = Field(..., min_length=1)
+    content: str = Field(..., min_length=1, max_length=5000)
 
 
 class ClientNoteRead(BaseModel):
