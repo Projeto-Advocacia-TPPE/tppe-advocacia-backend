@@ -5,9 +5,10 @@ from sqlalchemy.orm import Session
 
 from app.config.settings import get_settings
 from app.db.database import get_db
-from app.modules.users.model import Role, User
+from app.modules.users.model import User
 from app.modules.users.repository import UserRepository
 from app.shared.exceptions import ForbiddenError, UnauthorizedError
+from app.shared.types import Role
 
 settings = get_settings()
 _bearer = HTTPBearer()

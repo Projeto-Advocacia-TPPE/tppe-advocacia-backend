@@ -1,15 +1,10 @@
-import enum
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.base_model import Base
-
-
-class Role(enum.Enum):
-    ADMIN = "ADMIN"
-    USER = "USER"
+from app.shared.types import Role
 
 
 class User(Base):

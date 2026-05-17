@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 
-from app.modules.users.model import Role
+from app.shared.types import Role
 
 
 class UserCreate(BaseModel):

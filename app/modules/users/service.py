@@ -5,10 +5,11 @@ import bcrypt
 
 from app.modules.audit_logs.service import AuditLogService
 from app.modules.email.protocol import EmailService
-from app.modules.users.model import Role, User
+from app.modules.users.model import User
 from app.modules.users.repository import UserRepository
 from app.modules.users.schema import UserCreate, UserRead, UserUpdate
 from app.shared.exceptions import EmailAlreadyExistsError, UserNotFoundError
+from app.shared.types import Role
 
 
 class UserService:

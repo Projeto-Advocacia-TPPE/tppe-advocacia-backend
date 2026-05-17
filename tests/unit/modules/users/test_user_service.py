@@ -5,10 +5,11 @@ from unittest.mock import MagicMock
 import bcrypt
 import pytest
 
-from app.modules.users.model import Role, User
+from app.modules.users.model import User
 from app.modules.users.schema import UserCreate, UserUpdate
 from app.modules.users.service import UserService
 from app.shared.exceptions import EmailAlreadyExistsError, UserNotFoundError
+from app.shared.types import Role
 
 
 def make_user(**kwargs) -> User:

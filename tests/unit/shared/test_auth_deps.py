@@ -3,9 +3,10 @@ from unittest.mock import MagicMock, patch
 import jwt
 import pytest
 
-from app.modules.users.model import Role, User
+from app.modules.users.model import User
 from app.shared.auth_deps import get_current_user, require_admin
 from app.shared.exceptions import ForbiddenError, UnauthorizedError
+from app.shared.types import Role
 
 
 def make_credentials(token: str) -> MagicMock:

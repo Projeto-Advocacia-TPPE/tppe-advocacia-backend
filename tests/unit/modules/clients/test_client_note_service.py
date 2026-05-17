@@ -6,12 +6,13 @@ import pytest
 from app.modules.clients.model import Client, ClientNote
 from app.modules.clients.schema import ClientNoteCreate, ClientNoteUpdate
 from app.modules.clients.service import ClientService
-from app.modules.users.model import Role, User
+from app.modules.users.model import User
 from app.shared.exceptions import (
     ClientNoteNotFoundError,
     ClientNotFoundError,
     ForbiddenError,
 )
+from app.shared.types import Role
 
 
 def make_client(**kwargs) -> Client:
