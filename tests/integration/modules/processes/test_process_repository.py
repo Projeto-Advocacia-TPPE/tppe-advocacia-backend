@@ -1,10 +1,16 @@
+from datetime import datetime, timezone
+
 import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.modules.clients.model import Client
 from app.modules.clients.repository import ClientRepository
-from app.modules.processes.model import Process, ProcessStatus
+from app.modules.processes.model import (
+    MovementSource,
+    Process,
+    ProcessStatus,
+)
 from app.modules.processes.repository import ProcessRepository
 
 
@@ -150,3 +156,85 @@ class TestList:
 
         assert total == 1
         assert items[0].client_id == client_fixture.id
+
+
+class TestAtomicStatusChange:
+    def test_status_update_and_movement_persist_together(
+        self, db: Session, client_fixture
+    ):
+        repo = ProcessRepository(db)
+        process = make_process(repo, client_fixture, "12345678920248262300")
+
+        repo.update_status_no_commit(process, ProcessStatus.SUSPENSO, updated_by=42)
+        movement = repo.create_movement_no_commit(
+            process_id=process.id,
+            title="Status alterado: ATIVO → SUSPENSO",
+            description="motivo",
+            occurred_at=datetime.now(timezone.utc),
+            source=MovementSource.SYSTEM,
+            created_by=42,
+        )
+        db.commit()
+
+        reloaded = repo.get_by_id(process.id)
+        assert reloaded.status == ProcessStatus.SUSPENSO
+        assert reloaded.updated_by == 42
+
+        movements, total = repo.list_movements(process.id, source=MovementSource.SYSTEM)
+        assert total == 1
+        assert movements[0].id == movement.id
+        assert movements[0].title == "Status alterado: ATIVO → SUSPENSO"
+        assert movements[0].description == "motivo"
+
+    def test_rollback_leaves_status_and_movement_unchanged(
+        self, db: Session, client_fixture
+    ):
+        repo = ProcessRepository(db)
+        process = make_process(repo, client_fixture, "12345678920248262301")
+
+        repo.update_status_no_commit(process, ProcessStatus.SUSPENSO, updated_by=42)
+        repo.create_movement_no_commit(
+            process_id=process.id,
+            title="should be discarded",
+            occurred_at=datetime.now(timezone.utc),
+            source=MovementSource.SYSTEM,
+        )
+        db.rollback()
+
+        reloaded = repo.get_by_id(process.id)
+        assert reloaded.status == ProcessStatus.ATIVO
+
+        movements, total = repo.list_movements(process.id)
+        assert total == 0
+
+
+class TestCreateProcessAlsoCreatesSystemMovement:
+    def test_create_via_service_persists_initial_movement(
+        self, db: Session, client_fixture
+    ):
+        from unittest.mock import MagicMock
+
+        from app.modules.clients.repository import ClientRepository as CR
+        from app.modules.processes.schema import ProcessCreate
+        from app.modules.processes.service import ProcessService
+        from app.modules.users.model import User
+
+        repo = ProcessRepository(db)
+        svc = ProcessService(repo, CR(db))
+
+        actor = MagicMock(spec=User)
+        actor.id = 7
+
+        payload = ProcessCreate(
+            number="1234567-89.2024.8.26.2400",
+            client_id=client_fixture.id,
+            court="TJSP",
+            action_type="Ação Cível",
+        )
+        process = svc.create_process(payload, created_by=actor)
+
+        movements, total = repo.list_movements(process.id)
+        assert total == 1
+        assert movements[0].title == "Processo cadastrado"
+        assert movements[0].source == MovementSource.SYSTEM
+        assert movements[0].created_by == 7
