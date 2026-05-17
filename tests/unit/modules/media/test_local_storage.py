@@ -10,7 +10,9 @@ FAKE_JPEG_MAGIC = bytes([0xFF, 0xD8, 0xFF, 0xE0]) + b"\x00" * 100
 FAKE_PDF_MAGIC = b"%PDF-1.4" + b"\x00" * 100
 
 
-def make_upload_file(content: bytes, filename: str = "test.jpg", size: int | None = None):
+def make_upload_file(
+    content: bytes, filename: str = "test.jpg", size: int | None = None
+):
     mock = MagicMock()
     mock.filename = filename
     mock.file = io.BytesIO(content)
