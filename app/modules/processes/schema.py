@@ -13,19 +13,20 @@ def normalize_cnj(raw: str) -> str:
     if not isinstance(raw, str):
         raise ValueError("Número CNJ deve ser string")
 
-    stripped = raw.strip()
-
-    if CNJ_MASKED_REGEX.match(stripped):
-        return stripped
-
-    digits_only = re.sub(r"\D", "", stripped)
+    digits_only = re.sub(r"\D", "", raw.strip())
     if CNJ_DIGITS_REGEX.match(digits_only):
-        return (
-            f"{digits_only[0:7]}-{digits_only[7:9]}.{digits_only[9:13]}."
-            f"{digits_only[13:14]}.{digits_only[14:16]}.{digits_only[16:20]}"
-        )
+        return digits_only
 
     raise ValueError("Número CNJ inválido")
+
+
+def format_cnj(digits: str) -> str:
+    if not CNJ_DIGITS_REGEX.match(digits):
+        return digits
+    return (
+        f"{digits[0:7]}-{digits[7:9]}.{digits[9:13]}."
+        f"{digits[13:14]}.{digits[14:16]}.{digits[16:20]}"
+    )
 
 
 class ProcessCreate(BaseModel):
@@ -59,12 +60,12 @@ class ProcessRead(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def resolve_client_name(cls, data: object) -> object:
+    def resolve_fields(cls, data: object) -> object:
         if isinstance(data, dict):
             return data
         return {
             "id": data.id,
-            "number": data.number,
+            "number": format_cnj(data.number),
             "client_id": data.client_id,
             "client_name": data.client.name if data.client else None,
             "court": data.court,
@@ -92,12 +93,12 @@ class ProcessListItem(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def resolve_client_name(cls, data: object) -> object:
+    def resolve_fields(cls, data: object) -> object:
         if isinstance(data, dict):
             return data
         return {
             "id": data.id,
-            "number": data.number,
+            "number": format_cnj(data.number),
             "client_id": data.client_id,
             "client_name": data.client.name if data.client else None,
             "court": data.court,

@@ -136,7 +136,7 @@ class TestCreateProcess:
         created_process_ids,
     ):
         existing = ProcessRepository(db_session).create(
-            number="1234567-89.2024.8.26.1104",
+            number="12345678920248261104",
             client_id=client_fixture.id,
             court="TJSP",
             action_type="Ação Cível",
@@ -173,7 +173,7 @@ class TestGetProcess:
         created_process_ids,
     ):
         created = ProcessRepository(db_session).create(
-            number="1234567-89.2024.8.26.1200",
+            number="12345678920248261200",
             client_id=client_fixture.id,
             court="TJSP",
             action_type="Ação Cível",
@@ -217,7 +217,7 @@ class TestListProcesses:
         created_process_ids,
     ):
         created = ProcessRepository(db_session).create(
-            number="1234567-89.2024.8.26.1300",
+            number="12345678920248261300",
             client_id=client_fixture.id,
             court="TJSP",
             action_type="Ação Cível",
@@ -256,13 +256,13 @@ class TestListProcessesByClient:
     ):
         repo = ProcessRepository(db_session)
         owned = repo.create(
-            number="1234567-89.2024.8.26.1400",
+            number="12345678920248261400",
             client_id=client_fixture.id,
             court="TJSP",
             action_type="Ação Cível",
         )
         other = repo.create(
-            number="1234567-89.2024.8.26.1401",
+            number="12345678920248261401",
             client_id=other_client_fixture.id,
             court="TJSP",
             action_type="Ação Cível",

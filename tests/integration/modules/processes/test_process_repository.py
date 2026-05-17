@@ -36,10 +36,10 @@ class TestCreate:
     def test_persists_process_with_defaults(self, db: Session, client_fixture):
         repo = ProcessRepository(db)
 
-        process = make_process(repo, client_fixture, "1234567-89.2024.8.26.0100")
+        process = make_process(repo, client_fixture, "12345678920248260100")
 
         assert process.id is not None
-        assert process.number == "1234567-89.2024.8.26.0100"
+        assert process.number == "12345678920248260100"
         assert process.status == ProcessStatus.ATIVO
         assert process.client_id == client_fixture.id
         assert process.created_at is not None
@@ -48,7 +48,7 @@ class TestCreate:
         repo = ProcessRepository(db)
 
         process = make_process(
-            repo, client_fixture, "1234567-89.2024.8.26.0101", created_by=42
+            repo, client_fixture, "12345678920248260101", created_by=42
         )
 
         assert process.created_by == 42
@@ -56,16 +56,16 @@ class TestCreate:
 
     def test_number_unique_constraint(self, db: Session, client_fixture):
         repo = ProcessRepository(db)
-        make_process(repo, client_fixture, "1234567-89.2024.8.26.0200")
+        make_process(repo, client_fixture, "12345678920248260200")
 
         with pytest.raises(IntegrityError):
-            make_process(repo, client_fixture, "1234567-89.2024.8.26.0200")
+            make_process(repo, client_fixture, "12345678920248260200")
 
 
 class TestGetters:
     def test_get_by_id_returns_with_client(self, db: Session, client_fixture):
         repo = ProcessRepository(db)
-        created = make_process(repo, client_fixture, "1234567-89.2024.8.26.0300")
+        created = make_process(repo, client_fixture, "12345678920248260300")
 
         found = repo.get_by_id(created.id)
 
@@ -77,9 +77,9 @@ class TestGetters:
 
     def test_get_by_number_returns_process(self, db: Session, client_fixture):
         repo = ProcessRepository(db)
-        created = make_process(repo, client_fixture, "1234567-89.2024.8.26.0400")
+        created = make_process(repo, client_fixture, "12345678920248260400")
 
-        found = repo.get_by_number("1234567-89.2024.8.26.0400")
+        found = repo.get_by_number("12345678920248260400")
 
         assert found is not None
         assert found.id == created.id
@@ -88,8 +88,8 @@ class TestGetters:
 class TestList:
     def test_filter_by_client(self, db: Session, client_fixture, other_client):
         repo = ProcessRepository(db)
-        make_process(repo, client_fixture, "1234567-89.2024.8.26.0501")
-        make_process(repo, other_client, "1234567-89.2024.8.26.0502")
+        make_process(repo, client_fixture, "12345678920248260501")
+        make_process(repo, other_client, "12345678920248260502")
 
         items, total = repo.list(client_id=client_fixture.id)
 
@@ -98,10 +98,10 @@ class TestList:
 
     def test_filter_by_status(self, db: Session, client_fixture):
         repo = ProcessRepository(db)
-        p = make_process(repo, client_fixture, "1234567-89.2024.8.26.0601")
+        p = make_process(repo, client_fixture, "12345678920248260601")
         p.status = ProcessStatus.SUSPENSO
         db.commit()
-        make_process(repo, client_fixture, "1234567-89.2024.8.26.0602")
+        make_process(repo, client_fixture, "12345678920248260602")
 
         items, total = repo.list(status=ProcessStatus.SUSPENSO)
 
@@ -110,7 +110,7 @@ class TestList:
 
     def test_search_by_number(self, db: Session, client_fixture):
         repo = ProcessRepository(db)
-        make_process(repo, client_fixture, "9876543-21.2024.8.26.0700")
+        make_process(repo, client_fixture, "98765432120248260700")
 
         items, total = repo.list(search="9876543")
 
@@ -122,7 +122,7 @@ class TestList:
         make_process(
             repo,
             client_fixture,
-            "1234567-89.2024.8.26.0800",
+            "12345678920248260800",
             action_type="Ação Trabalhista",
         )
 
@@ -134,7 +134,7 @@ class TestList:
     def test_pagination_limits(self, db: Session, client_fixture):
         repo = ProcessRepository(db)
         for i in range(3):
-            make_process(repo, client_fixture, f"1234567-89.2024.8.26.090{i}")
+            make_process(repo, client_fixture, f"1234567892024826090{i}")
 
         items, total = repo.list(client_id=client_fixture.id, page=1, limit=2)
 
@@ -143,8 +143,8 @@ class TestList:
 
     def test_list_by_client(self, db: Session, client_fixture, other_client):
         repo = ProcessRepository(db)
-        make_process(repo, client_fixture, "1234567-89.2024.8.26.1001")
-        make_process(repo, other_client, "1234567-89.2024.8.26.1002")
+        make_process(repo, client_fixture, "12345678920248261001")
+        make_process(repo, other_client, "12345678920248261002")
 
         items, total = repo.list_by_client(client_fixture.id)
 

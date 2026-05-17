@@ -20,7 +20,7 @@ def make_process(**kwargs) -> Process:
     now = datetime.now(timezone.utc)
     defaults = {
         "id": 1,
-        "number": "1234567-89.2024.8.26.0100",
+        "number": "12345678920248260100",
         "client_id": 1,
         "court": "TJSP",
         "action_type": "Ação Cível",
@@ -80,7 +80,7 @@ class TestCreateProcess:
 
         assert result is process
         repo.create.assert_called_once_with(
-            number="1234567-89.2024.8.26.0100",
+            number="12345678920248260100",
             client_id=1,
             court="TJSP",
             action_type="Ação Cível",
@@ -102,7 +102,7 @@ class TestCreateProcess:
         assert result is process
         client_repo.get_by_id.assert_not_called()
         repo.create.assert_called_once_with(
-            number="1234567-89.2024.8.26.0100",
+            number="12345678920248260100",
             client_id=None,
             court="TJSP",
             action_type="Ação Cível",

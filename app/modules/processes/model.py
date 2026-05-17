@@ -29,7 +29,7 @@ class Process(Base):
     __table_args__ = (UniqueConstraint("number", name="uq_processes_number"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    number: Mapped[str] = mapped_column(String(25), nullable=False, index=True)
+    number: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     client_id: Mapped[int | None] = mapped_column(
         ForeignKey("clients.id", ondelete="RESTRICT"),
         nullable=True,
