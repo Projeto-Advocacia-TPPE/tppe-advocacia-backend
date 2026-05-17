@@ -23,8 +23,8 @@ from app.shared.exceptions import (
     ClientNotFoundError,
     ClientNotFoundForProcessError,
     ForbiddenError,
-    ProcessNotFoundError,
     ProcessNoteNotFoundError,
+    ProcessNotFoundError,
     ProcessNumberAlreadyExistsError,
     ProcessStatusUnchangedError,
 )

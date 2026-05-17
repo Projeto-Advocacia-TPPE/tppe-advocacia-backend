@@ -183,9 +183,7 @@ def list_process_notes(
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ) -> PaginatedResponse[ProcessNoteRead]:
-    items, total = ProcessController(db).list_notes(
-        process_id, page=page, limit=limit
-    )
+    items, total = ProcessController(db).list_notes(process_id, page=page, limit=limit)
     return paginated(items, total=total, page=page, limit=limit)
 
 

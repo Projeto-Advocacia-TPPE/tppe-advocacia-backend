@@ -211,7 +211,9 @@ class ProcessRepository:
             joinedload(ProcessNote.updater),
         )
 
-    def create_note(self, process_id: int, created_by: int, content: str) -> ProcessNote:
+    def create_note(
+        self, process_id: int, created_by: int, content: str
+    ) -> ProcessNote:
         note = ProcessNote(
             process_id=process_id, created_by=created_by, content=content
         )

@@ -74,9 +74,7 @@ class TestCreateNote:
 
         assert response.status_code == 422
 
-    def test_returns_422_content_too_long(
-        self, client, user_headers, process_fixture
-    ):
+    def test_returns_422_content_too_long(self, client, user_headers, process_fixture):
         response = client.post(
             _url(process_fixture.id),
             json={"content": "a" * 5001},
@@ -149,15 +147,11 @@ class TestListNotes:
 
 class TestUpdateNote:
     def test_returns_401_without_token(self, client, process_fixture):
-        response = client.patch(
-            f"{_url(process_fixture.id)}/1", json={"content": "x"}
-        )
+        response = client.patch(f"{_url(process_fixture.id)}/1", json={"content": "x"})
 
         assert response.status_code == 401
 
-    def test_returns_404_when_note_missing(
-        self, client, user_headers, process_fixture
-    ):
+    def test_returns_404_when_note_missing(self, client, user_headers, process_fixture):
         response = client.patch(
             f"{_url(process_fixture.id)}/999999",
             json={"content": "x"},
