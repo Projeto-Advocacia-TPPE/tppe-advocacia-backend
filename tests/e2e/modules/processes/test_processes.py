@@ -79,6 +79,19 @@ class TestCreateProcess:
         assert data["created_by"] == active_user["id"]
         created_process_ids.append(data["id"])
 
+        movements_response = client.get(
+            f"/api/v1/processes/{data['id']}/movements",
+            headers=user_headers,
+        )
+        assert movements_response.status_code == 200
+        movements = movements_response.json()["data"]
+        initial = next(
+            (m for m in movements if m["title"] == "Processo cadastrado"), None
+        )
+        assert initial is not None
+        assert initial["source"] == "SYSTEM"
+        assert initial["created_by"] == active_user["id"]
+
     def test_normalizes_digits_only_number(
         self, client, user_headers, client_fixture, created_process_ids
     ):

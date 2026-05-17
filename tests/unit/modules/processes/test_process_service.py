@@ -5,7 +5,11 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.modules.processes.model import MovementSource, Process, ProcessStatus
-from app.modules.processes.schema import MovementCreate, ProcessCreate
+from app.modules.processes.schema import (
+    MovementCreate,
+    ProcessCreate,
+    ProcessStatusChange,
+)
 from app.modules.processes.service import ProcessService
 from app.modules.users.model import User
 from app.shared.exceptions import (
@@ -13,6 +17,7 @@ from app.shared.exceptions import (
     ClientNotFoundForProcessError,
     ProcessNotFoundError,
     ProcessNumberAlreadyExistsError,
+    ProcessStatusUnchangedError,
 )
 
 
@@ -73,13 +78,15 @@ class TestCreateProcess:
 
     def test_creates_when_client_exists(self, service, repo, client_repo):
         client_repo.get_by_id.return_value = MagicMock()
-        process = make_process()
-        repo.create.return_value = process
+        created = make_process()
+        reloaded = make_process()
+        repo.create_no_commit.return_value = created
+        repo.reload_with_client.return_value = reloaded
 
         result = service.create_process(self._payload(), created_by=make_user(5))
 
-        assert result is process
-        repo.create.assert_called_once_with(
+        assert result is reloaded
+        repo.create_no_commit.assert_called_once_with(
             number="12345678920248260100",
             client_id=1,
             court="TJSP",
@@ -87,21 +94,29 @@ class TestCreateProcess:
             opposing_party=None,
             created_by=5,
         )
+        repo.create_movement_no_commit.assert_called_once()
+        mov_kwargs = repo.create_movement_no_commit.call_args.kwargs
+        assert mov_kwargs["process_id"] == created.id
+        assert mov_kwargs["title"] == "Processo cadastrado"
+        assert mov_kwargs["description"] is None
+        assert mov_kwargs["source"] == MovementSource.SYSTEM
+        assert mov_kwargs["created_by"] == 5
+        repo.db.commit.assert_called_once()
 
     def test_creates_without_client(self, service, repo, client_repo):
-        process = make_process(client_id=None)
-        repo.create.return_value = process
+        created = make_process(client_id=None)
+        repo.create_no_commit.return_value = created
+        repo.reload_with_client.return_value = created
         payload = ProcessCreate(
             number="1234567-89.2024.8.26.0100",
             court="TJSP",
             action_type="Ação Cível",
         )
 
-        result = service.create_process(payload, created_by=make_user(5))
+        service.create_process(payload, created_by=make_user(5))
 
-        assert result is process
         client_repo.get_by_id.assert_not_called()
-        repo.create.assert_called_once_with(
+        repo.create_no_commit.assert_called_once_with(
             number="12345678920248260100",
             client_id=None,
             court="TJSP",
@@ -116,11 +131,11 @@ class TestCreateProcess:
         with pytest.raises(ClientNotFoundForProcessError):
             service.create_process(self._payload(), created_by=make_user())
 
-        repo.create.assert_not_called()
+        repo.create_no_commit.assert_not_called()
 
     def test_raises_when_number_duplicate(self, service, repo, client_repo):
         client_repo.get_by_id.return_value = MagicMock()
-        repo.create.side_effect = IntegrityError("stmt", {}, Exception("dup"))
+        repo.create_no_commit.side_effect = IntegrityError("stmt", {}, Exception("dup"))
         repo.db = MagicMock()
 
         with pytest.raises(ProcessNumberAlreadyExistsError):
@@ -230,6 +245,110 @@ class TestCreateMovement:
             )
 
         repo.create_movement.assert_not_called()
+
+
+class TestCreateSystemMovement:
+    def test_delegates_with_source_system(self, service, repo):
+        repo.get_by_id.return_value = make_process()
+        repo.create_movement.return_value = MagicMock()
+
+        service.create_system_movement(
+            1, title="Algum evento", description="detalhe", created_by=9
+        )
+
+        kwargs = repo.create_movement.call_args.kwargs
+        assert kwargs["process_id"] == 1
+        assert kwargs["title"] == "Algum evento"
+        assert kwargs["description"] == "detalhe"
+        assert kwargs["source"] == MovementSource.SYSTEM
+        assert kwargs["created_by"] == 9
+
+    def test_raises_when_process_missing(self, service, repo):
+        repo.get_by_id.return_value = None
+
+        with pytest.raises(ProcessNotFoundError):
+            service.create_system_movement(99, title="X")
+
+        repo.create_movement.assert_not_called()
+
+
+class TestChangeStatus:
+    def _payload(self, status=ProcessStatus.SUSPENSO, reason=None):
+        return ProcessStatusChange(status=status, reason=reason)
+
+    def test_raises_when_process_missing(self, service, repo):
+        repo.get_by_id.return_value = None
+
+        with pytest.raises(ProcessNotFoundError):
+            service.change_status(99, self._payload(), make_user())
+
+        repo.update_status_no_commit.assert_not_called()
+        repo.create_movement_no_commit.assert_not_called()
+
+    def test_raises_when_status_unchanged(self, service, repo):
+        process = make_process(status=ProcessStatus.ATIVO)
+        repo.get_by_id.return_value = process
+
+        with pytest.raises(ProcessStatusUnchangedError):
+            service.change_status(
+                1, self._payload(status=ProcessStatus.ATIVO), make_user()
+            )
+
+        repo.update_status_no_commit.assert_not_called()
+        repo.create_movement_no_commit.assert_not_called()
+
+    def test_valid_transition_commits_and_creates_movement(self, service, repo):
+        process = make_process(status=ProcessStatus.ATIVO)
+        repo.get_by_id.return_value = process
+        movement = MagicMock(id=42)
+        repo.create_movement_no_commit.return_value = movement
+        repo.reload_with_client.return_value = process
+        repo.reload_movement.return_value = movement
+
+        result_process, result_mov = service.change_status(
+            1,
+            self._payload(status=ProcessStatus.SUSPENSO, reason="Motivo"),
+            make_user(7),
+        )
+
+        repo.update_status_no_commit.assert_called_once_with(
+            process, ProcessStatus.SUSPENSO, 7
+        )
+        mov_kwargs = repo.create_movement_no_commit.call_args.kwargs
+        assert mov_kwargs["process_id"] == process.id
+        assert mov_kwargs["title"] == "Status alterado: ATIVO -> SUSPENSO"
+        assert mov_kwargs["description"] == "Motivo"
+        assert mov_kwargs["source"] == MovementSource.SYSTEM
+        assert mov_kwargs["created_by"] == 7
+        repo.db.commit.assert_called_once()
+        assert result_process is process
+        assert result_mov is movement
+
+    def test_reason_optional_propagates_none(self, service, repo):
+        process = make_process(status=ProcessStatus.ATIVO)
+        repo.get_by_id.return_value = process
+        repo.create_movement_no_commit.return_value = MagicMock(id=1)
+        repo.reload_with_client.return_value = process
+        repo.reload_movement.return_value = MagicMock(id=1)
+
+        service.change_status(
+            1, self._payload(status=ProcessStatus.ARQUIVADO), make_user()
+        )
+
+        assert repo.create_movement_no_commit.call_args.kwargs["description"] is None
+
+    def test_rollback_when_movement_fails(self, service, repo):
+        process = make_process(status=ProcessStatus.ATIVO)
+        repo.get_by_id.return_value = process
+        repo.create_movement_no_commit.side_effect = RuntimeError("boom")
+
+        with pytest.raises(RuntimeError):
+            service.change_status(
+                1, self._payload(status=ProcessStatus.SUSPENSO), make_user()
+            )
+
+        repo.db.rollback.assert_called_once()
+        repo.db.commit.assert_not_called()
 
 
 class TestListMovements:

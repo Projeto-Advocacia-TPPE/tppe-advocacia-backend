@@ -79,6 +79,49 @@ class ProcessRead(BaseModel):
         }
 
 
+class ProcessStatusChange(BaseModel):
+    status: ProcessStatus
+    reason: str | None = Field(default=None, max_length=500)
+
+
+class ProcessStatusChangeResponse(BaseModel):
+    id: int
+    number: str
+    client_id: int | None
+    client_name: str | None
+    court: str
+    action_type: str
+    opposing_party: str | None
+    status: ProcessStatus
+    created_by: int | None
+    updated_by: int | None
+    created_at: datetime
+    updated_at: datetime
+    last_status_change_movement_id: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @classmethod
+    def from_process(
+        cls, process: object, movement_id: int
+    ) -> "ProcessStatusChangeResponse":
+        return cls(
+            id=process.id,
+            number=format_cnj(process.number),
+            client_id=process.client_id,
+            client_name=process.client.name if process.client else None,
+            court=process.court,
+            action_type=process.action_type,
+            opposing_party=process.opposing_party,
+            status=process.status,
+            created_by=process.created_by,
+            updated_by=process.updated_by,
+            created_at=process.created_at,
+            updated_at=process.updated_at,
+            last_status_change_movement_id=movement_id,
+        )
+
+
 class ProcessListItem(BaseModel):
     id: int
     number: str

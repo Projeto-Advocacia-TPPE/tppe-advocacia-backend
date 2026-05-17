@@ -171,3 +171,12 @@ class ClientNotFoundForProcessError(AppException):
             "CLIENT_NOT_FOUND_FOR_PROCESS",
             "Referenced client does not exist",
         )
+
+
+class ProcessStatusUnchangedError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_409_CONFLICT,
+            "PROCESS_STATUS_UNCHANGED",
+            "Process is already in the requested status",
+        )
