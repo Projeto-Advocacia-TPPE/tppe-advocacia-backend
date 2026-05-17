@@ -1511,3 +1511,199 @@ Lista movimentações do processo em ordem cronológica decrescente (`occurred_a
 | ------ | ------------------- | ------------------------- |
 | 401    | `UNAUTHORIZED`      | Token ausente ou inválido |
 | 404    | `PROCESS_NOT_FOUND` | Processo não encontrado   |
+
+---
+
+### `PATCH /api/v1/processes/{process_id}/status`
+
+Altera o status do processo e registra automaticamente uma movimentação `SYSTEM` na timeline. Toda transição entre os 4 valores é permitida (sem máquina de estados rígida). A atualização do processo e a criação da movimentação ocorrem na mesma transação — se uma falhar, nenhuma persiste.
+
+**Body**
+
+```json
+{
+  "status": "SUSPENSO",
+  "reason": "Aguardando acordo extrajudicial."
+}
+```
+
+> `status`: `"ATIVO"` | `"SUSPENSO"` | `"ARQUIVADO"` | `"ENCERRADO"`.
+> `reason` é opcional (até 500 caracteres) e fica gravado como `description` na movimentação automática.
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "number": "1234567-89.2024.8.26.0100",
+    "client_id": 7,
+    "client_name": "João Silva",
+    "court": "TJSP",
+    "action_type": "Ação Cível",
+    "opposing_party": "Empresa X",
+    "status": "SUSPENSO",
+    "created_by": 3,
+    "updated_by": 5,
+    "created_at": "2026-05-17T14:00:00Z",
+    "updated_at": "2026-05-17T16:00:00Z",
+    "last_status_change_movement_id": 42
+  }
+}
+```
+
+> `last_status_change_movement_id` aponta para a movimentação `SYSTEM` criada automaticamente, com `title = "Status alterado: <ANTERIOR> -> <NOVO>"` e `description = reason` (quando informado).
+
+**Erros**
+
+| Status | Code                        | Situação                                              |
+| ------ | --------------------------- | ----------------------------------------------------- |
+| 401    | `UNAUTHORIZED`              | Token ausente ou inválido                             |
+| 404    | `PROCESS_NOT_FOUND`         | Processo não encontrado                               |
+| 409    | `PROCESS_STATUS_UNCHANGED`  | Status enviado é igual ao status atual (idempotência) |
+| 422    | `VALIDATION_ERROR`          | `status` fora do enum ou `reason` > 500 caracteres    |
+
+---
+
+### `POST /api/v1/processes/{process_id}/notes`
+
+Cria uma anotação interna vinculada ao processo. O autor é o usuário autenticado. Notas são separadas das movimentações — não aparecem em `GET /processes/{id}/movements`.
+
+**Body**
+
+```json
+{
+  "content": "Estratégia: aguardar prazo recursal antes de protocolar contestação."
+}
+```
+
+> `content` obrigatório, 1–5000 caracteres.
+
+**Resposta 201**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "process_id": 1,
+    "created_by": 3,
+    "updated_by": null,
+    "created_by_name": "Ana Lima",
+    "updated_by_name": null,
+    "content": "Estratégia: aguardar prazo recursal antes de protocolar contestação.",
+    "created_at": "2026-05-17T14:00:00Z",
+    "updated_at": "2026-05-17T14:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                | Situação                                       |
+| ------ | ------------------- | ---------------------------------------------- |
+| 401    | `UNAUTHORIZED`      | Token ausente ou inválido                      |
+| 404    | `PROCESS_NOT_FOUND` | Processo não encontrado                        |
+| 422    | `VALIDATION_ERROR`  | `content` ausente, vazio ou > 5000 caracteres  |
+
+---
+
+### `GET /api/v1/processes/{process_id}/notes`
+
+Lista anotações internas do processo em ordem cronológica decrescente (`created_at DESC, id DESC`), com paginação.
+
+**Query params**
+
+| Parâmetro | Tipo              | Obrigatório | Descrição                        |
+| --------- | ----------------- | ----------- | -------------------------------- |
+| `page`    | `integer` (≥ 1)   | Não         | Página atual (default: `1`)      |
+| `limit`   | `integer` (1–100) | Não         | Itens por página (default: `20`) |
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 2,
+      "process_id": 1,
+      "created_by": 5,
+      "updated_by": 3,
+      "created_by_name": "Carlos Souza",
+      "updated_by_name": "Ana Lima",
+      "content": "Cliente confirmou disponibilidade para audiência.",
+      "created_at": "2026-05-17T15:00:00Z",
+      "updated_at": "2026-05-17T16:00:00Z"
+    },
+    {
+      "id": 1,
+      "process_id": 1,
+      "created_by": 3,
+      "updated_by": null,
+      "created_by_name": "Ana Lima",
+      "updated_by_name": null,
+      "content": "Estratégia: aguardar prazo recursal antes de protocolar contestação.",
+      "created_at": "2026-05-17T14:00:00Z",
+      "updated_at": "2026-05-17T14:00:00Z"
+    }
+  ],
+  "meta": {
+    "total": 2,
+    "page": 1,
+    "limit": 20,
+    "pages": 1
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                | Situação                  |
+| ------ | ------------------- | ------------------------- |
+| 401    | `UNAUTHORIZED`      | Token ausente ou inválido |
+| 404    | `PROCESS_NOT_FOUND` | Processo não encontrado   |
+
+---
+
+### `PATCH /api/v1/processes/{process_id}/notes/{note_id}`
+
+Edita o conteúdo de uma anotação. Apenas o autor original pode editar; usuários com role `ADMIN` podem editar qualquer anotação.
+
+**Body**
+
+```json
+{
+  "content": "Estratégia revista: solicitar perícia técnica antes da audiência."
+}
+```
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "process_id": 1,
+    "created_by": 3,
+    "updated_by": 3,
+    "created_by_name": "Ana Lima",
+    "updated_by_name": "Ana Lima",
+    "content": "Estratégia revista: solicitar perícia técnica antes da audiência.",
+    "created_at": "2026-05-17T14:00:00Z",
+    "updated_at": "2026-05-17T17:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                     | Situação                                              |
+| ------ | ------------------------ | ----------------------------------------------------- |
+| 401    | `UNAUTHORIZED`           | Token ausente ou inválido                             |
+| 403    | `FORBIDDEN`              | Usuário não é o autor nem ADMIN                       |
+| 404    | `PROCESS_NOT_FOUND`      | Processo não encontrado                               |
+| 404    | `PROCESS_NOTE_NOT_FOUND` | Anotação não encontrada ou não pertence ao processo   |
+| 422    | `VALIDATION_ERROR`       | `content` ausente, vazio ou > 5000 caracteres         |
