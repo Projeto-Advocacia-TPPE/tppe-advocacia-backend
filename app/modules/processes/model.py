@@ -4,7 +4,9 @@ from enum import Enum
 from sqlalchemy import (
     DateTime,
     ForeignKey,
+    Index,
     String,
+    Text,
     UniqueConstraint,
     func,
 )
@@ -14,6 +16,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modules.clients.model import Client
+from app.modules.users.model import User
 from app.shared.base_model import Base
 
 
@@ -22,6 +25,11 @@ class ProcessStatus(str, Enum):
     SUSPENSO = "SUSPENSO"
     ARQUIVADO = "ARQUIVADO"
     ENCERRADO = "ENCERRADO"
+
+
+class MovementSource(str, Enum):
+    MANUAL = "MANUAL"
+    SYSTEM = "SYSTEM"
 
 
 class Process(Base):
@@ -64,3 +72,44 @@ class Process(Base):
     )
 
     client: Mapped[Client | None] = relationship("Client", foreign_keys=[client_id])
+
+
+class ProcessMovement(Base):
+    __tablename__ = "process_movements"
+    __table_args__ = (
+        Index(
+            "ix_process_movements_process_occurred",
+            "process_id",
+            "occurred_at",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    process_id: Mapped[int] = mapped_column(
+        ForeignKey("processes.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    title: Mapped[str] = mapped_column(String(150), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+    source: Mapped[MovementSource] = mapped_column(
+        SAEnum(MovementSource, native_enum=False, length=10),
+        nullable=False,
+        default=MovementSource.MANUAL,
+    )
+    created_by: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", use_alter=True, name="fk_process_movements_created_by"),
+        nullable=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    creator: Mapped[User | None] = relationship("User", foreign_keys=[created_by])

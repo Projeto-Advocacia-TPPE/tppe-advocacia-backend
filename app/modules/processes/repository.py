@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.modules.processes.model import Process, ProcessStatus
+from app.modules.processes.model import (
+    MovementSource,
+    Process,
+    ProcessMovement,
+    ProcessStatus,
+)
 
 
 class ProcessRepository:
@@ -82,3 +89,60 @@ class ProcessRepository:
         self, client_id: int, page: int = 1, limit: int = 20
     ) -> tuple[list[Process], int]:
         return self.list(client_id=client_id, page=page, limit=limit)
+
+    def _movement_query(self):
+        return select(ProcessMovement).options(joinedload(ProcessMovement.creator))
+
+    def create_movement(
+        self,
+        process_id: int,
+        title: str,
+        occurred_at: datetime,
+        source: MovementSource,
+        description: str | None = None,
+        created_by: int | None = None,
+    ) -> ProcessMovement:
+        movement = ProcessMovement(
+            process_id=process_id,
+            title=title,
+            description=description,
+            occurred_at=occurred_at,
+            source=source,
+            created_by=created_by,
+        )
+        self.db.add(movement)
+        self.db.commit()
+        return self.db.scalars(
+            self._movement_query().where(ProcessMovement.id == movement.id)
+        ).first()
+
+    def list_movements(
+        self,
+        process_id: int,
+        source: MovementSource | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        page: int = 1,
+        limit: int = 20,
+    ) -> tuple[list[ProcessMovement], int]:
+        base = select(ProcessMovement).where(ProcessMovement.process_id == process_id)
+
+        if source is not None:
+            base = base.where(ProcessMovement.source == source)
+        if date_from is not None:
+            base = base.where(ProcessMovement.occurred_at >= date_from)
+        if date_to is not None:
+            base = base.where(ProcessMovement.occurred_at <= date_to)
+
+        total = self.db.scalar(select(func.count()).select_from(base.subquery())) or 0
+        items = list(
+            self.db.scalars(
+                base.options(joinedload(ProcessMovement.creator))
+                .order_by(ProcessMovement.occurred_at.desc(), ProcessMovement.id.desc())
+                .offset((page - 1) * limit)
+                .limit(limit)
+            )
+            .unique()
+            .all()
+        )
+        return items, total

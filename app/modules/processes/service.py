@@ -1,9 +1,16 @@
+from datetime import datetime, timezone
+
 from sqlalchemy.exc import IntegrityError
 
 from app.modules.clients.repository import ClientRepository
-from app.modules.processes.model import Process, ProcessStatus
+from app.modules.processes.model import (
+    MovementSource,
+    Process,
+    ProcessMovement,
+    ProcessStatus,
+)
 from app.modules.processes.repository import ProcessRepository
-from app.modules.processes.schema import ProcessCreate
+from app.modules.processes.schema import MovementCreate, ProcessCreate
 from app.modules.users.model import User
 from app.shared.exceptions import (
     ClientNotFoundError,
@@ -69,4 +76,37 @@ class ProcessService:
             raise ClientNotFoundError()
         return self.repository.list_by_client(
             client_id=client_id, page=page, limit=limit
+        )
+
+    def create_movement(
+        self, process_id: int, payload: MovementCreate, created_by: User
+    ) -> ProcessMovement:
+        self.get_process(process_id)
+        occurred_at = payload.occurred_at or datetime.now(timezone.utc)
+        return self.repository.create_movement(
+            process_id=process_id,
+            title=payload.title,
+            description=payload.description,
+            occurred_at=occurred_at,
+            source=MovementSource.MANUAL,
+            created_by=created_by.id,
+        )
+
+    def list_movements(
+        self,
+        process_id: int,
+        source: MovementSource | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
+        page: int = 1,
+        limit: int = 20,
+    ) -> tuple[list[ProcessMovement], int]:
+        self.get_process(process_id)
+        return self.repository.list_movements(
+            process_id=process_id,
+            source=source,
+            date_from=date_from,
+            date_to=date_to,
+            page=page,
+            limit=limit,
         )

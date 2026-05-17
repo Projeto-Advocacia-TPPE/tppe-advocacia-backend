@@ -1,10 +1,14 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
 from app.modules.processes.controller import ProcessController
-from app.modules.processes.model import ProcessStatus
+from app.modules.processes.model import MovementSource, ProcessStatus
 from app.modules.processes.schema import (
+    MovementCreate,
+    MovementRead,
     ProcessCreate,
     ProcessListItem,
     ProcessRead,
@@ -74,6 +78,53 @@ def get_process(
     _: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessRead]:
     return ok(ProcessController(db).get_process(process_id))
+
+
+@router.post(
+    "/processes/{process_id}/movements",
+    response_model=SuccessResponse[MovementRead],
+    status_code=status.HTTP_201_CREATED,
+    responses=error_responses(401, 404, 422),
+    summary="Registra movimentação manual em um processo",
+)
+def create_movement(
+    process_id: int,
+    payload: MovementCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SuccessResponse[MovementRead]:
+    return ok(
+        ProcessController(db).create_movement(
+            process_id, payload, created_by=current_user
+        )
+    )
+
+
+@router.get(
+    "/processes/{process_id}/movements",
+    response_model=PaginatedResponse[MovementRead],
+    responses=error_responses(401, 404),
+    summary="Lista movimentações de um processo em ordem cronológica decrescente",
+)
+def list_movements(
+    process_id: int,
+    source: MovementSource | None = Query(None),
+    date_from: datetime | None = Query(None),
+    date_to: datetime | None = Query(None),
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> PaginatedResponse[MovementRead]:
+    items, total = ProcessController(db).list_movements(
+        process_id,
+        source=source,
+        date_from=date_from,
+        date_to=date_to,
+        page=page,
+        limit=limit,
+    )
+    return paginated(items, total=total, page=page, limit=limit)
 
 
 @router.get(
