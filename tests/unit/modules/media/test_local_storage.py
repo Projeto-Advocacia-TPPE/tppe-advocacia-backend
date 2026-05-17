@@ -10,10 +10,11 @@ FAKE_JPEG_MAGIC = bytes([0xFF, 0xD8, 0xFF, 0xE0]) + b"\x00" * 100
 FAKE_PDF_MAGIC = b"%PDF-1.4" + b"\x00" * 100
 
 
-def make_upload_file(content: bytes, filename: str = "test.jpg"):
+def make_upload_file(content: bytes, filename: str = "test.jpg", size: int | None = None):
     mock = MagicMock()
     mock.filename = filename
     mock.file = io.BytesIO(content)
+    mock.size = size if size is not None else len(content)
     return mock
 
 
@@ -68,3 +69,35 @@ class TestSave:
         with patch("filetype.guess", return_value=None):
             with pytest.raises(InvalidMimeTypeError):
                 provider.save(file)
+
+    def test_rejects_oversize_via_declared_size_without_reading(self, provider):
+        huge = 5 * 1024 * 1024 * 1024
+        file = make_upload_file(b"", "huge.jpg", size=huge)
+        with pytest.raises(FileTooLargeError):
+            provider.save(file)
+
+    def test_rejects_oversize_when_size_attr_missing(self, provider):
+        big_content = b"\x00" * (2 * 1024 * 1024)
+        file = make_upload_file(big_content, "big.jpg")
+        file.size = None
+        with pytest.raises(FileTooLargeError):
+            provider.save(file)
+
+    def test_extension_ignores_client_filename(self, provider, tmp_path):
+        file = make_upload_file(FAKE_JPEG_MAGIC, "evil.html")
+        with patch("filetype.guess") as mock_guess:
+            mock_guess.return_value = MagicMock(mime="image/jpeg", extension="jpg")
+            filename = provider.save(file)
+
+        assert filename.endswith(".jpg")
+        assert ".html" not in filename
+        assert (tmp_path / filename).exists()
+
+    def test_extension_ignores_double_extension(self, provider, tmp_path):
+        file = make_upload_file(FAKE_JPEG_MAGIC, "photo.jpg.php")
+        with patch("filetype.guess") as mock_guess:
+            mock_guess.return_value = MagicMock(mime="image/jpeg", extension="jpg")
+            filename = provider.save(file)
+
+        assert filename.endswith(".jpg")
+        assert ".php" not in filename
