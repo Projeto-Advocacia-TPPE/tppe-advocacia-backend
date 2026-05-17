@@ -38,15 +38,17 @@ class TestUpload:
 
 
 class TestGetFilePath:
+    VALID_NAME = "12345678-1234-1234-1234-123456789012.jpg"
+
     def test_returns_path_when_file_exists(self, service, tmp_path, monkeypatch):
         monkeypatch.setattr(
             "app.modules.media.service.get_settings",
             lambda: MagicMock(upload_dir=str(tmp_path)),
         )
         svc = MediaService(MagicMock())
-        file = tmp_path / "test.jpg"
+        file = tmp_path / self.VALID_NAME
         file.write_bytes(b"fake")
-        assert svc.get_file_path("test.jpg") == file
+        assert svc.get_file_path(self.VALID_NAME) == file.resolve()
 
     def test_raises_when_file_missing(self, service, tmp_path, monkeypatch):
         monkeypatch.setattr(
@@ -55,4 +57,28 @@ class TestGetFilePath:
         )
         svc = MediaService(MagicMock())
         with pytest.raises(MediaNotFoundError):
-            svc.get_file_path("nonexistent.jpg")
+            svc.get_file_path(self.VALID_NAME)
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "../etc/passwd",
+            "..\\..\\.env",
+            "/etc/passwd",
+            "test.jpg",
+            "abc.jpg",
+            "12345678-1234-1234-1234-123456789012",
+            "12345678-1234-1234-1234-123456789012.JPG",
+            "12345678-1234-1234-1234-123456789012/..",
+        ],
+    )
+    def test_rejects_invalid_or_traversal_names(
+        self, service, tmp_path, monkeypatch, name
+    ):
+        monkeypatch.setattr(
+            "app.modules.media.service.get_settings",
+            lambda: MagicMock(upload_dir=str(tmp_path)),
+        )
+        svc = MediaService(MagicMock())
+        with pytest.raises(MediaNotFoundError):
+            svc.get_file_path(name)

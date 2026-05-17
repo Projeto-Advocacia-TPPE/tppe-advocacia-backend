@@ -90,13 +90,15 @@ class TestUpload:
 
 
 class TestServeFile:
+    VALID_NAME = "12345678-1234-1234-1234-123456789012.jpg"
+
     def test_serve_existing_file_returns_200(self, client, tmp_path):
         fake_settings = MagicMock(upload_dir=str(tmp_path))
-        (tmp_path / "test.jpg").write_bytes(FAKE_JPEG)
+        (tmp_path / self.VALID_NAME).write_bytes(FAKE_JPEG)
         with patch(
             "app.modules.media.service.get_settings", return_value=fake_settings
         ):
-            response = client.get("/api/v1/media/test.jpg")
+            response = client.get(f"/api/v1/media/{self.VALID_NAME}")
         assert response.status_code == 200
 
     def test_serve_missing_file_returns_404(self, client, tmp_path):
@@ -104,6 +106,26 @@ class TestServeFile:
         with patch(
             "app.modules.media.service.get_settings", return_value=fake_settings
         ):
-            response = client.get("/api/v1/media/nonexistent.jpg")
+            response = client.get(f"/api/v1/media/{self.VALID_NAME}")
         assert response.status_code == 404
         assert response.json()["error"]["code"] == "MEDIA_NOT_FOUND"
+
+    def test_serve_rejects_invalid_filename_returns_404(self, client, tmp_path):
+        fake_settings = MagicMock(upload_dir=str(tmp_path))
+        with patch(
+            "app.modules.media.service.get_settings", return_value=fake_settings
+        ):
+            response = client.get("/api/v1/media/test.jpg")
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == "MEDIA_NOT_FOUND"
+
+    def test_serve_rejects_path_traversal_returns_404(self, client, tmp_path):
+        fake_settings = MagicMock(upload_dir=str(tmp_path))
+        secret = tmp_path.parent / "secret.env"
+        secret.write_bytes(b"JWT_SECRET_KEY=leaked")
+        with patch(
+            "app.modules.media.service.get_settings", return_value=fake_settings
+        ):
+            response = client.get("/api/v1/media/..%2Fsecret.env")
+        assert response.status_code == 404
+        assert b"JWT_SECRET_KEY=leaked" not in response.content
