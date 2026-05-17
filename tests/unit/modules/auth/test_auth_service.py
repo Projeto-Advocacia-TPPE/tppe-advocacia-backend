@@ -12,13 +12,14 @@ from app.modules.auth.schema import (
 )
 from app.modules.auth.service import AuthService
 from app.modules.email.fake_service import FakeEmailService
-from app.modules.users.model import Role, User
+from app.modules.users.model import User
 from app.shared.exceptions import (
     ExpiredResetTokenError,
     InactiveUserError,
     InvalidCredentialsError,
     InvalidResetTokenError,
 )
+from app.shared.types import Role
 
 
 def make_user(**kwargs) -> User:

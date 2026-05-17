@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.modules.articles.model import ArticleStatus
 from app.modules.articles.repository import ArticleRepository
-from app.modules.users.model import Role
 from app.modules.users.repository import UserRepository
+from app.shared.types import Role
 
 
 def make_user(db: Session, *, email="author@test.com"):

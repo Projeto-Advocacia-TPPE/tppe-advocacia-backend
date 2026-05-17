@@ -7,9 +7,10 @@ from sqlalchemy.orm import Session
 from app.config.settings import get_settings
 from app.main import app
 from app.modules.email.fake_service import FakeEmailService
-from app.modules.users.model import Role, User
+from app.modules.users.model import User
 from app.modules.users.repository import UserRepository
 from app.shared.email_deps import get_email_service
+from app.shared.types import Role
 
 app.dependency_overrides[get_email_service] = lambda: FakeEmailService()
 

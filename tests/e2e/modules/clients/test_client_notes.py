@@ -5,8 +5,9 @@ from sqlalchemy.orm import Session
 
 from app.modules.clients.model import Client, ClientNote
 from app.modules.clients.repository import ClientRepository
-from app.modules.users.model import Role, User
+from app.modules.users.model import User
 from app.modules.users.repository import UserRepository
+from app.shared.types import Role
 
 CLIENTS_URL = "/api/v1/clients"
 

@@ -5,7 +5,8 @@ import pytest
 
 from app.modules.audit_logs.model import AuditAction, AuditLog
 from app.modules.audit_logs.service import AuditLogService
-from app.modules.users.model import Role, User
+from app.modules.users.model import User
+from app.shared.types import Role
 
 
 def make_user(**kwargs) -> User:

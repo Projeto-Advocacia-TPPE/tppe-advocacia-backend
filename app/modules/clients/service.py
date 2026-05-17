@@ -6,7 +6,7 @@ from app.modules.clients.schema import (
     ClientNoteUpdate,
     ClientUpdate,
 )
-from app.modules.users.model import Role, User
+from app.modules.users.model import User
 from app.shared.exceptions import (
     ClientCnpjAlreadyExistsError,
     ClientCpfAlreadyExistsError,
@@ -14,6 +14,7 @@ from app.shared.exceptions import (
     ClientNotFoundError,
     ForbiddenError,
 )
+from app.shared.types import Role
 
 
 class ClientService:

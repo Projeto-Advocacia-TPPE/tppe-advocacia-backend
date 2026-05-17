@@ -1,7 +1,10 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, ValidationInfo, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_WEAK_JWT_SECRETS = {"your-secret-key", "change-me", "secret"}
+_MIN_JWT_SECRET_LENGTH = 32
 
 
 class Settings(BaseSettings):
@@ -48,6 +51,19 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
     )
+
+    @field_validator("jwt_secret_key")
+    @classmethod
+    def strong_jwt_secret(cls, jwt_secret_key: str, info: ValidationInfo) -> str:
+        if info.data.get("app_env") == "production" and (
+            len(jwt_secret_key) < _MIN_JWT_SECRET_LENGTH
+            or jwt_secret_key in _WEAK_JWT_SECRETS
+        ):
+            raise ValueError(
+                "JWT_SECRET_KEY must be at least "
+                f"{_MIN_JWT_SECRET_LENGTH} chars and not a known default in production"
+            )
+        return jwt_secret_key
 
     @property
     def database_url(self) -> str:

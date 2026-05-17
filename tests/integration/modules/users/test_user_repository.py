@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
-from app.modules.users.model import Role
 from app.modules.users.repository import UserRepository
+from app.shared.types import Role
 
 
 def make_user(

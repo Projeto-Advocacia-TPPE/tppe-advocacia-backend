@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.modules.email.protocol import EmailService
 from app.modules.users.controller import UserController
-from app.modules.users.model import Role, User
+from app.modules.users.model import User
 from app.modules.users.schema import UserCreate, UserRead, UserUpdate
 from app.shared.auth_deps import require_admin
 from app.shared.email_deps import get_email_service
@@ -15,6 +15,7 @@ from app.shared.responses import (
     ok,
     paginated,
 )
+from app.shared.types import Role
 
 router = APIRouter(prefix="/users", tags=["Users"])
 

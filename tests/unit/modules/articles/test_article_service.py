@@ -6,8 +6,8 @@ import pytest
 from app.modules.articles.model import ArticleStatus
 from app.modules.articles.schema import ArticleCreate, ArticleUpdate
 from app.modules.articles.service import ArticleService
-from app.modules.users.model import Role
 from app.shared.exceptions import ArticleNotFoundError
+from app.shared.types import Role
 
 
 def make_request(base="http://testserver"):

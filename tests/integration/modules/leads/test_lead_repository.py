@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.modules.leads.model import Lead, LeadStatus
 from app.modules.leads.repository import LeadRepository
-from app.modules.users.model import Role
 from app.modules.users.repository import UserRepository
+from app.shared.types import Role
 
 
 def make_lead(repo: LeadRepository, **kwargs) -> Lead:

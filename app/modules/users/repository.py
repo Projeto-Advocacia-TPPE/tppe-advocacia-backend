@@ -1,7 +1,8 @@
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.modules.users.model import Role, User
+from app.modules.users.model import User
+from app.shared.types import Role
 
 
 class UserRepository:
