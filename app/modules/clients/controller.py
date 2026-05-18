@@ -6,9 +6,13 @@ from app.modules.clients.schema import (
     ClientCreate,
     ClientNoteCreate,
     ClientNoteUpdate,
+    ClientTimelineRead,
     ClientUpdate,
 )
 from app.modules.clients.service import ClientService
+from app.modules.clients.timeline_repository import TimelineRepository
+from app.modules.clients.timeline_service import ClientTimelineService
+from app.modules.processes.repository import ProcessRepository
 from app.modules.users.model import User
 
 
@@ -54,4 +58,27 @@ class ClientController:
     ) -> ClientNote:
         return self.service.update_note(
             client_id, note_id, payload, current_user=current_user
+        )
+
+
+class ClientTimelineController:
+    def __init__(self, db: Session) -> None:
+        self.service = ClientTimelineService(
+            ClientRepository(db),
+            ProcessRepository(db),
+            TimelineRepository(db),
+        )
+
+    def get_timeline(
+        self,
+        client_id: int,
+        notes_limit: int = 10,
+        processes_limit: int = 20,
+        activity_limit: int = 20,
+    ) -> ClientTimelineRead:
+        return self.service.get_timeline(
+            client_id=client_id,
+            notes_limit=notes_limit,
+            processes_limit=processes_limit,
+            activity_limit=activity_limit,
         )

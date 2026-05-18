@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
-from app.modules.clients.controller import ClientController
+from app.modules.clients.controller import ClientController, ClientTimelineController
 from app.modules.clients.schema import (
     ClientCreate,
     ClientListItem,
@@ -10,6 +10,7 @@ from app.modules.clients.schema import (
     ClientNoteRead,
     ClientNoteUpdate,
     ClientRead,
+    ClientTimelineRead,
     ClientUpdate,
 )
 from app.modules.users.model import User
@@ -123,6 +124,30 @@ def list_notes(
 ) -> PaginatedResponse[ClientNoteRead]:
     items, total = ClientController(db).list_notes(client_id, page=page, limit=limit)
     return paginated(items, total=total, page=page, limit=limit)
+
+
+@router.get(
+    "/{client_id}/timeline",
+    response_model=SuccessResponse[ClientTimelineRead],
+    responses=error_responses(401, 404),
+    summary="Visão 360º do cliente: notas, processos e feed de atividades",
+)
+def get_client_timeline(
+    client_id: int,
+    notes_limit: int = Query(10, ge=1, le=50),
+    processes_limit: int = Query(20, ge=1, le=50),
+    activity_limit: int = Query(20, ge=1, le=50),
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_user),
+) -> SuccessResponse[ClientTimelineRead]:
+    return ok(
+        ClientTimelineController(db).get_timeline(
+            client_id,
+            notes_limit=notes_limit,
+            processes_limit=processes_limit,
+            activity_limit=activity_limit,
+        )
+    )
 
 
 @router.patch(

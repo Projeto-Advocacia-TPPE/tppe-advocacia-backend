@@ -116,6 +116,18 @@ class ClientRepository:
         )
         return notes, total
 
+    def list_recent_notes(self, client_id: int, limit: int) -> list[ClientNote]:
+        return list(
+            self.db.scalars(
+                self._note_query()
+                .where(ClientNote.client_id == client_id)
+                .order_by(ClientNote.created_at.desc(), ClientNote.id.desc())
+                .limit(limit)
+            )
+            .unique()
+            .all()
+        )
+
     def update_note(
         self, note: ClientNote, content: str, updated_by: int
     ) -> ClientNote:
