@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import func, or_, select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, aliased, joinedload
 
 from app.modules.processes.model import (
     MovementSource,
@@ -122,6 +122,35 @@ class ProcessRepository:
         self, client_id: int, page: int = 1, limit: int = 20
     ) -> tuple[list[Process], int]:
         return self.list(client_id=client_id, page=page, limit=limit)
+
+    def get_processes_with_last_movement(
+        self, client_id: int, limit: int
+    ) -> list[tuple[Process, ProcessMovement | None]]:
+        ranked = select(
+            ProcessMovement,
+            func.row_number()
+            .over(
+                partition_by=ProcessMovement.process_id,
+                order_by=[
+                    ProcessMovement.occurred_at.desc(),
+                    ProcessMovement.id.desc(),
+                ],
+            )
+            .label("rn"),
+        ).subquery()
+        latest_movement = select(ranked).where(ranked.c.rn == 1).subquery()
+        mov_alias = aliased(ProcessMovement, latest_movement)
+
+        stmt = (
+            select(Process, mov_alias)
+            .where(Process.client_id == client_id)
+            .outerjoin(mov_alias, mov_alias.process_id == Process.id)
+            .order_by(Process.created_at.desc(), Process.id.desc())
+            .limit(limit)
+        )
+
+        rows = self.db.execute(stmt).unique().all()
+        return [(row[0], row[1]) for row in rows]
 
     def _movement_query(self):
         return select(ProcessMovement).options(joinedload(ProcessMovement.creator))

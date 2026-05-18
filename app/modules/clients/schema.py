@@ -1,6 +1,9 @@
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, model_validator
+
+from app.modules.processes.model import MovementSource, ProcessStatus
 
 
 class ClientCreate(BaseModel):
@@ -101,3 +104,42 @@ class ClientNoteRead(BaseModel):
             "created_at": data.created_at,
             "updated_at": data.updated_at,
         }
+
+
+class MovementSummary(BaseModel):
+    id: int
+    title: str
+    occurred_at: datetime
+    source: MovementSource
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProcessSummary(BaseModel):
+    id: int
+    number: str
+    action_type: str
+    court: str
+    status: ProcessStatus
+    created_at: datetime
+    last_movement: MovementSummary | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class RecentActivityItem(BaseModel):
+    kind: Literal["movement", "client_note"]
+    process_id: int | None = None
+    note_id: int | None = None
+    title: str | None = None
+    content: str | None = None
+    occurred_at: datetime
+    actor_id: int | None = None
+    actor_name: str | None = None
+
+
+class ClientTimelineRead(BaseModel):
+    client: ClientRead
+    notes: list[ClientNoteRead]
+    processes: list[ProcessSummary]
+    recent_activity: list[RecentActivityItem]
