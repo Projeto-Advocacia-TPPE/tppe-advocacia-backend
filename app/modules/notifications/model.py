@@ -18,7 +18,9 @@ from app.shared.base_model import Base
 class NotificationPreference(Base):
     __tablename__ = "notification_preference"
     __table_args__ = (
-        UniqueConstraint("user_id", "event_type", name="uq_notification_pref_user_event"),
+        UniqueConstraint(
+            "user_id", "event_type", name="uq_notification_pref_user_event"
+        ),
         Index("ix_notification_pref_user_id", "user_id"),
     )
 
