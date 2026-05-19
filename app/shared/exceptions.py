@@ -148,6 +148,24 @@ class ClientNoteNotFoundError(AppException):
         )
 
 
+class ClientHasActiveProcessesError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_409_CONFLICT,
+            "CLIENT_HAS_ACTIVE_PROCESSES",
+            "Client has active or suspended processes and cannot be anonymized",
+        )
+
+
+class ConfirmationRequiredError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_400_BAD_REQUEST,
+            "CONFIRMATION_REQUIRED",
+            "This action is irreversible and requires explicit confirmation",
+        )
+
+
 class ProcessNotFoundError(AppException):
     def __init__(self) -> None:
         super().__init__(

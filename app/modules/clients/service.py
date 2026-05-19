@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+
+from app.modules.audit_logs.service import AuditLogService
 from app.modules.clients.model import Client, ClientNote
 from app.modules.clients.repository import ClientRepository
 from app.modules.clients.schema import (
@@ -6,10 +9,12 @@ from app.modules.clients.schema import (
     ClientNoteUpdate,
     ClientUpdate,
 )
+from app.modules.processes.repository import ProcessRepository
 from app.modules.users.model import User
 from app.shared.exceptions import (
     ClientCnpjAlreadyExistsError,
     ClientCpfAlreadyExistsError,
+    ClientHasActiveProcessesError,
     ClientNoteNotFoundError,
     ClientNotFoundError,
     ForbiddenError,
@@ -18,8 +23,15 @@ from app.shared.types import Role
 
 
 class ClientService:
-    def __init__(self, repository: ClientRepository) -> None:
+    def __init__(
+        self,
+        repository: ClientRepository,
+        process_repository: ProcessRepository | None = None,
+        audit: AuditLogService | None = None,
+    ) -> None:
         self.repository = repository
+        self.process_repository = process_repository
+        self.audit = audit
 
     def create_client(self, payload: ClientCreate, created_by: User) -> Client:
         if payload.cpf and self.repository.get_by_cpf(payload.cpf):
@@ -38,8 +50,9 @@ class ClientService:
             created_by=created_by.id,
         )
 
-    def get_client(self, client_id: int) -> Client:
-        client = self.repository.get_by_id(client_id)
+    def get_client(self, client_id: int, requester: User | None = None) -> Client:
+        is_admin = requester is not None and requester.role == Role.ADMIN
+        client = self.repository.get_by_id(client_id, include_deleted=is_admin)
 
         if client is None:
             raise ClientNotFoundError()
@@ -76,6 +89,39 @@ class ClientService:
 
         data["updated_by"] = updated_by.id
         return self.repository.update(client, data)
+
+    def anonymize(self, client_id: int, performed_by: User) -> Client:
+        if self.process_repository is None or self.audit is None:
+            raise RuntimeError(
+                "ClientService.anonymize requires process_repository and audit"
+            )
+
+        client = self.repository.get_by_id(client_id, include_deleted=False)
+        if client is None:
+            raise ClientNotFoundError()
+
+        active = self.process_repository.count_active_or_suspended_by_client(client_id)
+        if active > 0:
+            raise ClientHasActiveProcessesError()
+
+        original_name = client.name
+        now = datetime.now(timezone.utc)
+
+        try:
+            self.repository.anonymize_no_commit(client, anonymized_at=now)
+            self.audit.log_client_anonymized(
+                client_id=client.id,
+                client_name=original_name,
+                performed_by=performed_by,
+                commit=False,
+            )
+            self.repository.db.commit()
+        except Exception:
+            self.repository.db.rollback()
+            raise
+
+        self.repository.db.refresh(client)
+        return client
 
     def create_note(
         self, client_id: int, payload: ClientNoteCreate, current_user: User

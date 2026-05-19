@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -14,7 +14,8 @@ from app.modules.clients.schema import (
     ClientUpdate,
 )
 from app.modules.users.model import User
-from app.shared.auth_deps import get_current_user
+from app.shared.auth_deps import get_current_user, require_admin
+from app.shared.exceptions import ConfirmationRequiredError
 from app.shared.responses import (
     PaginatedResponse,
     SuccessResponse,
@@ -69,9 +70,9 @@ def list_clients(
 def get_client(
     client_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ClientRead]:
-    return ok(ClientController(db).get_client(client_id))
+    return ok(ClientController(db).get_client(client_id, requester=current_user))
 
 
 @router.patch(
@@ -89,6 +90,26 @@ def update_client(
     return ok(
         ClientController(db).update_client(client_id, payload, updated_by=current_user)
     )
+
+
+@router.delete(
+    "/{client_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses=error_responses(400, 401, 403, 404, 409),
+    summary="Anonimiza cliente (soft delete LGPD, admin only, exige ?confirm=true)",
+)
+def anonymize_client(
+    client_id: int,
+    confirm: bool = Query(
+        False, description="Deve ser true para confirmar a ação irreversível"
+    ),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+) -> Response:
+    if not confirm:
+        raise ConfirmationRequiredError()
+    ClientController(db).anonymize_client(client_id, performed_by=current_user)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post(
@@ -138,11 +159,12 @@ def get_client_timeline(
     processes_limit: int = Query(20, ge=1, le=50),
     activity_limit: int = Query(20, ge=1, le=50),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ClientTimelineRead]:
     return ok(
         ClientTimelineController(db).get_timeline(
             client_id,
+            requester=current_user,
             notes_limit=notes_limit,
             processes_limit=processes_limit,
             activity_limit=activity_limit,

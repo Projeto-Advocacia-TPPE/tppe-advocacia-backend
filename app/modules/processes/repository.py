@@ -123,6 +123,17 @@ class ProcessRepository:
     ) -> tuple[list[Process], int]:
         return self.list(client_id=client_id, page=page, limit=limit)
 
+    def count_active_or_suspended_by_client(self, client_id: int) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(Process)
+            .where(
+                Process.client_id == client_id,
+                Process.status.in_([ProcessStatus.ATIVO, ProcessStatus.SUSPENSO]),
+            )
+        )
+        return self.db.scalar(stmt) or 0
+
     def get_processes_with_last_movement(
         self, client_id: int, limit: int
     ) -> list[tuple[Process, ProcessMovement | None]]:

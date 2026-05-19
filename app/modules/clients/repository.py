@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
@@ -35,14 +37,21 @@ class ClientRepository:
         self.db.refresh(client)
         return client
 
-    def get_by_id(self, client_id: int) -> Client | None:
-        return self.db.scalars(select(Client).where(Client.id == client_id)).first()
+    def get_by_id(self, client_id: int, include_deleted: bool = False) -> Client | None:
+        stmt = select(Client).where(Client.id == client_id)
+        if not include_deleted:
+            stmt = stmt.where(Client.deleted_at.is_(None))
+        return self.db.scalars(stmt).first()
 
     def get_by_cpf(self, cpf: str) -> Client | None:
-        return self.db.scalars(select(Client).where(Client.cpf == cpf)).first()
+        return self.db.scalars(
+            select(Client).where(Client.cpf == cpf, Client.deleted_at.is_(None))
+        ).first()
 
     def get_by_cnpj(self, cnpj: str) -> Client | None:
-        return self.db.scalars(select(Client).where(Client.cnpj == cnpj)).first()
+        return self.db.scalars(
+            select(Client).where(Client.cnpj == cnpj, Client.deleted_at.is_(None))
+        ).first()
 
     def list(
         self,
@@ -50,7 +59,7 @@ class ClientRepository:
         page: int = 1,
         limit: int = 20,
     ) -> tuple[list[Client], int]:
-        base = select(Client)
+        base = select(Client).where(Client.deleted_at.is_(None))
 
         if search:
             base = base.where(
@@ -95,18 +104,25 @@ class ClientRepository:
             self._note_query().where(
                 ClientNote.id == note_id,
                 ClientNote.client_id == client_id,
+                ClientNote.deleted_at.is_(None),
             )
         ).first()
 
     def list_notes_by_client(
         self, client_id: int, page: int = 1, limit: int = 20
     ) -> tuple[list[ClientNote], int]:
-        base = select(ClientNote).where(ClientNote.client_id == client_id)
+        base = select(ClientNote).where(
+            ClientNote.client_id == client_id,
+            ClientNote.deleted_at.is_(None),
+        )
         total = self.db.scalar(select(func.count()).select_from(base.subquery())) or 0
         notes = list(
             self.db.scalars(
                 self._note_query()
-                .where(ClientNote.client_id == client_id)
+                .where(
+                    ClientNote.client_id == client_id,
+                    ClientNote.deleted_at.is_(None),
+                )
                 .order_by(ClientNote.created_at.desc(), ClientNote.id.desc())
                 .offset((page - 1) * limit)
                 .limit(limit)
@@ -120,13 +136,46 @@ class ClientRepository:
         return list(
             self.db.scalars(
                 self._note_query()
-                .where(ClientNote.client_id == client_id)
+                .where(
+                    ClientNote.client_id == client_id,
+                    ClientNote.deleted_at.is_(None),
+                )
                 .order_by(ClientNote.created_at.desc(), ClientNote.id.desc())
                 .limit(limit)
             )
             .unique()
             .all()
         )
+
+    def list_all_notes_by_client(self, client_id: int) -> list[ClientNote]:
+        return list(
+            self.db.scalars(
+                select(ClientNote).where(ClientNote.client_id == client_id)
+            ).all()
+        )
+
+    def anonymize_no_commit(
+        self,
+        client: Client,
+        anonymized_at: datetime,
+        placeholder: str = "[ANONIMIZADO]",
+    ) -> Client:
+        client.name = placeholder
+        client.email = None
+        client.phone = None
+        client.cpf = None
+        client.cnpj = None
+        client.address = None
+        client.deleted_at = anonymized_at
+
+        for note in self.list_all_notes_by_client(client.id):
+            if note.deleted_at is not None:
+                continue
+            note.content = placeholder
+            note.deleted_at = anonymized_at
+
+        self.db.flush()
+        return client
 
     def update_note(
         self, note: ClientNote, content: str, updated_by: int

@@ -10,10 +10,12 @@ class AuditLogRead(BaseModel):
     action: AuditAction
     performed_by_id: int | None
     performed_by_name: str | None
-    target_user_id: int
-    target_user_name: str
-    target_user_email: str
-    target_user_role: str
+    target_user_id: int | None
+    target_user_name: str | None
+    target_user_email: str | None
+    target_user_role: str | None
+    target_client_id: int | None
+    target_client_name: str | None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
