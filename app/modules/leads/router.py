@@ -2,11 +2,13 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.modules.email.protocol import EmailService
 from app.modules.leads.controller import LeadController
 from app.modules.leads.model import LeadStatus
 from app.modules.leads.schema import LeadCreate, LeadRead, LeadUpdate
 from app.modules.users.model import User
 from app.shared.auth_deps import require_admin
+from app.shared.email_deps import get_email_service
 from app.shared.responses import (
     PaginatedResponse,
     SuccessResponse,
@@ -61,6 +63,11 @@ def update_lead(
     lead_id: int,
     payload: LeadUpdate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_admin),
+    email: EmailService = Depends(get_email_service),
+    current_user: User = Depends(require_admin),
 ) -> SuccessResponse[LeadRead]:
-    return ok(LeadController(db).update_lead(lead_id, payload))
+    return ok(
+        LeadController(db, email).update_lead(
+            lead_id, payload, current_user=current_user
+        )
+    )
