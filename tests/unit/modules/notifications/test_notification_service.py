@@ -161,3 +161,18 @@ class TestNotify:
         service.notify(1, EventType.LEAD_ASSIGNED, {})
 
         email.send.assert_not_called()
+
+    def test_swallows_user_lookup_failure(self, service, repo, users, email):
+        users.get_by_id.side_effect = RuntimeError("db down")
+
+        service.notify(1, EventType.LEAD_ASSIGNED, {})
+
+        email.send.assert_not_called()
+
+    def test_swallows_preferences_lookup_failure(self, service, repo, users, email):
+        users.get_by_id.return_value = make_user()
+        repo.get_by_user.side_effect = RuntimeError("db down")
+
+        service.notify(1, EventType.LEAD_ASSIGNED, {})
+
+        email.send.assert_not_called()
