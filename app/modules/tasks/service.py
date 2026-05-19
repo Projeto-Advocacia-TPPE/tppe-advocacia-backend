@@ -52,7 +52,7 @@ class TaskService:
         )
 
         if task.assigned_to is not None:
-            self._notify_assignee(task)
+            self._notify_assignee(task, actor_id=created_by.id)
         return task
 
     def get_task(self, task_id: int) -> Task:
@@ -99,7 +99,7 @@ class TaskService:
             and new_assignee is not None
             and new_assignee != old_assignee
         ):
-            self._notify_assignee(updated)
+            self._notify_assignee(updated, actor_id=updated_by.id)
 
         return updated
 
@@ -131,7 +131,9 @@ class TaskService:
         if process_id is not None and self.processes.get_by_id(process_id) is None:
             raise TaskProcessNotFoundError()
 
-    def _notify_assignee(self, task: Task) -> None:
+    def _notify_assignee(self, task: Task, actor_id: int | None) -> None:
+        if task.assigned_to is None or task.assigned_to == actor_id:
+            return
         self.notifications.notify(
             user_id=task.assigned_to,
             event_type=EventType.TASK_ASSIGNED,

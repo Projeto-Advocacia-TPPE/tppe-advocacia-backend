@@ -144,6 +144,19 @@ class TestCreateTask:
         service.create_task(TaskCreate(title="X"), created_by=make_user())
         notifications.notify.assert_not_called()
 
+    def test_does_not_notify_when_self_assigned(
+        self, service, repo, users, notifications
+    ):
+        users.get_by_id.return_value = MagicMock()
+        repo.create.return_value = make_task(assigned_to=10)
+
+        service.create_task(
+            TaskCreate(title="X", assigned_to=10),
+            created_by=make_user(id=10),
+        )
+
+        notifications.notify.assert_not_called()
+
 
 class TestGetTask:
     def test_returns_task(self, service, repo):
@@ -188,6 +201,19 @@ class TestUpdateTask:
         repo.update.return_value = new
 
         service.update_task(1, TaskUpdate(assigned_to=None), updated_by=make_user())
+
+        notifications.notify.assert_not_called()
+
+    def test_does_not_notify_when_self_assign_on_update(
+        self, service, repo, users, notifications
+    ):
+        users.get_by_id.return_value = MagicMock()
+        old = make_task(assigned_to=None)
+        new = make_task(assigned_to=42)
+        repo.get_by_id.return_value = old
+        repo.update.return_value = new
+
+        service.update_task(1, TaskUpdate(assigned_to=42), updated_by=make_user(id=42))
 
         notifications.notify.assert_not_called()
 

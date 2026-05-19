@@ -131,6 +131,8 @@ Leads com o mesmo e-mail enviados dentro da janela configurada (`LEAD_DEDUP_WIND
 
 Atualiza o status ou o responsável de um lead. Todos os campos são opcionais.
 
+> Quando `assigned_to` muda para um novo responsável diferente do próprio usuário que faz a chamada, é disparada notificação `LEAD_ASSIGNED` (ver seção [Notifications](#notifications) — respeita preferência do destinatário; falha de e-mail não bloqueia a operação).
+
 > Exige autenticação com role `ADMIN`.
 > Header obrigatório: `Authorization: Bearer <token>`
 
@@ -1549,6 +1551,8 @@ Mesmo formato de `GET /api/v1/processes`.
 
 Registra uma movimentação manual no processo. Movimentações são imutáveis — tentativas de `PATCH`/`DELETE` retornam 405.
 
+> Dispara notificação `PROCESS_MOVEMENT_CREATED` para usuários vinculados ao processo (atualmente: `created_by`), exceto o próprio autor da movimentação. Respeita as preferências do destinatário; falha de e-mail não bloqueia a criação.
+
 **Body**
 
 ```json
@@ -1654,6 +1658,8 @@ Lista movimentações do processo em ordem cronológica decrescente (`occurred_a
 ### `PATCH /api/v1/processes/{process_id}/status`
 
 Altera o status do processo e registra automaticamente uma movimentação `SYSTEM` na timeline. Toda transição entre os 4 valores é permitida (sem máquina de estados rígida). A atualização do processo e a criação da movimentação ocorrem na mesma transação — se uma falhar, nenhuma persiste.
+
+> Dispara notificação `PROCESS_STATUS_CHANGED` para usuários vinculados ao processo (atualmente: `created_by`), exceto quem executou a alteração. Respeita preferências; falha de e-mail não bloqueia a alteração.
 
 **Body**
 
@@ -1811,6 +1817,24 @@ Lista anotações internas do processo em ordem cronológica decrescente (`creat
 
 Tipos de evento suportados: `PROCESS_MOVEMENT_CREATED`, `PROCESS_STATUS_CHANGED`, `LEAD_ASSIGNED`, `TASK_ASSIGNED`.
 Default para qualquer evento sem registro explícito é `true` (notificação habilitada).
+
+**Regras de disparo:**
+
+- O usuário que causou o evento (criador da movimentação, autor da mudança de status, quem fez a atribuição) **não** recebe notificação por essa ação.
+- Falhas no envio (preferências indisponíveis, e-mail caiu, template inválido) são engolidas e logadas — **nunca** bloqueiam a operação principal (criar movimentação, alterar status, etc.).
+- Os disparos acontecem após o commit da operação principal. Não há rollback de DB causado por falha de notificação.
+
+**Endpoints que disparam:**
+
+| Endpoint                                       | Evento                       | Destinatários atuais                  |
+| ---------------------------------------------- | ---------------------------- | ------------------------------------- |
+| `POST /processes`                              | `PROCESS_MOVEMENT_CREATED`*  | `process.created_by`                  |
+| `POST /processes/{id}/movements`               | `PROCESS_MOVEMENT_CREATED`   | `process.created_by`                  |
+| `PATCH /processes/{id}/status`                 | `PROCESS_STATUS_CHANGED`     | `process.created_by`                  |
+| `PATCH /leads/{id}` (mudou `assigned_to`)      | `LEAD_ASSIGNED`              | novo `assigned_to`                    |
+| `POST /tasks` / `PATCH /tasks/{id}`            | `TASK_ASSIGNED`              | `assigned_to` quando definido/alterado |
+
+\* Como o próprio criador é o autor, na prática ninguém é notificado pela movimentação inicial — o disparo fica em pé para o futuro (ex.: quando houver "responsável pelo processo" diferente do criador).
 
 ---
 

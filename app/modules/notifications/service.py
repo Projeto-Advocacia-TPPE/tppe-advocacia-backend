@@ -31,24 +31,24 @@ class NotificationService:
         return self.get_preferences(user_id)
 
     def notify(self, user_id: int, event_type: EventType, payload: dict) -> None:
-        user = self.users.get_by_id(user_id)
-        if user is None or not user.is_active:
-            return
-
-        if not self.get_preferences(user_id)[event_type]:
-            return
-
-        renderer = TEMPLATES.get(event_type)
-        if renderer is None:
-            logger.warning("No template registered for event %s", event_type)
-            return
-
         try:
+            user = self.users.get_by_id(user_id)
+            if user is None or not user.is_active:
+                return
+
+            if not self.get_preferences(user_id)[event_type]:
+                return
+
+            renderer = TEMPLATES.get(event_type)
+            if renderer is None:
+                logger.warning("No template registered for event %s", event_type)
+                return
+
             subject, html = renderer(payload)
             self.email.send(to=user.email, subject=subject, html=html)
         except Exception:
             logger.exception(
-                "Failed to send notification email user_id=%s event=%s",
+                "Failed to send notification user_id=%s event=%s",
                 user_id,
                 event_type,
             )

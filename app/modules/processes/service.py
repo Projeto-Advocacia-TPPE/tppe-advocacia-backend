@@ -3,6 +3,8 @@ from datetime import datetime, timezone
 from sqlalchemy.exc import IntegrityError
 
 from app.modules.clients.repository import ClientRepository
+from app.modules.notifications.schema import EventType
+from app.modules.notifications.service import NotificationService
 from app.modules.processes.model import (
     MovementSource,
     Process,
@@ -17,6 +19,7 @@ from app.modules.processes.schema import (
     ProcessNoteCreate,
     ProcessNoteUpdate,
     ProcessStatusChange,
+    format_cnj,
 )
 from app.modules.users.model import User
 from app.shared.exceptions import (
@@ -33,10 +36,14 @@ from app.shared.types import Role
 
 class ProcessService:
     def __init__(
-        self, repository: ProcessRepository, client_repository: ClientRepository
+        self,
+        repository: ProcessRepository,
+        client_repository: ClientRepository,
+        notifications: NotificationService | None = None,
     ) -> None:
         self.repository = repository
         self.client_repository = client_repository
+        self.notifications = notifications
 
     def create_process(self, payload: ProcessCreate, created_by: User) -> Process:
         if (
@@ -54,7 +61,7 @@ class ProcessService:
                 opposing_party=payload.opposing_party,
                 created_by=created_by.id,
             )
-            self.repository.create_movement_no_commit(
+            initial_movement = self.repository.create_movement_no_commit(
                 process_id=process.id,
                 title="Processo cadastrado",
                 description=None,
@@ -67,7 +74,9 @@ class ProcessService:
             self.repository.db.rollback()
             raise ProcessNumberAlreadyExistsError() from exc
 
-        return self.repository.reload_with_client(process.id)
+        refreshed = self.repository.reload_with_client(process.id)
+        self._notify_movement(refreshed, initial_movement, actor_id=created_by.id)
+        return refreshed
 
     def get_process(self, process_id: int) -> Process:
         process = self.repository.get_by_id(process_id)
@@ -103,9 +112,9 @@ class ProcessService:
     def create_movement(
         self, process_id: int, payload: MovementCreate, created_by: User
     ) -> ProcessMovement:
-        self.get_process(process_id)
+        process = self.get_process(process_id)
         occurred_at = payload.occurred_at or datetime.now(timezone.utc)
-        return self.repository.create_movement(
+        movement = self.repository.create_movement(
             process_id=process_id,
             title=payload.title,
             description=payload.description,
@@ -113,6 +122,8 @@ class ProcessService:
             source=MovementSource.MANUAL,
             created_by=created_by.id,
         )
+        self._notify_movement(process, movement, actor_id=created_by.id)
+        return movement
 
     def create_system_movement(
         self,
@@ -121,8 +132,8 @@ class ProcessService:
         description: str | None = None,
         created_by: int | None = None,
     ) -> ProcessMovement:
-        self.get_process(process_id)
-        return self.repository.create_movement(
+        process = self.get_process(process_id)
+        movement = self.repository.create_movement(
             process_id=process_id,
             title=title,
             description=description,
@@ -130,6 +141,8 @@ class ProcessService:
             source=MovementSource.SYSTEM,
             created_by=created_by,
         )
+        self._notify_movement(process, movement, actor_id=created_by)
+        return movement
 
     def change_status(
         self,
@@ -162,6 +175,13 @@ class ProcessService:
 
         refreshed = self.repository.reload_with_client(process.id)
         reloaded_movement = self.repository.reload_movement(movement.id)
+        self._notify_status_change(
+            refreshed,
+            actor_id=current_user.id,
+            previous=previous,
+            new_status=payload.status,
+            reason=payload.reason,
+        )
         return refreshed, reloaded_movement
 
     def create_note(
@@ -223,3 +243,61 @@ class ProcessService:
             page=page,
             limit=limit,
         )
+
+    def _recipients_for(self, process: Process) -> set[int]:
+        recipients: set[int] = set()
+        if process.created_by is not None:
+            recipients.add(process.created_by)
+        return recipients
+
+    def _notify_movement(
+        self,
+        process: Process,
+        movement: ProcessMovement,
+        actor_id: int | None,
+    ) -> None:
+        if self.notifications is None:
+            return
+        payload = {
+            "process_id": process.id,
+            "process_number": format_cnj(process.number),
+            "title": movement.title,
+            "description": movement.description,
+            "occurred_at": movement.occurred_at.isoformat()
+            if movement.occurred_at
+            else None,
+        }
+        for user_id in self._recipients_for(process):
+            if user_id == actor_id:
+                continue
+            self.notifications.notify(
+                user_id=user_id,
+                event_type=EventType.PROCESS_MOVEMENT_CREATED,
+                payload=payload,
+            )
+
+    def _notify_status_change(
+        self,
+        process: Process,
+        actor_id: int | None,
+        previous: ProcessStatus,
+        new_status: ProcessStatus,
+        reason: str | None,
+    ) -> None:
+        if self.notifications is None:
+            return
+        payload = {
+            "process_id": process.id,
+            "process_number": format_cnj(process.number),
+            "previous_status": previous.value,
+            "new_status": new_status.value,
+            "reason": reason,
+        }
+        for user_id in self._recipients_for(process):
+            if user_id == actor_id:
+                continue
+            self.notifications.notify(
+                user_id=user_id,
+                event_type=EventType.PROCESS_STATUS_CHANGED,
+                payload=payload,
+            )
