@@ -65,14 +65,25 @@ class TestCreateTask:
         assert response.status_code == 422
 
     def test_dispatches_notification_when_assigned(
-        self, client, user_headers, active_user, fake_email
+        self, client, user_headers, admin_user, fake_email
     ):
         client.post(
             TASKS_URL,
-            json={"title": "Atribuída", "assigned_to": active_user["id"]},
+            json={"title": "Atribuída", "assigned_to": admin_user["id"]},
             headers=user_headers,
         )
         assert any("Atribuída" in m["subject"] for m in fake_email.sent)
+
+    def test_self_assignment_does_not_notify(
+        self, client, user_headers, active_user, fake_email
+    ):
+        fake_email.sent.clear()
+        client.post(
+            TASKS_URL,
+            json={"title": "Pra mim", "assigned_to": active_user["id"]},
+            headers=user_headers,
+        )
+        assert fake_email.sent == []
 
 
 class TestListTasks:
@@ -132,7 +143,7 @@ class TestUpdateTask:
         assert response.json()["data"]["title"] == "Renomeado"
 
     def test_changing_assignee_dispatches_notification(
-        self, client, user_headers, active_user, fake_email
+        self, client, user_headers, admin_user, fake_email
     ):
         created = client.post(
             TASKS_URL, json={"title": "X"}, headers=user_headers
@@ -141,7 +152,7 @@ class TestUpdateTask:
 
         client.patch(
             f"{TASKS_URL}/{created['id']}",
-            json={"assigned_to": active_user["id"]},
+            json={"assigned_to": admin_user["id"]},
             headers=user_headers,
         )
 
