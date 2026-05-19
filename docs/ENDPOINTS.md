@@ -1884,3 +1884,318 @@ Edita o conteúdo de uma anotação. Apenas o autor original pode editar; usuár
 | 404    | `PROCESS_NOT_FOUND`      | Processo não encontrado                               |
 | 404    | `PROCESS_NOTE_NOT_FOUND` | Anotação não encontrada ou não pertence ao processo   |
 | 422    | `VALIDATION_ERROR`       | `content` ausente, vazio ou > 5000 caracteres         |
+
+---
+
+## Tasks
+
+> Todos os endpoints exigem autenticação (qualquer role).
+> Header obrigatório: `Authorization: Bearer <token>`
+
+Cada tarefa pertence a uma coluna (`status`) e possui um `order` inteiro que determina a posição na coluna do Kanban. A reordenação é atômica: ao mover ou alterar o `status`, o backend renumera as tarefas afetadas em uma única transação para manter a sequência sem buracos.
+
+- Status disponíveis: `TODO`, `IN_PROGRESS`, `BLOCKED`, `DONE`
+- Prioridades disponíveis: `LOW`, `MEDIUM`, `HIGH`
+- O campo `completed_at` é preenchido automaticamente quando o status passa para `DONE` e limpo quando sai de `DONE`
+- Alterar o `assigned_to` (na criação ou em atualização) dispara a notificação `TASK_ASSIGNED` ao novo responsável (respeita preferência de notificação do usuário — ver seção [Notifications](#notifications))
+
+---
+
+### `POST /api/v1/tasks`
+
+Cria uma nova tarefa. A tarefa pode ser vinculada a um cliente, a um processo ou ficar avulsa.
+
+**Body**
+
+```json
+{
+  "title": "Revisar contrato de prestação de serviços",
+  "description": "Conferir cláusulas 4 e 7 antes da assinatura.",
+  "due_date": "2026-05-30T17:00:00Z",
+  "priority": "HIGH",
+  "assigned_to": 5,
+  "client_id": 7,
+  "process_id": 12
+}
+```
+
+> Apenas `title` é obrigatório. `priority` default é `MEDIUM`. `status` inicial é sempre `TODO`. O `order` é atribuído automaticamente como o próximo valor disponível na coluna `TODO`.
+
+**Resposta 201**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "Revisar contrato de prestação de serviços",
+    "description": "Conferir cláusulas 4 e 7 antes da assinatura.",
+    "due_date": "2026-05-30T17:00:00Z",
+    "priority": "HIGH",
+    "status": "TODO",
+    "order": 0,
+    "assigned_to": 5,
+    "assigned_to_name": "Ana Lima",
+    "client_id": 7,
+    "process_id": 12,
+    "created_by": 3,
+    "created_by_name": "Carlos Souza",
+    "updated_by": 3,
+    "completed_at": null,
+    "created_at": "2026-05-19T12:00:00Z",
+    "updated_at": "2026-05-19T12:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                   | Situação                                              |
+| ------ | ---------------------- | ----------------------------------------------------- |
+| 401    | `UNAUTHORIZED`         | Token ausente ou inválido                             |
+| 422    | `ASSIGNEE_NOT_FOUND`   | `assigned_to` informado não existe                    |
+| 422    | `TASK_CLIENT_NOT_FOUND`| `client_id` informado não existe                      |
+| 422    | `TASK_PROCESS_NOT_FOUND`| `process_id` informado não existe                    |
+| 422    | `VALIDATION_ERROR`     | `title` ausente, vazio ou > 150 caracteres            |
+
+---
+
+### `GET /api/v1/tasks`
+
+Lista tarefas com filtros e paginação. Ordenado por `status, order, id` para suportar a renderização direta de um quadro Kanban.
+
+**Query params**
+
+| Parâmetro        | Tipo                                                | Obrigatório | Descrição                                            |
+| ---------------- | --------------------------------------------------- | ----------- | ---------------------------------------------------- |
+| `assigned_to`    | `integer`                                           | Não         | Filtra por responsável                               |
+| `status`         | `TODO` \| `IN_PROGRESS` \| `BLOCKED` \| `DONE`      | Não         | Filtra por coluna do Kanban                          |
+| `priority`       | `LOW` \| `MEDIUM` \| `HIGH`                         | Não         | Filtra por prioridade                                |
+| `client_id`      | `integer`                                           | Não         | Filtra por cliente vinculado                         |
+| `process_id`     | `integer`                                           | Não         | Filtra por processo vinculado                        |
+| `due_date_from`  | `datetime` ISO 8601                                 | Não         | Limite inferior (inclusive) para `due_date`          |
+| `due_date_to`    | `datetime` ISO 8601                                 | Não         | Limite superior (inclusive) para `due_date`          |
+| `page`           | `integer` (≥ 1)                                     | Não         | Página atual (default: `1`)                          |
+| `limit`          | `integer` (1–100)                                   | Não         | Itens por página (default: `20`)                     |
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "title": "Revisar contrato de prestação de serviços",
+      "description": "Conferir cláusulas 4 e 7 antes da assinatura.",
+      "due_date": "2026-05-30T17:00:00Z",
+      "priority": "HIGH",
+      "status": "TODO",
+      "order": 0,
+      "assigned_to": 5,
+      "assigned_to_name": "Ana Lima",
+      "client_id": 7,
+      "process_id": 12,
+      "created_by": 3,
+      "created_by_name": "Carlos Souza",
+      "updated_by": 3,
+      "completed_at": null,
+      "created_at": "2026-05-19T12:00:00Z",
+      "updated_at": "2026-05-19T12:00:00Z"
+    }
+  ],
+  "meta": {
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "pages": 1
+  }
+}
+```
+
+**Erros**
+
+| Status | Code           | Situação                  |
+| ------ | -------------- | ------------------------- |
+| 401    | `UNAUTHORIZED` | Token ausente ou inválido |
+
+---
+
+### `GET /api/v1/tasks/{task_id}`
+
+Retorna os dados completos de uma tarefa.
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "Revisar contrato de prestação de serviços",
+    "description": "Conferir cláusulas 4 e 7 antes da assinatura.",
+    "due_date": "2026-05-30T17:00:00Z",
+    "priority": "HIGH",
+    "status": "TODO",
+    "order": 0,
+    "assigned_to": 5,
+    "assigned_to_name": "Ana Lima",
+    "client_id": 7,
+    "process_id": 12,
+    "created_by": 3,
+    "created_by_name": "Carlos Souza",
+    "updated_by": 3,
+    "completed_at": null,
+    "created_at": "2026-05-19T12:00:00Z",
+    "updated_at": "2026-05-19T12:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code              | Situação                  |
+| ------ | ----------------- | ------------------------- |
+| 401    | `UNAUTHORIZED`    | Token ausente ou inválido |
+| 404    | `TASK_NOT_FOUND`  | Tarefa não encontrada     |
+
+---
+
+### `PATCH /api/v1/tasks/{task_id}`
+
+Atualização parcial. Aceita qualquer subconjunto dos campos editáveis (`title`, `description`, `due_date`, `priority`, `status`, `assigned_to`, `client_id`, `process_id`).
+
+> Para reposicionar a tarefa dentro de uma coluna ou movê-la entre colunas com `order` explícito, prefira o endpoint dedicado [`PATCH /api/v1/tasks/{task_id}/move`](#patch-apiv1taskstask_idmove).
+
+Comportamentos especiais:
+
+- Alterar `status` via este endpoint move a tarefa para o **fim** da nova coluna e renumera a coluna de origem; `completed_at` é ajustado automaticamente quando o destino é `DONE`.
+- Alterar `assigned_to` para um novo responsável dispara a notificação `TASK_ASSIGNED`.
+- Campos não enviados permanecem inalterados. Campos extras são rejeitados (`extra="forbid"`).
+
+**Body (exemplo)**
+
+```json
+{
+  "title": "Revisar contrato — urgência aumentada",
+  "priority": "HIGH",
+  "assigned_to": 8
+}
+```
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "Revisar contrato — urgência aumentada",
+    "description": "Conferir cláusulas 4 e 7 antes da assinatura.",
+    "due_date": "2026-05-30T17:00:00Z",
+    "priority": "HIGH",
+    "status": "TODO",
+    "order": 0,
+    "assigned_to": 8,
+    "assigned_to_name": "Marcos Diniz",
+    "client_id": 7,
+    "process_id": 12,
+    "created_by": 3,
+    "created_by_name": "Carlos Souza",
+    "updated_by": 3,
+    "completed_at": null,
+    "created_at": "2026-05-19T12:00:00Z",
+    "updated_at": "2026-05-19T13:10:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                     | Situação                                              |
+| ------ | ------------------------ | ----------------------------------------------------- |
+| 401    | `UNAUTHORIZED`           | Token ausente ou inválido                             |
+| 404    | `TASK_NOT_FOUND`         | Tarefa não encontrada                                 |
+| 422    | `ASSIGNEE_NOT_FOUND`     | `assigned_to` informado não existe                    |
+| 422    | `TASK_CLIENT_NOT_FOUND`  | `client_id` informado não existe                      |
+| 422    | `TASK_PROCESS_NOT_FOUND` | `process_id` informado não existe                     |
+| 422    | `VALIDATION_ERROR`       | Body inválido, campo desconhecido ou valor fora dos limites |
+
+---
+
+### `PATCH /api/v1/tasks/{task_id}/move`
+
+Move uma tarefa para um destino específico no Kanban, informando `status` (coluna) e `order` (posição). A reordenação das tarefas afetadas — na coluna de origem e na de destino — acontece em uma única transação.
+
+Regras de reordenação:
+
+- **Mesma coluna (`status` igual ao atual)**: as demais tarefas entre a posição antiga e a nova são deslocadas para preencher o intervalo, sem buracos.
+- **Coluna diferente**: a coluna de origem é renumerada (tarefas com `order` maior que o antigo são decrementadas) e a coluna de destino abre espaço a partir do `order` informado (tarefas com `order` ≥ ao novo são incrementadas).
+- Se o `order` informado exceder o tamanho da coluna de destino, é truncado para o final da coluna.
+- Mover para `DONE` preenche `completed_at` automaticamente; mover de `DONE` para qualquer outro status limpa o campo.
+
+**Body**
+
+```json
+{
+  "status": "IN_PROGRESS",
+  "order": 0
+}
+```
+
+> `status` deve ser um valor válido do enum `TaskStatus`. `order` deve ser ≥ 0.
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "Revisar contrato de prestação de serviços",
+    "description": "Conferir cláusulas 4 e 7 antes da assinatura.",
+    "due_date": "2026-05-30T17:00:00Z",
+    "priority": "HIGH",
+    "status": "IN_PROGRESS",
+    "order": 0,
+    "assigned_to": 5,
+    "assigned_to_name": "Ana Lima",
+    "client_id": 7,
+    "process_id": 12,
+    "created_by": 3,
+    "created_by_name": "Carlos Souza",
+    "updated_by": 3,
+    "completed_at": null,
+    "created_at": "2026-05-19T12:00:00Z",
+    "updated_at": "2026-05-19T14:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code               | Situação                                           |
+| ------ | ------------------ | -------------------------------------------------- |
+| 401    | `UNAUTHORIZED`     | Token ausente ou inválido                          |
+| 404    | `TASK_NOT_FOUND`   | Tarefa não encontrada                              |
+| 422    | `VALIDATION_ERROR` | `status` inválido ou `order` negativo              |
+
+---
+
+### `DELETE /api/v1/tasks/{task_id}`
+
+Remove uma tarefa e renumera a coluna em que ela estava para manter a sequência sem buracos.
+
+> Somente o **criador** da tarefa (`created_by`) ou um usuário com role `ADMIN` pode excluir.
+
+**Resposta 204**
+
+Sem corpo.
+
+**Erros**
+
+| Status | Code             | Situação                                                  |
+| ------ | ---------------- | --------------------------------------------------------- |
+| 401    | `UNAUTHORIZED`   | Token ausente ou inválido                                 |
+| 403    | `FORBIDDEN`      | Usuário não é o criador nem ADMIN                         |
+| 404    | `TASK_NOT_FOUND` | Tarefa não encontrada                                     |

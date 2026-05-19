@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.config.settings import get_settings
 from app.main import app
 from app.modules.email.fake_service import FakeEmailService
+from app.modules.tasks.model import Task
 from app.modules.users.model import User
 from app.modules.users.repository import UserRepository
 from app.shared.email_deps import get_email_service
@@ -47,6 +48,19 @@ def _hash(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
+def _teardown_user(db_session: Session, user_id: int) -> None:
+    db_session.rollback()
+    db_session.execute(
+        delete(Task).where(
+            (Task.created_by == user_id)
+            | (Task.updated_by == user_id)
+            | (Task.assigned_to == user_id)
+        )
+    )
+    db_session.execute(delete(User).where(User.id == user_id))
+    db_session.commit()
+
+
 @pytest.fixture
 def active_user(db_session):
     password = "Valid@1234"
@@ -57,8 +71,7 @@ def active_user(db_session):
         role=Role.USER,
     )
     yield {"id": user.id, "email": user.email, "password": password}
-    db_session.execute(delete(User).where(User.id == user.id))
-    db_session.commit()
+    _teardown_user(db_session, user.id)
 
 
 @pytest.fixture
@@ -73,8 +86,7 @@ def inactive_user(db_session):
     )
     repo.update(user, {"is_active": False})
     yield {"id": user.id, "email": user.email, "password": password}
-    db_session.execute(delete(User).where(User.id == user.id))
-    db_session.commit()
+    _teardown_user(db_session, user.id)
 
 
 @pytest.fixture
@@ -87,8 +99,7 @@ def admin_user(db_session):
         role=Role.ADMIN,
     )
     yield {"id": user.id, "email": user.email, "password": password}
-    db_session.execute(delete(User).where(User.id == user.id))
-    db_session.commit()
+    _teardown_user(db_session, user.id)
 
 
 @pytest.fixture

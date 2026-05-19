@@ -189,3 +189,26 @@ class ProcessStatusUnchangedError(AppException):
             "PROCESS_STATUS_UNCHANGED",
             "Process is already in the requested status",
         )
+
+
+class TaskNotFoundError(AppException):
+    def __init__(self) -> None:
+        super().__init__(status.HTTP_404_NOT_FOUND, "TASK_NOT_FOUND", "Task not found")
+
+
+class TaskClientNotFoundError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "TASK_CLIENT_NOT_FOUND",
+            "Referenced client does not exist",
+        )
+
+
+class TaskProcessNotFoundError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "TASK_PROCESS_NOT_FOUND",
+            "Referenced process does not exist",
+        )

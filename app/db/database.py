@@ -37,6 +37,7 @@ def init_db() -> None:
     from app.modules.notifications.model import NotificationPreference  # noqa: F401
     from app.modules.office_config.model import OfficeConfig  # noqa: F401
     from app.modules.processes.model import Process  # noqa: F401
+    from app.modules.tasks.model import Task  # noqa: F401
     from app.modules.users.model import User  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
