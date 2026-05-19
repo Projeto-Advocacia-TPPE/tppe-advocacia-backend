@@ -70,6 +70,16 @@ def service(repo, client_repo):
     svc = ProcessService.__new__(ProcessService)
     svc.repository = repo
     svc.client_repository = client_repo
+    svc.notifications = None
+    return svc
+
+
+@pytest.fixture
+def service_with_notifications(repo, client_repo):
+    svc = ProcessService.__new__(ProcessService)
+    svc.repository = repo
+    svc.client_repository = client_repo
+    svc.notifications = MagicMock()
     return svc
 
 
@@ -519,3 +529,100 @@ class TestUpdateNote:
             service.update_note(1, 10, self._payload(), make_user(42, Role.USER))
 
         repo.update_note.assert_not_called()
+
+
+class TestMovementNotifications:
+    def test_notifies_process_creator_on_movement(
+        self, service_with_notifications, repo
+    ):
+        process = make_process(created_by=42)
+        repo.get_by_id.return_value = process
+        movement = MagicMock(
+            title="Audiência",
+            description=None,
+            occurred_at=datetime.now(timezone.utc),
+        )
+        repo.create_movement.return_value = movement
+
+        service_with_notifications.create_movement(
+            1, MovementCreate(title="Audiência"), created_by=make_user(7)
+        )
+
+        service_with_notifications.notifications.notify.assert_called_once()
+        kwargs = service_with_notifications.notifications.notify.call_args.kwargs
+        assert kwargs["user_id"] == 42
+        assert kwargs["event_type"].value == "PROCESS_MOVEMENT_CREATED"
+        assert kwargs["payload"]["process_id"] == process.id
+        assert kwargs["payload"]["title"] == "Audiência"
+
+    def test_does_not_notify_creator_when_actor_is_creator(
+        self, service_with_notifications, repo
+    ):
+        process = make_process(created_by=7)
+        repo.get_by_id.return_value = process
+        repo.create_movement.return_value = MagicMock(
+            title="Petição", description=None, occurred_at=datetime.now(timezone.utc)
+        )
+
+        service_with_notifications.create_movement(
+            1, MovementCreate(title="Petição"), created_by=make_user(7)
+        )
+
+        service_with_notifications.notifications.notify.assert_not_called()
+
+    def test_does_not_notify_when_process_has_no_creator(
+        self, service_with_notifications, repo
+    ):
+        process = make_process(created_by=None)
+        repo.get_by_id.return_value = process
+        repo.create_movement.return_value = MagicMock(
+            title="X", description=None, occurred_at=datetime.now(timezone.utc)
+        )
+
+        service_with_notifications.create_movement(
+            1, MovementCreate(title="X"), created_by=make_user(7)
+        )
+
+        service_with_notifications.notifications.notify.assert_not_called()
+
+
+class TestStatusChangeNotifications:
+    def test_notifies_creator_on_status_change(
+        self, service_with_notifications, repo
+    ):
+        process = make_process(created_by=42, status=ProcessStatus.ATIVO)
+        repo.get_by_id.return_value = process
+        repo.create_movement_no_commit.return_value = MagicMock(id=1)
+        repo.reload_with_client.return_value = process
+        repo.reload_movement.return_value = MagicMock(id=1)
+
+        service_with_notifications.change_status(
+            1,
+            ProcessStatusChange(status=ProcessStatus.SUSPENSO, reason="motivo"),
+            make_user(7),
+        )
+
+        service_with_notifications.notifications.notify.assert_called_once()
+        kwargs = service_with_notifications.notifications.notify.call_args.kwargs
+        assert kwargs["user_id"] == 42
+        assert kwargs["event_type"].value == "PROCESS_STATUS_CHANGED"
+        assert kwargs["payload"]["previous_status"] == "ATIVO"
+        assert kwargs["payload"]["new_status"] == "SUSPENSO"
+        assert kwargs["payload"]["reason"] == "motivo"
+
+    def test_does_not_notify_when_actor_is_creator(
+        self, service_with_notifications, repo
+    ):
+        process = make_process(created_by=7, status=ProcessStatus.ATIVO)
+        repo.get_by_id.return_value = process
+        repo.create_movement_no_commit.return_value = MagicMock(id=1)
+        repo.reload_with_client.return_value = process
+        repo.reload_movement.return_value = MagicMock(id=1)
+
+        service_with_notifications.change_status(
+            1,
+            ProcessStatusChange(status=ProcessStatus.SUSPENSO),
+            make_user(7),
+        )
+
+        service_with_notifications.notifications.notify.assert_not_called()
