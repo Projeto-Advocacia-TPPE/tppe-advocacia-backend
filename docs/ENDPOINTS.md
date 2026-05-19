@@ -2013,6 +2013,62 @@ Lista tarefas com filtros e paginação. Ordenado por `status, order, id` para s
 }
 ```
 
+---
+
+### `GET /api/v1/tasks/kanban`
+
+Retorna as tarefas agrupadas pelas 4 colunas do Kanban (`TODO`, `IN_PROGRESS`, `BLOCKED`, `DONE`), ordenadas por `order ASC` dentro de cada coluna. As 4 chaves são **sempre** retornadas, mesmo que vazias — assim o front-end pode renderizar todas as colunas sem precisar inferir nomes.
+
+Cada coluna é truncada em `KANBAN_MAX_PER_COLUMN` itens (default `100`, configurável via env). Quando uma coluna tem mais tarefas que o limite, `has_more=true` e o front-end deve buscar o restante via `GET /api/v1/tasks?status=...&page=N` com paginação tradicional.
+
+**Query params**
+
+| Parâmetro     | Tipo      | Obrigatório | Descrição                     |
+| ------------- | --------- | ----------- | ----------------------------- |
+| `assigned_to` | `integer` | Não         | Filtra por responsável        |
+| `client_id`   | `integer` | Não         | Filtra por cliente vinculado  |
+| `process_id`  | `integer` | Não         | Filtra por processo vinculado |
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "TODO": {
+      "items": [
+        {
+          "id": 1,
+          "title": "Revisar contrato",
+          "description": null,
+          "due_date": null,
+          "priority": "MEDIUM",
+          "status": "TODO",
+          "order": 0,
+          "assigned_to": 5,
+          "assigned_to_name": "Ana Lima",
+          "client_id": null,
+          "process_id": null,
+          "created_by": 3,
+          "created_by_name": "Carlos Souza",
+          "updated_by": 3,
+          "completed_at": null,
+          "created_at": "2026-05-19T12:00:00Z",
+          "updated_at": "2026-05-19T12:00:00Z"
+        }
+      ],
+      "total": 1,
+      "has_more": false
+    },
+    "IN_PROGRESS": { "items": [], "total": 0, "has_more": false },
+    "BLOCKED": { "items": [], "total": 0, "has_more": false },
+    "DONE": { "items": [], "total": 0, "has_more": false }
+  }
+}
+```
+
+> `total` é o número real de tarefas na coluna (antes do truncamento), útil para exibir o contador na header da coluna. `has_more` é `true` quando `total > KANBAN_MAX_PER_COLUMN`.
+
 **Erros**
 
 | Status | Code           | Situação                  |

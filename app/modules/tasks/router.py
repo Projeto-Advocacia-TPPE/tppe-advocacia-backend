@@ -3,11 +3,19 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
+from app.config.settings import Settings, get_settings
 from app.db.database import get_db
 from app.modules.email.protocol import EmailService
 from app.modules.tasks.controller import TaskController
 from app.modules.tasks.model import TaskPriority, TaskStatus
-from app.modules.tasks.schema import TaskCreate, TaskMove, TaskRead, TaskUpdate
+from app.modules.tasks.schema import (
+    KanbanColumn,
+    KanbanRead,
+    TaskCreate,
+    TaskMove,
+    TaskRead,
+    TaskUpdate,
+)
 from app.modules.users.model import User
 from app.shared.auth_deps import get_current_user
 from app.shared.email_deps import get_email_service
@@ -76,6 +84,38 @@ def list_tasks(
         page=page,
         limit=limit,
     )
+
+
+@router.get(
+    "/kanban",
+    response_model=SuccessResponse[KanbanRead],
+    responses=error_responses(401),
+    summary="Get tasks grouped by status (Kanban view)",
+)
+def get_kanban(
+    assigned_to: int | None = Query(None),
+    client_id: int | None = Query(None),
+    process_id: int | None = Query(None),
+    db: Session = Depends(get_db),
+    email: EmailService = Depends(get_email_service),
+    settings: Settings = Depends(get_settings),
+    _: User = Depends(get_current_user),
+) -> SuccessResponse[KanbanRead]:
+    grouped = TaskController(db, email).get_kanban_view(
+        assigned_to=assigned_to,
+        client_id=client_id,
+        process_id=process_id,
+        max_per_column=settings.kanban_max_per_column,
+    )
+    columns = {
+        status.value: KanbanColumn(
+            items=[TaskRead.model_validate(t) for t in items],
+            total=total,
+            has_more=total > len(items),
+        )
+        for status, (items, total) in grouped.items()
+    }
+    return ok(KanbanRead(**columns))
 
 
 @router.get(

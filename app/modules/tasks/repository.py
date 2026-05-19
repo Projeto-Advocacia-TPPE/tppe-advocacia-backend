@@ -180,6 +180,41 @@ class TaskRepository:
         )
         self.db.commit()
 
+    def list_kanban(
+        self,
+        *,
+        assigned_to: int | None = None,
+        client_id: int | None = None,
+        process_id: int | None = None,
+        max_per_column: int = 100,
+    ) -> dict[TaskStatus, tuple[list[Task], int]]:
+        base = select(Task).options(
+            joinedload(Task.assignee),
+            joinedload(Task.creator),
+        )
+
+        if assigned_to is not None:
+            base = base.where(Task.assigned_to == assigned_to)
+        if client_id is not None:
+            base = base.where(Task.client_id == client_id)
+        if process_id is not None:
+            base = base.where(Task.process_id == process_id)
+
+        rows = list(
+            self.db.scalars(base.order_by(Task.status, Task.order, Task.id))
+            .unique()
+            .all()
+        )
+
+        grouped: dict[TaskStatus, list[Task]] = {s: [] for s in TaskStatus}
+        for task in rows:
+            grouped[task.status].append(task)
+
+        return {
+            status: (items[:max_per_column], len(items))
+            for status, items in grouped.items()
+        }
+
     def list(
         self,
         assigned_to: int | None = None,

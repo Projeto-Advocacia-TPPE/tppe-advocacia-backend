@@ -5,7 +5,7 @@ from app.modules.email.protocol import EmailService
 from app.modules.notifications.repository import NotificationPreferenceRepository
 from app.modules.notifications.service import NotificationService
 from app.modules.processes.repository import ProcessRepository
-from app.modules.tasks.model import Task
+from app.modules.tasks.model import Task, TaskStatus
 from app.modules.tasks.repository import TaskRepository
 from app.modules.tasks.schema import TaskCreate, TaskMove, TaskUpdate
 from app.modules.tasks.service import TaskService
@@ -33,6 +33,21 @@ class TaskController:
 
     def list_tasks(self, **filters) -> tuple[list[Task], int]:
         return self.service.list_tasks(**filters)
+
+    def get_kanban_view(
+        self,
+        *,
+        assigned_to: int | None,
+        client_id: int | None,
+        process_id: int | None,
+        max_per_column: int,
+    ) -> dict[TaskStatus, tuple[list[Task], int]]:
+        return self.service.get_kanban_view(
+            assigned_to=assigned_to,
+            client_id=client_id,
+            process_id=process_id,
+            max_per_column=max_per_column,
+        )
 
     def get_task(self, task_id: int) -> Task:
         return self.service.get_task(task_id)

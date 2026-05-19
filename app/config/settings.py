@@ -46,6 +46,8 @@ class Settings(BaseSettings):
         validation_alias="ALLOWED_MIME_TYPES",
     )
 
+    kanban_max_per_column: int = Field(100, validation_alias="KANBAN_MAX_PER_COLUMN")
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

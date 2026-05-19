@@ -33,6 +33,19 @@ class TaskMove(BaseModel):
     order: int = Field(..., ge=0)
 
 
+class KanbanColumn(BaseModel):
+    items: list["TaskRead"]
+    total: int
+    has_more: bool
+
+
+class KanbanRead(BaseModel):
+    TODO: KanbanColumn
+    IN_PROGRESS: KanbanColumn
+    BLOCKED: KanbanColumn
+    DONE: KanbanColumn
+
+
 class TaskRead(BaseModel):
     id: int
     title: str
@@ -78,3 +91,6 @@ class TaskRead(BaseModel):
             "created_at": data.created_at,
             "updated_at": data.updated_at,
         }
+
+
+KanbanColumn.model_rebuild()

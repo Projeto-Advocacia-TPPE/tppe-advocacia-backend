@@ -209,6 +209,27 @@ class TestMoveTask:
         )
 
 
+class TestGetKanbanView:
+    def test_delegates_to_repository_with_filters(self, service, repo):
+        repo.list_kanban.return_value = {s: ([], 0) for s in TaskStatus}
+
+        service.get_kanban_view(
+            assigned_to=5, client_id=7, process_id=9, max_per_column=50
+        )
+
+        repo.list_kanban.assert_called_once_with(
+            assigned_to=5, client_id=7, process_id=9, max_per_column=50
+        )
+
+    def test_returns_repository_result(self, service, repo):
+        expected = {s: ([make_task()], 1) for s in TaskStatus}
+        repo.list_kanban.return_value = expected
+
+        result = service.get_kanban_view(max_per_column=100)
+
+        assert result is expected
+
+
 class TestDeleteTask:
     def test_creator_can_delete(self, service, repo):
         task = make_task(created_by=10)

@@ -64,6 +64,21 @@ class TaskService:
     def list_tasks(self, **filters) -> tuple[list[Task], int]:
         return self.repository.list(**filters)
 
+    def get_kanban_view(
+        self,
+        *,
+        assigned_to: int | None = None,
+        client_id: int | None = None,
+        process_id: int | None = None,
+        max_per_column: int = 100,
+    ) -> dict[TaskStatus, tuple[list[Task], int]]:
+        return self.repository.list_kanban(
+            assigned_to=assigned_to,
+            client_id=client_id,
+            process_id=process_id,
+            max_per_column=max_per_column,
+        )
+
     def update_task(self, task_id: int, payload: TaskUpdate, updated_by: User) -> Task:
         task = self.get_task(task_id)
         data = payload.model_dump(exclude_unset=True)

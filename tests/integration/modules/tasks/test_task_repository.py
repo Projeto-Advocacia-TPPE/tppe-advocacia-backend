@@ -234,6 +234,66 @@ class TestUpdate:
         assert updated.completed_at is not None
 
 
+class TestListKanban:
+    def test_groups_by_status_and_orders_within_column(self, db: Session):
+        user = make_user(db)
+        repo = TaskRepository(db)
+        a = make_task(repo, user.id, title="a", status=TaskStatus.TODO)
+        b = make_task(repo, user.id, title="b", status=TaskStatus.TODO)
+        c = make_task(repo, user.id, title="c", status=TaskStatus.IN_PROGRESS)
+
+        result = repo.list_kanban()
+
+        todo_items, todo_total = result[TaskStatus.TODO]
+        in_prog_items, in_prog_total = result[TaskStatus.IN_PROGRESS]
+        assert [t.id for t in todo_items] == [a.id, b.id]
+        assert todo_total == 2
+        assert [t.id for t in in_prog_items] == [c.id]
+        assert in_prog_total == 1
+
+    def test_returns_all_four_columns_even_when_empty(self, db: Session):
+        result = TaskRepository(db).list_kanban()
+        assert set(result.keys()) == set(TaskStatus)
+        for items, total in result.values():
+            assert items == []
+            assert total == 0
+
+    def test_truncates_to_max_per_column_and_reports_full_total(self, db: Session):
+        user = make_user(db)
+        repo = TaskRepository(db)
+        for i in range(5):
+            make_task(repo, user.id, title=f"t{i}")
+
+        result = repo.list_kanban(max_per_column=2)
+
+        items, total = result[TaskStatus.TODO]
+        assert len(items) == 2
+        assert total == 5
+
+    def test_filters_by_assigned_to(self, db: Session):
+        u1 = make_user(db, "a@test.com")
+        u2 = make_user(db, "b@test.com")
+        repo = TaskRepository(db)
+        repo.create(
+            title="mine",
+            description=None,
+            due_date=None,
+            priority=TaskPriority.MEDIUM,
+            status=TaskStatus.TODO,
+            assigned_to=u1.id,
+            client_id=None,
+            process_id=None,
+            created_by=u1.id,
+        )
+        make_task(repo, u2.id, title="theirs")
+
+        result = repo.list_kanban(assigned_to=u1.id)
+
+        items, total = result[TaskStatus.TODO]
+        assert total == 1
+        assert items[0].assigned_to == u1.id
+
+
 class TestDelete:
     def test_renumbers_column_after_delete(self, db: Session):
         user = make_user(db)
