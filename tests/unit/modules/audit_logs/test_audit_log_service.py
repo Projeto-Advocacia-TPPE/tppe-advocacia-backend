@@ -38,6 +38,8 @@ def make_audit_log(**kwargs) -> AuditLog:
         "target_user_name": "Test User",
         "target_user_email": "test@test.com",
         "target_user_role": "USER",
+        "target_client_id": None,
+        "target_client_name": None,
         "created_at": now,
     }
     defaults.update(kwargs)

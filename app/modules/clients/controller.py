@@ -1,5 +1,7 @@
 from sqlalchemy.orm import Session
 
+from app.modules.audit_logs.repository import AuditLogRepository
+from app.modules.audit_logs.service import AuditLogService
 from app.modules.clients.model import Client, ClientNote
 from app.modules.clients.repository import ClientRepository
 from app.modules.clients.schema import (
@@ -18,13 +20,17 @@ from app.modules.users.model import User
 
 class ClientController:
     def __init__(self, db: Session) -> None:
-        self.service = ClientService(ClientRepository(db))
+        self.service = ClientService(
+            ClientRepository(db),
+            process_repository=ProcessRepository(db),
+            audit=AuditLogService(AuditLogRepository(db)),
+        )
 
     def create_client(self, payload: ClientCreate, created_by: User) -> Client:
         return self.service.create_client(payload, created_by=created_by)
 
-    def get_client(self, client_id: int) -> Client:
-        return self.service.get_client(client_id)
+    def get_client(self, client_id: int, requester: User) -> Client:
+        return self.service.get_client(client_id, requester=requester)
 
     def list_clients(
         self,
@@ -38,6 +44,9 @@ class ClientController:
         self, client_id: int, payload: ClientUpdate, updated_by: User
     ) -> Client:
         return self.service.update_client(client_id, payload, updated_by=updated_by)
+
+    def anonymize_client(self, client_id: int, performed_by: User) -> Client:
+        return self.service.anonymize(client_id, performed_by=performed_by)
 
     def create_note(
         self, client_id: int, payload: ClientNoteCreate, current_user: User
@@ -72,12 +81,14 @@ class ClientTimelineController:
     def get_timeline(
         self,
         client_id: int,
+        requester: User,
         notes_limit: int = 10,
         processes_limit: int = 20,
         activity_limit: int = 20,
     ) -> ClientTimelineRead:
         return self.service.get_timeline(
             client_id=client_id,
+            requester=requester,
             notes_limit=notes_limit,
             processes_limit=processes_limit,
             activity_limit=activity_limit,

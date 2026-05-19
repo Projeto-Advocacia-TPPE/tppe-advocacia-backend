@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -173,3 +175,86 @@ class TestUpdate:
         updated = repo.update(client, {"address": "Rua das Flores, 123"})
 
         assert updated.address == "Rua das Flores, 123"
+
+
+class TestAnonymizeAndFiltering:
+    def test_anonymize_overwrites_pii_and_sets_deleted_at(self, db: Session):
+        repo = ClientRepository(db)
+        client = make_client(repo, name="João", cpf="20202020201", address="Rua A")
+        note = repo.create_note(client_id=client.id, created_by=1, content="oi")
+        now = datetime.now(timezone.utc)
+
+        repo.anonymize_no_commit(client, anonymized_at=now)
+        db.commit()
+        db.refresh(client)
+
+        assert client.name == "[ANONIMIZADO]"
+        assert client.email is None
+        assert client.phone is None
+        assert client.cpf is None
+        assert client.cnpj is None
+        assert client.address is None
+        assert client.deleted_at is not None
+
+        from sqlalchemy import select
+
+        from app.modules.clients.model import ClientNote
+
+        stored_note = db.scalars(
+            select(ClientNote).where(ClientNote.id == note.id)
+        ).first()
+        assert stored_note.content == "[ANONIMIZADO]"
+        assert stored_note.deleted_at is not None
+
+    def test_list_excludes_anonymized(self, db: Session):
+        repo = ClientRepository(db)
+        active = make_client(repo, name="Ativo", cpf="30303030301")
+        deleted = make_client(repo, name="Deletado", cpf="30303030302")
+        repo.anonymize_no_commit(deleted, anonymized_at=datetime.now(timezone.utc))
+        db.commit()
+
+        clients, total = repo.list(limit=100)
+        ids = [c.id for c in clients]
+
+        assert active.id in ids
+        assert deleted.id not in ids
+
+    def test_get_by_id_excludes_anonymized_by_default(self, db: Session):
+        repo = ClientRepository(db)
+        client = make_client(repo, cpf="40404040401")
+        repo.anonymize_no_commit(client, anonymized_at=datetime.now(timezone.utc))
+        db.commit()
+
+        assert repo.get_by_id(client.id) is None
+        assert repo.get_by_id(client.id, include_deleted=True) is not None
+
+    def test_get_by_cpf_returns_none_for_anonymized(self, db: Session):
+        repo = ClientRepository(db)
+        client = make_client(repo, cpf="50505050501")
+        repo.anonymize_no_commit(client, anonymized_at=datetime.now(timezone.utc))
+        db.commit()
+
+        assert repo.get_by_cpf("50505050501") is None
+
+    def test_cpf_can_be_reused_after_anonymize(self, db: Session):
+        repo = ClientRepository(db)
+        first = make_client(repo, cpf="60606060601")
+        repo.anonymize_no_commit(first, anonymized_at=datetime.now(timezone.utc))
+        db.commit()
+
+        new_client = make_client(repo, name="Novo Dono", cpf="60606060601")
+
+        assert new_client.id != first.id
+        assert new_client.cpf == "60606060601"
+
+    def test_list_notes_excludes_anonymized_notes(self, db: Session):
+        repo = ClientRepository(db)
+        client = make_client(repo, cpf="70707070701")
+        repo.create_note(client_id=client.id, created_by=1, content="visivel")
+        repo.anonymize_no_commit(client, anonymized_at=datetime.now(timezone.utc))
+        db.commit()
+
+        notes, total = repo.list_notes_by_client(client_id=client.id)
+
+        assert total == 0
+        assert notes == []

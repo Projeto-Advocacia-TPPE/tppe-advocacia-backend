@@ -11,7 +11,9 @@ from app.modules.clients.schema import (
 )
 from app.modules.clients.timeline_repository import TimelineRepository
 from app.modules.processes.repository import ProcessRepository
+from app.modules.users.model import User
 from app.shared.exceptions import ClientNotFoundError
+from app.shared.types import Role
 
 
 class ClientTimelineService:
@@ -28,11 +30,13 @@ class ClientTimelineService:
     def get_timeline(
         self,
         client_id: int,
+        requester: User | None = None,
         notes_limit: int = 10,
         processes_limit: int = 20,
         activity_limit: int = 20,
     ) -> ClientTimelineRead:
-        client = self.client_repository.get_by_id(client_id)
+        is_admin = requester is not None and requester.role == Role.ADMIN
+        client = self.client_repository.get_by_id(client_id, include_deleted=is_admin)
         if client is None:
             raise ClientNotFoundError()
 

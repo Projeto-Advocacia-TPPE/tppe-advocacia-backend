@@ -522,9 +522,9 @@ Lista logs de auditoria com filtros opcionais e paginação.
 
 **Query params**
 
-| Parâmetro   | Tipo                                 | Obrigatório | Descrição                            |
-| ----------- | ------------------------------------ | ----------- | ------------------------------------ |
-| `action`    | `USER_CREATED` \| `USER_DEACTIVATED` | Não         | Filtra por tipo de ação              |
+| Parâmetro   | Tipo                                                       | Obrigatório | Descrição                            |
+| ----------- | ---------------------------------------------------------- | ----------- | ------------------------------------ |
+| `action`    | `USER_CREATED` \| `USER_DEACTIVATED` \| `CLIENT_ANONYMIZED` | Não         | Filtra por tipo de ação              |
 | `date_from` | `datetime` (ISO 8601)                | Não         | Filtra registros a partir desta data |
 | `date_to`   | `datetime` (ISO 8601)                | Não         | Filtra registros até esta data       |
 | `page`      | `integer` (≥ 1)                      | Não         | Página atual (default: `1`)          |
@@ -545,6 +545,8 @@ Lista logs de auditoria com filtros opcionais e paginação.
       "target_user_name": "Carlos Souza",
       "target_user_email": "carlos@escritorio.com",
       "target_user_role": "USER",
+      "target_client_id": null,
+      "target_client_name": null,
       "created_at": "2026-05-16T14:00:00Z"
     }
   ],
@@ -556,6 +558,8 @@ Lista logs de auditoria com filtros opcionais e paginação.
   }
 }
 ```
+
+> Para `action = "CLIENT_ANONYMIZED"`, os campos `target_user_*` vêm como `null` e `target_client_id`/`target_client_name` (snapshot do nome anterior à anonimização) ficam preenchidos. Para ações de usuário, ocorre o inverso.
 
 **Erros**
 
@@ -1019,7 +1023,7 @@ Lista clientes com paginação e busca opcional por nome (parcial, case-insensit
 
 ### `GET /api/v1/clients/{id}`
 
-Retorna dados completos de um cliente.
+Retorna dados completos de um cliente. Quando o cliente foi anonimizado (`deleted_at != null`), usuários com role `USER` recebem 404; role `ADMIN` recebe 200 com os campos PII zerados.
 
 **Resposta 200**
 
@@ -1037,7 +1041,8 @@ Retorna dados completos de um cliente.
     "created_by": 3,
     "updated_by": 5,
     "created_at": "2026-05-16T14:00:00Z",
-    "updated_at": "2026-05-16T15:00:00Z"
+    "updated_at": "2026-05-16T15:00:00Z",
+    "deleted_at": null
   }
 }
 ```
@@ -1048,6 +1053,41 @@ Retorna dados completos de um cliente.
 | ------ | ------------------ | ------------------------- |
 | 401    | `UNAUTHORIZED`     | Token ausente ou inválido |
 | 404    | `CLIENT_NOT_FOUND` | Cliente não encontrado    |
+
+---
+
+### `DELETE /api/v1/clients/{id}`
+
+Anonimiza um cliente (soft delete) em conformidade com a LGPD: sobrescreve todos os campos PII (`name = "[ANONIMIZADO]"`, `email/phone/cpf/cnpj/address = null`), seta `deleted_at = now()` e anonimiza também o conteúdo de todas as notas (`client_notes.content = "[ANONIMIZADO]"`). Ação irreversível.
+
+> Exige autenticação com role `ADMIN`.
+> Header obrigatório: `Authorization: Bearer <token>`
+
+**Query params**
+
+| Parâmetro | Tipo      | Obrigatório | Descrição                                                |
+| --------- | --------- | ----------- | -------------------------------------------------------- |
+| `confirm` | `boolean` | Sim         | Deve ser `true`. Confirmação explícita da ação irreversível. |
+
+**Resposta 204** — sem corpo.
+
+Efeitos colaterais:
+
+- Cliente deixa de aparecer em `GET /clients` e em buscas por `search` (inclusive para ADMIN).
+- `GET /clients/{id}` retorna 404 para role `USER`; para `ADMIN`, retorna 200 com dados anonimizados e `deleted_at` preenchido.
+- Processos vinculados permanecem intactos; em todos os endpoints de `processes`, `client_name` aparece como `"[ANONIMIZADO]"`.
+- CPF/CNPJ originais ficam liberados para reuso por um novo cadastro (unique constraint libera porque os valores são setados para `null`).
+- Audit log com `action = "CLIENT_ANONYMIZED"` é registrado contendo `performed_by_id`, `performed_by_name`, `target_client_id` e `target_client_name` (snapshot do nome anterior à anonimização).
+
+**Erros**
+
+| Status | Code                          | Situação                                                                 |
+| ------ | ----------------------------- | ------------------------------------------------------------------------ |
+| 400    | `CONFIRMATION_REQUIRED`       | `?confirm=true` ausente ou diferente de `true`                          |
+| 401    | `UNAUTHORIZED`                | Token ausente ou inválido                                                |
+| 403    | `FORBIDDEN`                   | Usuário autenticado não é ADMIN                                          |
+| 404    | `CLIENT_NOT_FOUND`            | Cliente não encontrado ou já anonimizado                                 |
+| 409    | `CLIENT_HAS_ACTIVE_PROCESSES` | Cliente possui processo com status `ATIVO` ou `SUSPENSO`                 |
 
 ---
 

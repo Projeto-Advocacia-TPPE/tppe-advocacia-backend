@@ -40,6 +40,11 @@ class Client(Base):
         onupdate=func.now(),
         nullable=False,
     )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True,
+    )
 
 
 class ClientNote(Base):
@@ -70,6 +75,11 @@ class ClientNote(Base):
         server_default=func.now(),
         onupdate=func.now(),
         nullable=False,
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True,
     )
 
     creator: Mapped[User] = relationship("User", foreign_keys=[created_by])

@@ -32,6 +32,30 @@ class AuditLogService:
             target_user_role=user.role.value,
         )
 
+    def log_client_anonymized(
+        self,
+        client_id: int,
+        client_name: str,
+        performed_by: User,
+        commit: bool = True,
+    ) -> None:
+        if commit:
+            self.repository.create(
+                action=AuditAction.CLIENT_ANONYMIZED,
+                performed_by_id=performed_by.id,
+                performed_by_name=performed_by.name,
+                target_client_id=client_id,
+                target_client_name=client_name,
+            )
+        else:
+            self.repository.create_no_commit(
+                action=AuditAction.CLIENT_ANONYMIZED,
+                performed_by_id=performed_by.id,
+                performed_by_name=performed_by.name,
+                target_client_id=client_id,
+                target_client_name=client_name,
+            )
+
     def list_logs(
         self,
         action: AuditAction | None,
