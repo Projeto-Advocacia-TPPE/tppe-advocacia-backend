@@ -72,6 +72,13 @@ app/
 │   │   ├── controller.py
 │   │   ├── router.py              # GET/PATCH /notifications/preferences
 │   │   └── templates/             # subject + body por evento
+│   ├── tasks/                     # tarefas em Kanban (CRUD + move atômico)
+│   │   ├── model.py               # ORM: Task, TaskStatus, TaskPriority
+│   │   ├── schema.py              # TaskCreate, TaskUpdate, TaskMove, TaskRead
+│   │   ├── repository.py          # CRUD + reordenação atômica em transação
+│   │   ├── service.py             # valida referências, dispara TASK_ASSIGNED
+│   │   ├── controller.py
+│   │   └── router.py              # /tasks, /tasks/{id}, /tasks/{id}/move
 │   └── health/                    # health check
 │       ├── schema.py
 │       ├── controller.py
