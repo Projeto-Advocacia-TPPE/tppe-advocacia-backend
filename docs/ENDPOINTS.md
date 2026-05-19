@@ -1764,6 +1764,86 @@ Lista anotações internas do processo em ordem cronológica decrescente (`creat
 
 ---
 
+## Notifications
+
+> Todos os endpoints exigem autenticação (qualquer role).
+> Header obrigatório: `Authorization: Bearer <token>`
+
+Tipos de evento suportados: `PROCESS_MOVEMENT_CREATED`, `PROCESS_STATUS_CHANGED`, `LEAD_ASSIGNED`, `TASK_ASSIGNED`.
+Default para qualquer evento sem registro explícito é `true` (notificação habilitada).
+
+---
+
+### `GET /api/v1/notifications/preferences`
+
+Retorna as preferências de notificação do usuário autenticado. Todos os tipos de evento são sempre retornados; tipos sem registro explícito vêm com `true`.
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "preferences": {
+      "PROCESS_MOVEMENT_CREATED": true,
+      "PROCESS_STATUS_CHANGED": true,
+      "LEAD_ASSIGNED": true,
+      "TASK_ASSIGNED": true
+    }
+  }
+}
+```
+
+**Erros**
+
+| Status | Code           | Situação                  |
+| ------ | -------------- | ------------------------- |
+| 401    | `UNAUTHORIZED` | Token ausente ou inválido |
+
+---
+
+### `PATCH /api/v1/notifications/preferences`
+
+Atualiza preferências do usuário autenticado. Atualização parcial — só os tipos enviados são modificados. Retorna o estado completo após o update.
+
+**Body**
+
+```json
+{
+  "preferences": {
+    "LEAD_ASSIGNED": false,
+    "TASK_ASSIGNED": true
+  }
+}
+```
+
+> `preferences` é obrigatório e não pode ser vazio. Chaves devem ser tipos de evento válidos.
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "preferences": {
+      "PROCESS_MOVEMENT_CREATED": true,
+      "PROCESS_STATUS_CHANGED": true,
+      "LEAD_ASSIGNED": false,
+      "TASK_ASSIGNED": true
+    }
+  }
+}
+```
+
+**Erros**
+
+| Status | Code               | Situação                                              |
+| ------ | ------------------ | ----------------------------------------------------- |
+| 401    | `UNAUTHORIZED`     | Token ausente ou inválido                             |
+| 422    | `VALIDATION_ERROR` | Body inválido, `preferences` vazio ou evento inválido |
+
+---
+
 ### `PATCH /api/v1/processes/{process_id}/notes/{note_id}`
 
 Edita o conteúdo de uma anotação. Apenas o autor original pode editar; usuários com role `ADMIN` podem editar qualquer anotação.
