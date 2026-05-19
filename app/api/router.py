@@ -10,6 +10,7 @@ from app.modules.media.router import router as media_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.office_config.router import router as office_config_router
 from app.modules.processes.router import router as processes_router
+from app.modules.tasks.router import router as tasks_router
 from app.modules.users.router import router as users_router
 
 api_router = APIRouter()
@@ -24,3 +25,4 @@ api_router.include_router(articles_router)
 api_router.include_router(clients_router)
 api_router.include_router(processes_router)
 api_router.include_router(notifications_router)
+api_router.include_router(tasks_router)
