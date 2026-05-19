@@ -18,8 +18,10 @@ from app.modules.processes.schema import (
     ProcessStatusChange,
     ProcessStatusChangeResponse,
 )
+from app.modules.email.protocol import EmailService
 from app.modules.users.model import User
 from app.shared.auth_deps import get_current_user
+from app.shared.email_deps import get_email_service
 from app.shared.responses import (
     PaginatedResponse,
     SuccessResponse,
@@ -41,9 +43,12 @@ router = APIRouter(tags=["Processes"])
 def create_process(
     payload: ProcessCreate,
     db: Session = Depends(get_db),
+    email: EmailService = Depends(get_email_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessRead]:
-    return ok(ProcessController(db).create_process(payload, created_by=current_user))
+    return ok(
+        ProcessController(db, email).create_process(payload, created_by=current_user)
+    )
 
 
 @router.get(
@@ -95,9 +100,10 @@ def change_process_status(
     process_id: int,
     payload: ProcessStatusChange,
     db: Session = Depends(get_db),
+    email: EmailService = Depends(get_email_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessStatusChangeResponse]:
-    process, movement = ProcessController(db).change_status(
+    process, movement = ProcessController(db, email).change_status(
         process_id, payload, current_user
     )
     return ok(ProcessStatusChangeResponse.from_process(process, movement.id))
@@ -114,10 +120,11 @@ def create_movement(
     process_id: int,
     payload: MovementCreate,
     db: Session = Depends(get_db),
+    email: EmailService = Depends(get_email_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[MovementRead]:
     return ok(
-        ProcessController(db).create_movement(
+        ProcessController(db, email).create_movement(
             process_id, payload, created_by=current_user
         )
     )

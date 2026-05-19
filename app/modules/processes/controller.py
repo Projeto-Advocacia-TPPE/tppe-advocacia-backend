@@ -3,6 +3,9 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.modules.clients.repository import ClientRepository
+from app.modules.email.protocol import EmailService
+from app.modules.notifications.repository import NotificationPreferenceRepository
+from app.modules.notifications.service import NotificationService
 from app.modules.processes.model import (
     MovementSource,
     Process,
@@ -20,11 +23,24 @@ from app.modules.processes.schema import (
 )
 from app.modules.processes.service import ProcessService
 from app.modules.users.model import User
+from app.modules.users.repository import UserRepository
 
 
 class ProcessController:
-    def __init__(self, db: Session) -> None:
-        self.service = ProcessService(ProcessRepository(db), ClientRepository(db))
+    def __init__(self, db: Session, email: EmailService | None = None) -> None:
+        users_repo = UserRepository(db)
+        notifications = (
+            NotificationService(
+                NotificationPreferenceRepository(db), users_repo, email
+            )
+            if email is not None
+            else None
+        )
+        self.service = ProcessService(
+            ProcessRepository(db),
+            ClientRepository(db),
+            notifications=notifications,
+        )
 
     def create_process(self, payload: ProcessCreate, created_by: User) -> Process:
         return self.service.create_process(payload, created_by=created_by)
