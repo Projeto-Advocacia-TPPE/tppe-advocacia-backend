@@ -64,6 +64,14 @@ app/
 │   │   ├── protocol.py            # EmailService (Protocol)
 │   │   ├── resend_service.py      # implementação Resend
 │   │   └── fake_service.py        # implementação fake para testes
+│   ├── notifications/             # preferências e disparo de notificações por e-mail
+│   │   ├── model.py               # ORM: NotificationPreference
+│   │   ├── schema.py              # EventType, PreferencesRead, PreferencesUpdate
+│   │   ├── repository.py
+│   │   ├── service.py             # notify(user_id, event_type, payload)
+│   │   ├── controller.py
+│   │   ├── router.py              # GET/PATCH /notifications/preferences
+│   │   └── templates/             # subject + body por evento
 │   └── health/                    # health check
 │       ├── schema.py
 │       ├── controller.py
