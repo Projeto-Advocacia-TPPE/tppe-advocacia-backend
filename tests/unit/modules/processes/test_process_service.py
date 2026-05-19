@@ -587,9 +587,7 @@ class TestMovementNotifications:
 
 
 class TestStatusChangeNotifications:
-    def test_notifies_creator_on_status_change(
-        self, service_with_notifications, repo
-    ):
+    def test_notifies_creator_on_status_change(self, service_with_notifications, repo):
         process = make_process(created_by=42, status=ProcessStatus.ATIVO)
         repo.get_by_id.return_value = process
         repo.create_movement_no_commit.return_value = MagicMock(id=1)

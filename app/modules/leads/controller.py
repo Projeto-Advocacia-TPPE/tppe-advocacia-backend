@@ -15,9 +15,7 @@ class LeadController:
     def __init__(self, db: Session, email: EmailService | None = None) -> None:
         users_repo = UserRepository(db)
         notifications = (
-            NotificationService(
-                NotificationPreferenceRepository(db), users_repo, email
-            )
+            NotificationService(NotificationPreferenceRepository(db), users_repo, email)
             if email is not None
             else None
         )

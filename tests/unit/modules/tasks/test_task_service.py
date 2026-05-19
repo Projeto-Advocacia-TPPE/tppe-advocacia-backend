@@ -213,9 +213,7 @@ class TestUpdateTask:
         repo.get_by_id.return_value = old
         repo.update.return_value = new
 
-        service.update_task(
-            1, TaskUpdate(assigned_to=42), updated_by=make_user(id=42)
-        )
+        service.update_task(1, TaskUpdate(assigned_to=42), updated_by=make_user(id=42))
 
         notifications.notify.assert_not_called()
 

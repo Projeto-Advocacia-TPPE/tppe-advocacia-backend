@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+from app.modules.email.protocol import EmailService
 from app.modules.processes.controller import ProcessController
 from app.modules.processes.model import MovementSource, ProcessStatus
 from app.modules.processes.schema import (
@@ -18,7 +19,6 @@ from app.modules.processes.schema import (
     ProcessStatusChange,
     ProcessStatusChangeResponse,
 )
-from app.modules.email.protocol import EmailService
 from app.modules.users.model import User
 from app.shared.auth_deps import get_current_user
 from app.shared.email_deps import get_email_service
