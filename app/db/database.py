@@ -34,6 +34,7 @@ def init_db() -> None:
     from app.modules.audit_logs.model import AuditLog  # noqa: F401
     from app.modules.clients.model import Client, ClientNote  # noqa: F401
     from app.modules.leads.model import Lead  # noqa: F401
+    from app.modules.notifications.model import NotificationPreference  # noqa: F401
     from app.modules.office_config.model import OfficeConfig  # noqa: F401
     from app.modules.processes.model import Process  # noqa: F401
     from app.modules.users.model import User  # noqa: F401
