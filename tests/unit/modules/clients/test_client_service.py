@@ -10,8 +10,10 @@ from app.modules.users.model import User
 from app.shared.exceptions import (
     ClientCnpjAlreadyExistsError,
     ClientCpfAlreadyExistsError,
+    ClientHasActiveProcessesError,
     ClientNotFoundError,
 )
+from app.shared.types import Role
 
 
 def make_client(**kwargs) -> Client:
@@ -51,6 +53,17 @@ def repo():
 def service(repo):
     svc = ClientService.__new__(ClientService)
     svc.repository = repo
+    svc.process_repository = None
+    svc.audit = None
+    return svc
+
+
+@pytest.fixture
+def anonymize_service(repo):
+    svc = ClientService.__new__(ClientService)
+    svc.repository = repo
+    svc.process_repository = MagicMock()
+    svc.audit = MagicMock()
     return svc
 
 
@@ -240,3 +253,88 @@ class TestUpdateClient:
         call_data = repo.update.call_args[0][1]
         assert call_data["cnpj"] == "11111111000111"
         assert call_data["cpf"] is None
+
+
+class TestGetClientVisibility:
+    def test_non_admin_passes_include_deleted_false(self, service, repo):
+        client = make_client()
+        repo.get_by_id.return_value = client
+        requester = MagicMock(spec=User)
+        requester.role = Role.USER
+
+        service.get_client(1, requester=requester)
+
+        repo.get_by_id.assert_called_once_with(1, include_deleted=False)
+
+    def test_admin_passes_include_deleted_true(self, service, repo):
+        client = make_client()
+        repo.get_by_id.return_value = client
+        requester = MagicMock(spec=User)
+        requester.role = Role.ADMIN
+
+        service.get_client(1, requester=requester)
+
+        repo.get_by_id.assert_called_once_with(1, include_deleted=True)
+
+    def test_without_requester_excludes_deleted(self, service, repo):
+        client = make_client()
+        repo.get_by_id.return_value = client
+
+        service.get_client(1)
+
+        repo.get_by_id.assert_called_once_with(1, include_deleted=False)
+
+
+class TestAnonymize:
+    def test_anonymizes_when_no_active_processes(self, anonymize_service, repo):
+        client = make_client(name="João Silva")
+        repo.get_by_id.return_value = client
+        anonymize_service.process_repository.count_active_or_suspended_by_client.return_value = 0
+        repo.db = MagicMock()
+        performed_by = make_user(user_id=7)
+
+        result = anonymize_service.anonymize(1, performed_by=performed_by)
+
+        repo.anonymize_no_commit.assert_called_once()
+        anonymize_service.audit.log_client_anonymized.assert_called_once_with(
+            client_id=1,
+            client_name="João Silva",
+            performed_by=performed_by,
+            commit=False,
+        )
+        repo.db.commit.assert_called_once()
+        repo.db.refresh.assert_called_once_with(client)
+        assert result is client
+
+    def test_raises_not_found_when_client_missing(self, anonymize_service, repo):
+        repo.get_by_id.return_value = None
+
+        with pytest.raises(ClientNotFoundError):
+            anonymize_service.anonymize(99, performed_by=make_user())
+
+        repo.anonymize_no_commit.assert_not_called()
+        anonymize_service.audit.log_client_anonymized.assert_not_called()
+
+    def test_raises_when_has_active_processes(self, anonymize_service, repo):
+        client = make_client()
+        repo.get_by_id.return_value = client
+        anonymize_service.process_repository.count_active_or_suspended_by_client.return_value = 1
+
+        with pytest.raises(ClientHasActiveProcessesError):
+            anonymize_service.anonymize(1, performed_by=make_user())
+
+        repo.anonymize_no_commit.assert_not_called()
+        anonymize_service.audit.log_client_anonymized.assert_not_called()
+
+    def test_rollback_on_failure(self, anonymize_service, repo):
+        client = make_client()
+        repo.get_by_id.return_value = client
+        anonymize_service.process_repository.count_active_or_suspended_by_client.return_value = 0
+        repo.db = MagicMock()
+        repo.anonymize_no_commit.side_effect = RuntimeError("boom")
+
+        with pytest.raises(RuntimeError):
+            anonymize_service.anonymize(1, performed_by=make_user())
+
+        repo.db.rollback.assert_called_once()
+        repo.db.commit.assert_not_called()
