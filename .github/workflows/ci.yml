@@ -59,7 +59,9 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Audit dependencies
-        run: pip-audit -r requirements.txt
+        # PYSEC-2025-183/CVE-2025-45768 is disputed upstream; this app enforces
+        # strong JWT secrets in production settings.
+        run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2025-183
 
   sast:
     name: SAST (Bandit)
