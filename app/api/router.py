@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from app.modules.appointments.router import router as appointments_router
 from app.modules.articles.router import router as articles_router
 from app.modules.audit_logs.router import router as audit_logs_router
 from app.modules.auth.router import router as auth_router
@@ -30,3 +31,4 @@ api_router.include_router(notifications_router)
 api_router.include_router(tasks_router)
 api_router.include_router(forensic_holidays_router)
 api_router.include_router(deadlines_router)
+api_router.include_router(appointments_router)
