@@ -2654,3 +2654,142 @@ Lista o histórico de alertas já disparados para um prazo. Acessível apenas ao
 | 403    | `FORBIDDEN`          | Usuário não é o autor do prazo nem ADMIN            |
 | 404    | `PROCESS_NOT_FOUND`  | Processo não encontrado                             |
 | 404    | `DEADLINE_NOT_FOUND` | Prazo não encontrado ou não pertence ao processo    |
+
+---
+
+## Appointments
+
+> Todos os endpoints exigem autenticação (qualquer role).
+> Header obrigatório: `Authorization: Bearer <token>`
+
+Agenda pessoal de compromissos. Cada compromisso pertence ao usuário que o criou (`created_by`). O dono acessa os seus; usuários com role `ADMIN` podem ver/editar/excluir qualquer compromisso. A listagem retorna apenas os compromissos do usuário autenticado.
+
+Datas são armazenadas em UTC. `type`: `AUDIENCIA` | `REUNIAO` | `PRAZO` | `OUTRO`. Os campos `google_event_id` e `is_synced_to_google` pertencem à integração com o Google Calendar (fase 2) e hoje vêm sempre `null`/`false`.
+
+---
+
+### `POST /api/v1/appointments`
+
+Cria um compromisso. O autor é o usuário autenticado.
+
+**Body**
+
+```json
+{
+  "title": "Audiência de conciliação",
+  "type": "AUDIENCIA",
+  "starts_at": "2026-12-01T14:00:00Z",
+  "duration_minutes": 60,
+  "client_id": 7,
+  "process_id": 12,
+  "description": "Levar procuração atualizada.",
+  "location": "Fórum Central, sala 3"
+}
+```
+
+> Obrigatórios: `title`, `type`, `starts_at`, `duration_minutes`. `client_id`, `process_id`, `description`, `location` são opcionais. `starts_at` não pode estar no passado. `duration_minutes` entre 1 e 1440.
+
+**Resposta 201**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "Audiência de conciliação",
+    "type": "AUDIENCIA",
+    "starts_at": "2026-12-01T14:00:00Z",
+    "duration_minutes": 60,
+    "description": "Levar procuração atualizada.",
+    "location": "Fórum Central, sala 3",
+    "client_id": 7,
+    "process_id": 12,
+    "created_by": 3,
+    "created_by_name": "Ana Lima",
+    "google_event_id": null,
+    "is_synced_to_google": false,
+    "created_at": "2026-05-20T12:00:00Z",
+    "updated_at": "2026-05-20T12:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                            | Situação                                      |
+| ------ | ------------------------------- | --------------------------------------------- |
+| 401    | `UNAUTHORIZED`                  | Token ausente ou inválido                     |
+| 422    | `APPOINTMENT_CLIENT_NOT_FOUND`  | `client_id` informado não existe              |
+| 422    | `APPOINTMENT_PROCESS_NOT_FOUND` | `process_id` informado não existe             |
+| 422    | `VALIDATION_ERROR`              | Body inválido ou `starts_at` no passado       |
+
+---
+
+### `GET /api/v1/appointments`
+
+Lista os compromissos do usuário autenticado, ordenados por `starts_at` ascendente, com filtros e paginação.
+
+**Query params**
+
+| Parâmetro    | Tipo                                                  | Obrigatório | Descrição                          |
+| ------------ | ----------------------------------------------------- | ----------- | ---------------------------------- |
+| `date_from`  | `datetime` (ISO 8601)                                 | Não         | Filtra `starts_at >= date_from`    |
+| `date_to`    | `datetime` (ISO 8601)                                 | Não         | Filtra `starts_at <= date_to`      |
+| `type`       | `AUDIENCIA` \| `REUNIAO` \| `PRAZO` \| `OUTRO`        | Não         | Filtra por tipo                    |
+| `client_id`  | `integer`                                             | Não         | Filtra por cliente vinculado       |
+| `process_id` | `integer`                                             | Não         | Filtra por processo vinculado      |
+| `page`       | `integer` (≥ 1)                                       | Não         | Página atual (default: `1`)        |
+| `limit`      | `integer` (1–100)                                     | Não         | Itens por página (default: `20`)   |
+
+**Resposta 200** — mesmo formato de item de `POST`, dentro de `PaginatedResponse`.
+
+**Erros**
+
+| Status | Code           | Situação                  |
+| ------ | -------------- | ------------------------- |
+| 401    | `UNAUTHORIZED` | Token ausente ou inválido |
+
+---
+
+### `GET /api/v1/appointments/{appointment_id}`
+
+Retorna os detalhes de um compromisso. Acessível ao dono ou a um `ADMIN`.
+
+**Erros**
+
+| Status | Code                    | Situação                              |
+| ------ | ----------------------- | ------------------------------------- |
+| 401    | `UNAUTHORIZED`          | Token ausente ou inválido             |
+| 403    | `FORBIDDEN`             | Usuário não é o dono nem ADMIN        |
+| 404    | `APPOINTMENT_NOT_FOUND` | Compromisso não encontrado            |
+
+---
+
+### `PATCH /api/v1/appointments/{appointment_id}`
+
+Atualiza parcialmente um compromisso. Todos os campos são opcionais. Diferente da criação, `starts_at` pode estar no passado (correção de registro). Acessível ao dono ou a um `ADMIN`.
+
+**Erros**
+
+| Status | Code                            | Situação                          |
+| ------ | ------------------------------- | --------------------------------- |
+| 401    | `UNAUTHORIZED`                  | Token ausente ou inválido         |
+| 403    | `FORBIDDEN`                     | Usuário não é o dono nem ADMIN    |
+| 404    | `APPOINTMENT_NOT_FOUND`         | Compromisso não encontrado        |
+| 422    | `APPOINTMENT_CLIENT_NOT_FOUND`  | `client_id` informado não existe  |
+| 422    | `APPOINTMENT_PROCESS_NOT_FOUND` | `process_id` informado não existe |
+| 422    | `VALIDATION_ERROR`              | Body inválido                     |
+
+---
+
+### `DELETE /api/v1/appointments/{appointment_id}`
+
+Remove um compromisso. Acessível ao dono ou a um `ADMIN`. Retorna 204 sem corpo.
+
+**Erros**
+
+| Status | Code                    | Situação                       |
+| ------ | ----------------------- | ------------------------------ |
+| 401    | `UNAUTHORIZED`          | Token ausente ou inválido      |
+| 403    | `FORBIDDEN`             | Usuário não é o dono nem ADMIN |
+| 404    | `APPOINTMENT_NOT_FOUND` | Compromisso não encontrado     |
