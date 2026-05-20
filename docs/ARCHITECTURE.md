@@ -91,6 +91,13 @@ app/
 │   │   ├── service.py             # calculate_due_date, business_days_until, dispatch_alerts
 │   │   ├── controller.py
 │   │   └── router.py              # /deadlines/calculate, /processes/{id}/deadlines, /deadlines/{id}, .../alerts
+│   ├── appointments/              # agenda de compromissos (CRUD pessoal)
+│   │   ├── model.py               # ORM: Appointment, AppointmentType
+│   │   ├── schema.py              # AppointmentCreate/Update/Read
+│   │   ├── repository.py
+│   │   ├── service.py             # CRUD + validação de refs + autorização dono/admin
+│   │   ├── controller.py
+│   │   └── router.py              # /appointments, /appointments/{id}
 │   ├── tasks/                     # tarefas em Kanban (CRUD + move atômico)
 │   │   ├── model.py               # ORM: Task, TaskStatus, TaskPriority
 │   │   ├── schema.py              # TaskCreate, TaskUpdate, TaskMove, TaskRead
