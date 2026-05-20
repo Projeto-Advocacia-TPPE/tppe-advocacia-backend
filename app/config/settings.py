@@ -1,7 +1,8 @@
 from functools import lru_cache
+from typing import Annotated
 
 from pydantic import Field, ValidationInfo, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 _WEAK_JWT_SECRETS = {"your-secret-key", "change-me", "secret"}
 _MIN_JWT_SECRET_LENGTH = 32
@@ -48,6 +49,13 @@ class Settings(BaseSettings):
 
     kanban_max_per_column: int = Field(100, validation_alias="KANBAN_MAX_PER_COLUMN")
 
+    scheduler_enabled: bool = Field(True, validation_alias="SCHEDULER_ENABLED")
+    deadline_alert_cron: str = Field("06:00", validation_alias="DEADLINE_ALERT_CRON")
+    deadline_alert_intervals: Annotated[list[int], NoDecode] = Field(
+        default=[30, 15, 7, 3, 2, 1],
+        validation_alias="DEADLINE_ALERT_INTERVALS",
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -66,6 +74,23 @@ class Settings(BaseSettings):
                 f"{_MIN_JWT_SECRET_LENGTH} chars and not a known default in production"
             )
         return jwt_secret_key
+
+    @field_validator("deadline_alert_intervals", mode="before")
+    @classmethod
+    def parse_intervals(cls, value: object) -> object:
+        if isinstance(value, str):
+            return [int(part.strip()) for part in value.split(",") if part.strip()]
+        return value
+
+    @property
+    def deadline_alert_cron_parts(self) -> tuple[int, int]:
+        parts = self.deadline_alert_cron.split(":")
+        if len(parts) != 2:
+            raise ValueError("DEADLINE_ALERT_CRON must be in HH:MM format")
+        hour, minute = int(parts[0]), int(parts[1])
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            raise ValueError("DEADLINE_ALERT_CRON hour/minute out of range")
+        return hour, minute
 
     @property
     def database_url(self) -> str:
