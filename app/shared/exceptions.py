@@ -248,3 +248,21 @@ class InvalidHolidayScopeError(AppException):
             "INVALID_HOLIDAY_SCOPE",
             message,
         )
+
+
+class DeadlineNotFoundError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_404_NOT_FOUND,
+            "DEADLINE_NOT_FOUND",
+            "Deadline not found",
+        )
+
+
+class InvalidDeadlineRangeError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "INVALID_DEADLINE_RANGE",
+            "business_days must be greater than 0",
+        )
