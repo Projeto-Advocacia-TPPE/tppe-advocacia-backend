@@ -38,6 +38,8 @@ class TestGetPreferences:
             "PROCESS_STATUS_CHANGED": True,
             "LEAD_ASSIGNED": True,
             "TASK_ASSIGNED": True,
+            "DEADLINE_APPROACHING": True,
+            "DEADLINE_EXPIRED": True,
         }
 
 
