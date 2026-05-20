@@ -72,6 +72,22 @@ app/
 │   │   ├── controller.py
 │   │   ├── router.py              # GET/PATCH /notifications/preferences
 │   │   └── templates/             # subject + body por evento
+│   ├── forensic_holidays/         # feriados forenses (nacional, court, comarca)
+│   │   ├── model.py               # ORM: ForensicHoliday, HolidayScope
+│   │   ├── schema.py
+│   │   ├── repository.py
+│   │   ├── service.py
+│   │   ├── controller.py
+│   │   ├── router.py              # /forensic-holidays (GET autenticado, CUD admin)
+│   │   ├── data/holidays.json     # nacionais + recesso + TJDFT
+│   │   └── seed.py                # `python -m app.modules.forensic_holidays.seed`
+│   ├── deadlines/                 # cálculo e persistência de prazos processuais
+│   │   ├── model.py               # ORM: Deadline
+│   │   ├── schema.py              # DeadlineCalculate*, DeadlineCreate/Update/Read
+│   │   ├── repository.py
+│   │   ├── service.py             # calculate_due_date(start, days, court, comarca)
+│   │   ├── controller.py
+│   │   └── router.py              # /deadlines/calculate, /processes/{id}/deadlines, /deadlines/{id}
 │   ├── tasks/                     # tarefas em Kanban (CRUD + move atômico)
 │   │   ├── model.py               # ORM: Task, TaskStatus, TaskPriority
 │   │   ├── schema.py              # TaskCreate, TaskUpdate, TaskMove, TaskRead

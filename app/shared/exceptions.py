@@ -230,3 +230,39 @@ class TaskProcessNotFoundError(AppException):
             "TASK_PROCESS_NOT_FOUND",
             "Referenced process does not exist",
         )
+
+
+class ForensicHolidayNotFoundError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_404_NOT_FOUND,
+            "FORENSIC_HOLIDAY_NOT_FOUND",
+            "Forensic holiday not found",
+        )
+
+
+class InvalidHolidayScopeError(AppException):
+    def __init__(self, message: str = "Invalid holiday scope configuration") -> None:
+        super().__init__(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "INVALID_HOLIDAY_SCOPE",
+            message,
+        )
+
+
+class DeadlineNotFoundError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_404_NOT_FOUND,
+            "DEADLINE_NOT_FOUND",
+            "Deadline not found",
+        )
+
+
+class InvalidDeadlineRangeError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "INVALID_DEADLINE_RANGE",
+            "business_days must be greater than 0",
+        )

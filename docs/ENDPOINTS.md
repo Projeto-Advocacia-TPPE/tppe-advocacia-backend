@@ -2319,3 +2319,274 @@ Sem corpo.
 | 401    | `UNAUTHORIZED`   | Token ausente ou inválido                                 |
 | 403    | `FORBIDDEN`      | Usuário não é o criador nem ADMIN                         |
 | 404    | `TASK_NOT_FOUND` | Tarefa não encontrada                                     |
+
+---
+
+## Forensic Holidays
+
+> `GET` exige autenticação (qualquer role). `POST/PATCH/DELETE` exigem role `ADMIN`.
+> Header obrigatório: `Authorization: Bearer <token>`
+
+Tabela de feriados forenses usada pelo módulo `deadlines` no cálculo de prazos. Cada feriado tem um `scope`:
+
+- `NATIONAL` — vale para todos (`court`/`comarca` devem ser `null`)
+- `COURT` — vale para um tribunal específico (`court` obrigatório, `comarca` deve ser `null`)
+- `COMARCA` — vale para uma comarca específica (`comarca` obrigatório)
+
+Seed inicial: `python -m app.modules.forensic_holidays.seed [ano ...]` cobre feriados nacionais (Lei 10.406), recesso forense (art. 220 CPC, 20/12–20/01) e feriados TJDFT do ano corrente e do próximo. Operação idempotente.
+
+---
+
+### `GET /api/v1/forensic-holidays`
+
+Lista feriados com filtros opcionais. Quando `court` ou `comarca` são informados, a query retorna **NATIONAL + COURT correspondente + COMARCA correspondente** (união). Sem filtros, retorna todos.
+
+**Query params**
+
+| Parâmetro | Tipo              | Obrigatório | Descrição                                       |
+| --------- | ----------------- | ----------- | ----------------------------------------------- |
+| `year`    | `integer`         | Não         | Filtra por ano (`YYYY-01-01` a `YYYY-12-31`)    |
+| `court`   | `string`          | Não         | Inclui feriados COURT desse tribunal            |
+| `comarca` | `string`          | Não         | Inclui feriados COMARCA dessa comarca           |
+| `page`    | `integer` (≥ 1)   | Não         | Página atual (default: `1`)                     |
+| `limit`   | `integer` (1–500) | Não         | Itens por página (default: `100`)               |
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "date": "2026-05-01",
+      "description": "Dia do Trabalho",
+      "scope": "NATIONAL",
+      "court": null,
+      "comarca": null,
+      "created_at": "2026-05-19T12:00:00Z",
+      "updated_at": "2026-05-19T12:00:00Z"
+    }
+  ],
+  "meta": { "total": 1, "page": 1, "limit": 100, "pages": 1 }
+}
+```
+
+---
+
+### `POST /api/v1/forensic-holidays`
+
+Cria um novo feriado. Admin only.
+
+**Body**
+
+```json
+{
+  "date": "2026-04-23",
+  "description": "Aniversário de Brasília (TJDFT)",
+  "scope": "COURT",
+  "court": "TJDFT"
+}
+```
+
+**Resposta 201** — mesmo formato do GET.
+
+**Erros**
+
+| Status | Code                          | Situação                                                                                |
+| ------ | ----------------------------- | --------------------------------------------------------------------------------------- |
+| 401    | `UNAUTHORIZED`                | Token ausente ou inválido                                                               |
+| 403    | `FORBIDDEN`                   | Usuário não é ADMIN                                                                     |
+| 422    | `INVALID_HOLIDAY_SCOPE`       | Combinação inválida de `scope`/`court`/`comarca`                                        |
+| 422    | `VALIDATION_ERROR`            | Body inválido                                                                           |
+
+---
+
+### `PATCH /api/v1/forensic-holidays/{holiday_id}`
+
+Atualiza parcialmente um feriado. Admin only. Para limpar `court`/`comarca`, enviar `null` explicitamente.
+
+**Erros**
+
+| Status | Code                          | Situação                                  |
+| ------ | ----------------------------- | ----------------------------------------- |
+| 401    | `UNAUTHORIZED`                | Token ausente ou inválido                 |
+| 403    | `FORBIDDEN`                   | Usuário não é ADMIN                       |
+| 404    | `FORENSIC_HOLIDAY_NOT_FOUND`  | Feriado não encontrado                    |
+| 422    | `INVALID_HOLIDAY_SCOPE`       | Estado resultante viola regras de scope   |
+
+---
+
+### `DELETE /api/v1/forensic-holidays/{holiday_id}`
+
+Remove um feriado. Admin only. Retorna 204 sem corpo.
+
+---
+
+## Deadlines
+
+> Todos os endpoints exigem autenticação (qualquer role).
+> Header obrigatório: `Authorization: Bearer <token>`
+
+Calcula e persiste prazos processuais em dias úteis, pulando finais de semana e feriados aplicáveis (NATIONAL + COURT do processo + COMARCA do prazo). O `court` é snapshot do `Process` no momento da criação; `comarca` é snapshot do que foi enviado no body. Mudanças futuras em `Process` não afetam prazos antigos.
+
+Algoritmo:
+1. Se `start_date` cai em dia não-útil, avança até o próximo dia útil (sem contar).
+2. Conta `business_days` dias úteis, pulando sábados, domingos e feriados aplicáveis.
+3. Retorna a data final + a lista de dias pulados (útil para a UI explicar o cálculo).
+
+---
+
+### `POST /api/v1/deadlines/calculate`
+
+Calcula a data-limite sem persistir nada. Útil para preview no formulário.
+
+**Body**
+
+```json
+{
+  "start_date": "2026-05-11",
+  "business_days": 15,
+  "court": "TJDFT",
+  "comarca": "Brasília"
+}
+```
+
+> `court` e `comarca` são opcionais. Sem eles, apenas feriados `NATIONAL` são considerados.
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "start_date": "2026-05-11",
+    "business_days": 15,
+    "due_date": "2026-06-01",
+    "court": "TJDFT",
+    "comarca": "Brasília",
+    "skipped_days": [
+      { "date": "2026-05-16", "reason": "WEEKEND", "description": null },
+      { "date": "2026-05-17", "reason": "WEEKEND", "description": null }
+    ]
+  }
+}
+```
+
+> `reason`: `"WEEKEND"` ou `"HOLIDAY"`. Para feriados, `description` contém o nome do feriado.
+
+**Erros**
+
+| Status | Code                      | Situação                              |
+| ------ | ------------------------- | ------------------------------------- |
+| 401    | `UNAUTHORIZED`            | Token ausente ou inválido             |
+| 422    | `INVALID_DEADLINE_RANGE`  | `business_days` ≤ 0                   |
+| 422    | `VALIDATION_ERROR`        | Body inválido                         |
+
+---
+
+### `POST /api/v1/processes/{process_id}/deadlines`
+
+Cria prazo persistido vinculado a um processo. Calcula `due_date` automaticamente usando o `court` do Process e o `comarca` do body (opcional).
+
+**Body**
+
+```json
+{
+  "start_date": "2026-05-11",
+  "business_days": 15,
+  "deadline_type": "Contestação",
+  "comarca": "Brasília"
+}
+```
+
+> `deadline_type` é string livre (até 120 chars), ex: "Contestação", "Réplica", "Recurso".
+
+**Resposta 201**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "process_id": 12,
+    "start_date": "2026-05-11",
+    "business_days": 15,
+    "deadline_type": "Contestação",
+    "due_date": "2026-06-01",
+    "court": "TJDFT",
+    "comarca": "Brasília",
+    "created_by": 3,
+    "created_at": "2026-05-19T12:00:00Z",
+    "updated_at": "2026-05-19T12:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                     | Situação                                |
+| ------ | ------------------------ | --------------------------------------- |
+| 401    | `UNAUTHORIZED`           | Token ausente ou inválido               |
+| 404    | `PROCESS_NOT_FOUND`      | Processo não encontrado                 |
+| 422    | `INVALID_DEADLINE_RANGE` | `business_days` ≤ 0                     |
+| 422    | `VALIDATION_ERROR`       | Body inválido                           |
+
+---
+
+### `GET /api/v1/processes/{process_id}/deadlines`
+
+Lista prazos do processo, ordenados por `due_date ASC, id ASC`, com paginação.
+
+**Query params**
+
+| Parâmetro | Tipo              | Obrigatório | Descrição                        |
+| --------- | ----------------- | ----------- | -------------------------------- |
+| `page`    | `integer` (≥ 1)   | Não         | Página atual (default: `1`)      |
+| `limit`   | `integer` (1–100) | Não         | Itens por página (default: `20`) |
+
+**Erros**
+
+| Status | Code                | Situação                  |
+| ------ | ------------------- | ------------------------- |
+| 401    | `UNAUTHORIZED`      | Token ausente ou inválido |
+| 404    | `PROCESS_NOT_FOUND` | Processo não encontrado   |
+
+---
+
+### `PATCH /api/v1/deadlines/{deadline_id}`
+
+Atualiza um prazo. Se `start_date`, `business_days` ou `comarca` mudarem, o `due_date` é **recalculado automaticamente** usando o `court` já snapshotado. Para alterar só metadado (`deadline_type`), envie apenas esse campo.
+
+**Body** (todos opcionais)
+
+```json
+{
+  "start_date": "2026-05-12",
+  "business_days": 20,
+  "deadline_type": "Recurso",
+  "comarca": null
+}
+```
+
+**Erros**
+
+| Status | Code                     | Situação                  |
+| ------ | ------------------------ | ------------------------- |
+| 401    | `UNAUTHORIZED`           | Token ausente ou inválido |
+| 404    | `DEADLINE_NOT_FOUND`     | Prazo não encontrado      |
+| 422    | `INVALID_DEADLINE_RANGE` | `business_days` ≤ 0       |
+| 422    | `VALIDATION_ERROR`       | Body inválido             |
+
+---
+
+### `DELETE /api/v1/deadlines/{deadline_id}`
+
+Remove um prazo. Retorna 204 sem corpo.
+
+**Erros**
+
+| Status | Code                 | Situação                  |
+| ------ | -------------------- | ------------------------- |
+| 401    | `UNAUTHORIZED`       | Token ausente ou inválido |
+| 404    | `DEADLINE_NOT_FOUND` | Prazo não encontrado      |
