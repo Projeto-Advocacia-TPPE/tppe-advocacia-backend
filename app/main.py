@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from app.api.router import api_router
 from app.config.settings import get_settings
 from app.db.database import init_db
+from app.scheduler.scheduler import shutdown_scheduler, start_scheduler
 from app.shared.exceptions import AppException
 
 settings = get_settings()
@@ -18,7 +19,9 @@ settings = get_settings()
 async def lifespan(_: FastAPI):
     init_db()
     Path(settings.upload_dir).mkdir(parents=True, exist_ok=True)
+    start_scheduler()
     yield
+    shutdown_scheduler()
 
 
 _is_prod = settings.app_env == "production"
