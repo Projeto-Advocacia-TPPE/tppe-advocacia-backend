@@ -5,7 +5,7 @@ from datetime import date
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.modules.deadlines.model import Deadline
+from app.modules.deadlines.model import Deadline, DeadlineAlert
 
 
 class DeadlineRepository:
@@ -83,6 +83,39 @@ class DeadlineRepository:
         self.db.refresh(deadline)
         return deadline
 
+    def list_all(self) -> list[Deadline]:
+        return list(self.db.scalars(select(Deadline)).all())
+
     def delete(self, deadline: Deadline) -> None:
         self.db.delete(deadline)
         self.db.commit()
+
+
+class DeadlineAlertRepository:
+    def __init__(self, db: Session) -> None:
+        self.db = db
+
+    def sent_days_for(self, deadline_id: int) -> set[int]:
+        return set(
+            self.db.scalars(
+                select(DeadlineAlert.days_before).where(
+                    DeadlineAlert.deadline_id == deadline_id
+                )
+            ).all()
+        )
+
+    def create(self, deadline_id: int, days_before: int) -> DeadlineAlert:
+        alert = DeadlineAlert(deadline_id=deadline_id, days_before=days_before)
+        self.db.add(alert)
+        self.db.commit()
+        self.db.refresh(alert)
+        return alert
+
+    def list_by_deadline(self, deadline_id: int) -> list[DeadlineAlert]:
+        return list(
+            self.db.scalars(
+                select(DeadlineAlert)
+                .where(DeadlineAlert.deadline_id == deadline_id)
+                .order_by(DeadlineAlert.sent_at.asc(), DeadlineAlert.id.asc())
+            ).all()
+        )

@@ -33,7 +33,10 @@ def init_db() -> None:
     from app.modules.articles.model import Article  # noqa: F401
     from app.modules.audit_logs.model import AuditLog  # noqa: F401
     from app.modules.clients.model import Client, ClientNote  # noqa: F401
-    from app.modules.deadlines.model import Deadline  # noqa: F401
+    from app.modules.deadlines.model import (  # noqa: F401
+        Deadline,
+        DeadlineAlert,
+    )
     from app.modules.forensic_holidays.model import ForensicHoliday  # noqa: F401
     from app.modules.leads.model import Lead  # noqa: F401
     from app.modules.notifications.model import NotificationPreference  # noqa: F401

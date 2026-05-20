@@ -1815,7 +1815,7 @@ Lista anotações internas do processo em ordem cronológica decrescente (`creat
 > Todos os endpoints exigem autenticação (qualquer role).
 > Header obrigatório: `Authorization: Bearer <token>`
 
-Tipos de evento suportados: `PROCESS_MOVEMENT_CREATED`, `PROCESS_STATUS_CHANGED`, `LEAD_ASSIGNED`, `TASK_ASSIGNED`.
+Tipos de evento suportados: `PROCESS_MOVEMENT_CREATED`, `PROCESS_STATUS_CHANGED`, `LEAD_ASSIGNED`, `TASK_ASSIGNED`, `DEADLINE_APPROACHING`, `DEADLINE_EXPIRED`.
 Default para qualquer evento sem registro explícito é `true` (notificação habilitada).
 
 **Regras de disparo:**
@@ -1833,8 +1833,12 @@ Default para qualquer evento sem registro explícito é `true` (notificação ha
 | `PATCH /processes/{id}/status`                 | `PROCESS_STATUS_CHANGED`     | `process.created_by`                  |
 | `PATCH /leads/{id}` (mudou `assigned_to`)      | `LEAD_ASSIGNED`              | novo `assigned_to`                    |
 | `POST /tasks` / `PATCH /tasks/{id}`            | `TASK_ASSIGNED`              | `assigned_to` quando definido/alterado |
+| Job cron diário de prazos                      | `DEADLINE_APPROACHING`       | `deadline.created_by`                 |
+| Job cron diário de prazos                      | `DEADLINE_EXPIRED`           | `deadline.created_by`                 |
 
 \* Como o próprio criador é o autor, na prática ninguém é notificado pela movimentação inicial — o disparo fica em pé para o futuro (ex.: quando houver "responsável pelo processo" diferente do criador).
+
+Os eventos `DEADLINE_APPROACHING` / `DEADLINE_EXPIRED` não são disparados por um endpoint HTTP, mas por um job agendado (APScheduler) — ver seção [Deadlines](#deadlines).
 
 ---
 
@@ -2590,3 +2594,63 @@ Remove um prazo. Retorna 204 sem corpo.
 | ------ | -------------------- | ------------------------- |
 | 401    | `UNAUTHORIZED`       | Token ausente ou inválido |
 | 404    | `DEADLINE_NOT_FOUND` | Prazo não encontrado      |
+
+---
+
+## Alertas de prazo
+
+Um job cron diário (APScheduler) varre os prazos e dispara alertas por e-mail em intervalos escalonados, contados em **dias úteis** até a data-limite. Configurável por variáveis de ambiente:
+
+| Variável                  | Default          | Descrição                                          |
+| ------------------------- | ---------------- | -------------------------------------------------- |
+| `SCHEDULER_ENABLED`       | `true`           | Liga/desliga o scheduler                           |
+| `DEADLINE_ALERT_CRON`     | `06:00`          | Horário diário do job, formato `HH:MM` (fuso local) |
+| `DEADLINE_ALERT_INTERVALS`| `30,15,7,3,2,1`  | Intervalos de alerta, em dias úteis                |
+
+Regras de disparo:
+
+- Prazos **não-vencidos**: quando os dias úteis restantes entram numa janela configurada, dispara `DEADLINE_APPROACHING`. Para um prazo criado já dentro de uma janela, o job dispara no ciclo seguinte o alerta da menor janela aplicável (um único e-mail).
+- Prazos **vencidos** (`due_date < hoje`): dispara `DEADLINE_EXPIRED` uma única vez.
+- Cada par (prazo, intervalo) gera no máximo um alerta — registrado na tabela `deadline_alert`.
+- O destinatário é o `created_by` do prazo. Respeita a preferência de notificação do usuário (US-22).
+
+---
+
+### `GET /api/v1/processes/{process_id}/deadlines/{deadline_id}/alerts`
+
+Lista o histórico de alertas já disparados para um prazo. Acessível apenas ao autor do prazo (`created_by`) ou a usuários com role `ADMIN`.
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "deadline_id": 12,
+      "days_before": 15,
+      "kind": "APPROACHING",
+      "sent_at": "2026-05-19T06:00:03Z"
+    },
+    {
+      "id": 2,
+      "deadline_id": 12,
+      "days_before": -1,
+      "kind": "EXPIRED",
+      "sent_at": "2026-06-10T06:00:01Z"
+    }
+  ]
+}
+```
+
+> `kind`: `"APPROACHING"` (alerta de proximidade — `days_before` é o intervalo em dias úteis) ou `"EXPIRED"` (alerta de prazo vencido — `days_before` é o sentinela `-1`).
+
+**Erros**
+
+| Status | Code                 | Situação                                            |
+| ------ | -------------------- | --------------------------------------------------- |
+| 401    | `UNAUTHORIZED`       | Token ausente ou inválido                           |
+| 403    | `FORBIDDEN`          | Usuário não é o autor do prazo nem ADMIN            |
+| 404    | `PROCESS_NOT_FOUND`  | Processo não encontrado                             |
+| 404    | `DEADLINE_NOT_FOUND` | Prazo não encontrado ou não pertence ao processo    |

@@ -1,6 +1,15 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, Index, Integer, String, func
+from sqlalchemy import (
+    Date,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.shared.base_model import Base
@@ -35,5 +44,27 @@ class Deadline(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
+        nullable=False,
+    )
+
+
+class DeadlineAlert(Base):
+    __tablename__ = "deadline_alert"
+    __table_args__ = (
+        UniqueConstraint(
+            "deadline_id", "days_before", name="uq_deadline_alert_deadline_days"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    deadline_id: Mapped[int] = mapped_column(
+        ForeignKey("deadlines.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    days_before: Mapped[int] = mapped_column(Integer, nullable=False)
+    sent_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
         nullable=False,
     )

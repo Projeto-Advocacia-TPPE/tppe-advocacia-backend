@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.modules.deadlines.controller import DeadlineController
 from app.modules.deadlines.schema import (
+    DeadlineAlertRead,
     DeadlineCalculateRequest,
     DeadlineCalculateResponse,
     DeadlineCreate,
@@ -104,3 +105,18 @@ def delete_deadline(
 ) -> Response:
     DeadlineController(db).delete(deadline_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get(
+    "/processes/{process_id}/deadlines/{deadline_id}/alerts",
+    response_model=SuccessResponse[list[DeadlineAlertRead]],
+    responses=error_responses(401, 403, 404),
+    summary="Lista o histórico de alertas disparados de um prazo (admin/autor)",
+)
+def list_deadline_alerts(
+    process_id: int,
+    deadline_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> SuccessResponse[list[DeadlineAlertRead]]:
+    return ok(DeadlineController(db).list_alerts(process_id, deadline_id, current_user))
