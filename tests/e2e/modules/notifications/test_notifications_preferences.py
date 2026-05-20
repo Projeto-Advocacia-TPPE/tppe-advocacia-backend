@@ -40,6 +40,7 @@ class TestGetPreferences:
             "TASK_ASSIGNED": True,
             "DEADLINE_APPROACHING": True,
             "DEADLINE_EXPIRED": True,
+            "EXTERNAL_API_FAILURE": True,
         }
 
 
