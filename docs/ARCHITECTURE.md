@@ -13,6 +13,9 @@ app/
 │   └── settings.py                # configurações e variáveis de ambiente
 ├── db/
 │   └── database.py                # conexão com o banco de dados
+├── scheduler/                     # APScheduler — jobs agendados (cron)
+│   ├── scheduler.py               # setup/start/shutdown do BackgroundScheduler
+│   └── jobs.py                    # dispatch_deadline_alerts_job (US-28)
 ├── shared/                        # código transversal entre módulos
 │   ├── base_model.py              # DeclarativeBase do SQLAlchemy
 │   ├── exceptions.py              # exceções customizadas (AppException e subclasses)
@@ -81,13 +84,13 @@ app/
 │   │   ├── router.py              # /forensic-holidays (GET autenticado, CUD admin)
 │   │   ├── data/holidays.json     # nacionais + recesso + TJDFT
 │   │   └── seed.py                # `python -m app.modules.forensic_holidays.seed`
-│   ├── deadlines/                 # cálculo e persistência de prazos processuais
-│   │   ├── model.py               # ORM: Deadline
-│   │   ├── schema.py              # DeadlineCalculate*, DeadlineCreate/Update/Read
-│   │   ├── repository.py
-│   │   ├── service.py             # calculate_due_date(start, days, court, comarca)
+│   ├── deadlines/                 # cálculo, persistência e alertas de prazos
+│   │   ├── model.py               # ORM: Deadline, DeadlineAlert
+│   │   ├── schema.py              # DeadlineCalculate*, DeadlineCreate/Update/Read, DeadlineAlertRead
+│   │   ├── repository.py          # DeadlineRepository, DeadlineAlertRepository
+│   │   ├── service.py             # calculate_due_date, business_days_until, dispatch_alerts
 │   │   ├── controller.py
-│   │   └── router.py              # /deadlines/calculate, /processes/{id}/deadlines, /deadlines/{id}
+│   │   └── router.py              # /deadlines/calculate, /processes/{id}/deadlines, /deadlines/{id}, .../alerts
 │   ├── tasks/                     # tarefas em Kanban (CRUD + move atômico)
 │   │   ├── model.py               # ORM: Task, TaskStatus, TaskPriority
 │   │   ├── schema.py              # TaskCreate, TaskUpdate, TaskMove, TaskRead
