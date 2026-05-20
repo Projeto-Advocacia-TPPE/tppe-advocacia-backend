@@ -27,6 +27,7 @@ class ProcessRepository:
         court: str,
         action_type: str,
         client_id: int | None = None,
+        tribunal_alias: str | None = None,
         opposing_party: str | None = None,
         created_by: int | None = None,
     ) -> Process:
@@ -34,6 +35,7 @@ class ProcessRepository:
             number=number,
             client_id=client_id,
             court=court,
+            tribunal_alias=tribunal_alias,
             action_type=action_type,
             opposing_party=opposing_party,
             status=ProcessStatus.ATIVO,
@@ -50,6 +52,7 @@ class ProcessRepository:
         court: str,
         action_type: str,
         client_id: int | None = None,
+        tribunal_alias: str | None = None,
         opposing_party: str | None = None,
         created_by: int | None = None,
     ) -> Process:
@@ -58,6 +61,7 @@ class ProcessRepository:
             court=court,
             action_type=action_type,
             client_id=client_id,
+            tribunal_alias=tribunal_alias,
             opposing_party=opposing_party,
             created_by=created_by,
         )
@@ -123,6 +127,32 @@ class ProcessRepository:
     ) -> tuple[list[Process], int]:
         return self.list(client_id=client_id, page=page, limit=limit)
 
+    def list_active_for_datajud(
+        self,
+        tribunal_alias: str | None = None,
+        limit: int = 50,
+    ) -> tuple[list[Process], int]:
+        statement = select(Process).where(Process.status == ProcessStatus.ATIVO)
+
+        if tribunal_alias is not None:
+            statement = statement.where(Process.tribunal_alias == tribunal_alias)
+        else:
+            statement = statement.where(Process.tribunal_alias.is_not(None))
+
+        total = (
+            self.db.scalar(select(func.count()).select_from(statement.subquery())) or 0
+        )
+        processes = list(
+            self.db.scalars(
+                statement.options(joinedload(Process.client))
+                .order_by(Process.created_at.desc(), Process.id.desc())
+                .limit(limit)
+            )
+            .unique()
+            .all()
+        )
+        return processes, total
+
     def count_active_or_suspended_by_client(self, client_id: int) -> int:
         stmt = (
             select(func.count())
@@ -173,6 +203,7 @@ class ProcessRepository:
         occurred_at: datetime,
         source: MovementSource,
         description: str | None = None,
+        external_id: str | None = None,
         created_by: int | None = None,
     ) -> ProcessMovement:
         movement = ProcessMovement(
@@ -181,6 +212,7 @@ class ProcessRepository:
             description=description,
             occurred_at=occurred_at,
             source=source,
+            external_id=external_id,
             created_by=created_by,
         )
         self.db.add(movement)
@@ -194,6 +226,7 @@ class ProcessRepository:
         occurred_at: datetime,
         source: MovementSource,
         description: str | None = None,
+        external_id: str | None = None,
         created_by: int | None = None,
     ) -> ProcessMovement:
         movement = self.create_movement_no_commit(
@@ -202,6 +235,7 @@ class ProcessRepository:
             occurred_at=occurred_at,
             source=source,
             description=description,
+            external_id=external_id,
             created_by=created_by,
         )
         self.db.commit()
@@ -213,6 +247,17 @@ class ProcessRepository:
         return self.db.scalars(
             self._movement_query().where(ProcessMovement.id == movement_id)
         ).first()
+
+    def movement_external_id_exists(self, process_id: int, external_id: str) -> bool:
+        return (
+            self.db.scalars(
+                select(ProcessMovement.id).where(
+                    ProcessMovement.process_id == process_id,
+                    ProcessMovement.external_id == external_id,
+                )
+            ).first()
+            is not None
+        )
 
     def list_movements(
         self,

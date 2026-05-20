@@ -57,6 +57,7 @@ class ProcessService:
                 number=payload.number,
                 client_id=payload.client_id,
                 court=payload.court,
+                tribunal_alias=payload.tribunal_alias,
                 action_type=payload.action_type,
                 opposing_party=payload.opposing_party,
                 created_by=created_by.id,
@@ -130,6 +131,7 @@ class ProcessService:
         process_id: int,
         title: str,
         description: str | None = None,
+        external_id: str | None = None,
         created_by: int | None = None,
     ) -> ProcessMovement:
         process = self.get_process(process_id)
@@ -139,6 +141,7 @@ class ProcessService:
             description=description,
             occurred_at=datetime.now(timezone.utc),
             source=MovementSource.SYSTEM,
+            external_id=external_id,
             created_by=created_by,
         )
         self._notify_movement(process, movement, actor_id=created_by)

@@ -4,6 +4,7 @@ from app.modules.notifications.schema import EventType
 from app.modules.notifications.templates import (
     deadline_approaching,
     deadline_expired,
+    external_api_failure,
     lead_assigned,
     process_movement_created,
     process_status_changed,
@@ -19,4 +20,5 @@ TEMPLATES: dict[EventType, Renderer] = {
     EventType.TASK_ASSIGNED: task_assigned.render,
     EventType.DEADLINE_APPROACHING: deadline_approaching.render,
     EventType.DEADLINE_EXPIRED: deadline_expired.render,
+    EventType.EXTERNAL_API_FAILURE: external_api_failure.render,
 }

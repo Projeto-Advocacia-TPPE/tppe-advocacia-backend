@@ -37,6 +37,7 @@ def init_db() -> None:
         Deadline,
         DeadlineAlert,
     )
+    from app.modules.external_api_logs.model import ExternalApiLog  # noqa: F401
     from app.modules.forensic_holidays.model import ForensicHoliday  # noqa: F401
     from app.modules.leads.model import Lead  # noqa: F401
     from app.modules.notifications.model import NotificationPreference  # noqa: F401
