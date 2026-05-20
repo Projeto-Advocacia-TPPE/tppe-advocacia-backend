@@ -2,15 +2,20 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.modules.deadlines.repository import DeadlineRepository
+from app.modules.deadlines.repository import (
+    DeadlineAlertRepository,
+    DeadlineRepository,
+)
 from app.modules.deadlines.schema import (
+    DeadlineAlertKind,
+    DeadlineAlertRead,
     DeadlineCalculateRequest,
     DeadlineCalculateResponse,
     DeadlineCreate,
     DeadlineRead,
     DeadlineUpdate,
 )
-from app.modules.deadlines.service import DeadlineService
+from app.modules.deadlines.service import EXPIRED_DAYS_BEFORE, DeadlineService
 from app.modules.forensic_holidays.repository import ForensicHolidayRepository
 from app.modules.processes.repository import ProcessRepository
 from app.modules.users.model import User
@@ -22,6 +27,7 @@ class DeadlineController:
             DeadlineRepository(db),
             ForensicHolidayRepository(db),
             ProcessRepository(db),
+            alert_repository=DeadlineAlertRepository(db),
         )
 
     def calculate(self, payload: DeadlineCalculateRequest) -> DeadlineCalculateResponse:
@@ -59,3 +65,22 @@ class DeadlineController:
 
     def delete(self, deadline_id: int) -> None:
         self.service.delete(deadline_id)
+
+    def list_alerts(
+        self, process_id: int, deadline_id: int, current_user: User
+    ) -> list[DeadlineAlertRead]:
+        alerts = self.service.list_alerts(process_id, deadline_id, current_user)
+        return [
+            DeadlineAlertRead(
+                id=a.id,
+                deadline_id=a.deadline_id,
+                days_before=a.days_before,
+                kind=(
+                    DeadlineAlertKind.EXPIRED
+                    if a.days_before == EXPIRED_DAYS_BEFORE
+                    else DeadlineAlertKind.APPROACHING
+                ),
+                sent_at=a.sent_at,
+            )
+            for a in alerts
+        ]

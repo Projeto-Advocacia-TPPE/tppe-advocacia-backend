@@ -59,3 +59,16 @@ class DeadlineRead(BaseModel):
     created_by: int | None
     created_at: datetime
     updated_at: datetime
+
+
+class DeadlineAlertKind(str, Enum):
+    APPROACHING = "APPROACHING"
+    EXPIRED = "EXPIRED"
+
+
+class DeadlineAlertRead(BaseModel):
+    id: int
+    deadline_id: int
+    days_before: int
+    kind: DeadlineAlertKind
+    sent_at: datetime
