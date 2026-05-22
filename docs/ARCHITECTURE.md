@@ -105,6 +105,25 @@ app/
 │   │   ├── service.py             # calculate_due_date, business_days_until, dispatch_alerts
 │   │   ├── controller.py
 │   │   └── router.py              # /deadlines/calculate, /processes/{id}/deadlines, /deadlines/{id}, .../alerts
+│   ├── appointments/              # agenda de compromissos (CRUD pessoal)
+│   │   ├── model.py               # ORM: Appointment, AppointmentType
+│   │   ├── schema.py              # AppointmentCreate/Update/Read
+│   │   ├── repository.py
+│   │   ├── service.py             # CRUD + validação de refs + autorização + sync Google
+│   │   ├── controller.py
+│   │   └── router.py              # /appointments, /appointments/{id}
+│   ├── google_calendar/           # integração OAuth + sync com Google Calendar
+│   │   ├── model.py               # ORM: GoogleCredential
+│   │   ├── schema.py
+│   │   ├── repository.py
+│   │   ├── crypto.py              # TokenCipher (Fernet) p/ o refresh_token
+│   │   ├── protocol.py            # GoogleCalendarClient (Protocol)
+│   │   ├── google_service.py      # impl real (Google Calendar API)
+│   │   ├── fake_service.py        # impl fake para testes
+│   │   ├── oauth.py               # fluxo OAuth (auth URL, troca de code)
+│   │   ├── service.py             # GoogleCalendarService + sync_appointment
+│   │   ├── controller.py
+│   │   └── router.py              # /integrations/google/*
 │   ├── tasks/                     # tarefas em Kanban (CRUD + move atômico)
 │   │   ├── model.py               # ORM: Task, TaskStatus, TaskPriority
 │   │   ├── schema.py              # TaskCreate, TaskUpdate, TaskMove, TaskRead

@@ -99,6 +99,16 @@ class Settings(BaseSettings):
         validation_alias="DEADLINE_ALERT_INTERVALS",
     )
 
+    google_client_id: str = Field("", validation_alias="GOOGLE_CLIENT_ID")
+    google_client_secret: str = Field("", validation_alias="GOOGLE_CLIENT_SECRET")
+    google_redirect_uri: str = Field(
+        "http://localhost:8000/api/v1/integrations/google/callback",
+        validation_alias="GOOGLE_REDIRECT_URI",
+    )
+    google_token_encryption_key: str = Field(
+        "", validation_alias="GOOGLE_TOKEN_ENCRYPTION_KEY"
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -135,6 +145,15 @@ class Settings(BaseSettings):
         if not (0 <= hour <= 23 and 0 <= minute <= 59):
             raise ValueError("DEADLINE_ALERT_CRON hour/minute out of range")
         return hour, minute
+
+    @property
+    def google_configured(self) -> bool:
+        return bool(
+            self.google_client_id
+            and self.google_client_secret
+            and self.google_redirect_uri
+            and self.google_token_encryption_key
+        )
 
     @property
     def database_url(self) -> str:
