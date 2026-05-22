@@ -6,7 +6,7 @@ from googleapiclient.discovery import build
 from app.config.settings import Settings
 from app.modules.google_calendar.oauth import SCOPES
 
-_TOKEN_URI = "https://oauth2.googleapis.com/token"
+_TOKEN_URI = "https://oauth2.googleapis.com/token"  # public OAuth URL  # nosec B105
 _CALENDAR_ID = "primary"
 
 

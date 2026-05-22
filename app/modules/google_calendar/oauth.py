@@ -8,7 +8,7 @@ from app.config.settings import Settings
 SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 
 _AUTH_URI = "https://accounts.google.com/o/oauth2/auth"
-_TOKEN_URI = "https://oauth2.googleapis.com/token"
+_TOKEN_URI = "https://oauth2.googleapis.com/token"  # public OAuth URL  # nosec B105
 
 
 class GoogleOAuthFlow:

@@ -106,7 +106,7 @@ class AuthService:
             user,
             {
                 "hashed_password": new_hashed,
-                "reset_token_hash": None,
-                "reset_token_expires_at": None,
+                "reset_token_hash": None,  # clearing token field  # nosec B105
+                "reset_token_expires_at": None,  # clearing field  # nosec B105
             },
         )
