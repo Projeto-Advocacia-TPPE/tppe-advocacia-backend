@@ -7,6 +7,7 @@ from app.modules.auth.router import router as auth_router
 from app.modules.clients.router import router as clients_router
 from app.modules.deadlines.router import router as deadlines_router
 from app.modules.forensic_holidays.router import router as forensic_holidays_router
+from app.modules.google_calendar.router import router as google_calendar_router
 from app.modules.health.router import router as health_router
 from app.modules.leads.router import router as leads_router
 from app.modules.media.router import router as media_router
@@ -32,3 +33,4 @@ api_router.include_router(tasks_router)
 api_router.include_router(forensic_holidays_router)
 api_router.include_router(deadlines_router)
 api_router.include_router(appointments_router)
+api_router.include_router(google_calendar_router)

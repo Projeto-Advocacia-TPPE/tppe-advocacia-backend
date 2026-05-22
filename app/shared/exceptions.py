@@ -293,3 +293,21 @@ class AppointmentProcessNotFoundError(AppException):
             "APPOINTMENT_PROCESS_NOT_FOUND",
             "Referenced process does not exist",
         )
+
+
+class GoogleNotConfiguredError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "GOOGLE_NOT_CONFIGURED",
+            "Google Calendar integration is not configured on the server",
+        )
+
+
+class GoogleNotConnectedError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_409_CONFLICT,
+            "GOOGLE_NOT_CONNECTED",
+            "User has not connected a Google Calendar account",
+        )
