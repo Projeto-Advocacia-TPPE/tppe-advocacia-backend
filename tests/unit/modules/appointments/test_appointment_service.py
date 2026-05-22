@@ -12,6 +12,8 @@ from app.shared.exceptions import (
     AppointmentNotFoundError,
     AppointmentProcessNotFoundError,
     ForbiddenError,
+    GoogleNotConfiguredError,
+    GoogleNotConnectedError,
 )
 from app.shared.types import Role
 
@@ -133,3 +135,67 @@ class TestList:
         repo.list.return_value = ([], 0)
         service.list_appointments(make_user(id=42), page=1, limit=20)
         assert repo.list.call_args.kwargs["created_by"] == 42
+
+
+def make_google_sync(connected: bool = True, configured: bool = True) -> MagicMock:
+    google = MagicMock()
+    google.is_configured = configured
+    google.get_status.return_value = SimpleNamespace(connected=connected)
+    return google
+
+
+class TestSyncAllToGoogle:
+    def test_raises_when_not_configured(self, repo, clients, processes):
+        google = make_google_sync(configured=False)
+        service = AppointmentService(repo, clients, processes, google_sync=google)
+        with pytest.raises(GoogleNotConfiguredError):
+            service.sync_all_to_google(make_user())
+
+    def test_raises_when_google_sync_absent(self, service):
+        with pytest.raises(GoogleNotConfiguredError):
+            service.sync_all_to_google(make_user())
+
+    def test_raises_when_user_not_connected(self, repo, clients, processes):
+        google = make_google_sync(connected=False)
+        service = AppointmentService(repo, clients, processes, google_sync=google)
+        with pytest.raises(GoogleNotConnectedError):
+            service.sync_all_to_google(make_user())
+
+    def test_syncs_unsynced_appointments(self, repo, clients, processes):
+        google = make_google_sync()
+        google.sync_appointment.side_effect = ["evt-1", "evt-2"]
+        repo.list_unsynced_future.return_value = [
+            SimpleNamespace(id=1),
+            SimpleNamespace(id=2),
+        ]
+        service = AppointmentService(repo, clients, processes, google_sync=google)
+
+        result = service.sync_all_to_google(make_user(id=5))
+
+        assert (result.total, result.synced, result.failed) == (2, 2, 0)
+        assert repo.update.call_count == 2
+        assert repo.list_unsynced_future.call_args.args[0] == 5
+
+    def test_counts_failures_without_updating(self, repo, clients, processes):
+        google = make_google_sync()
+        # segundo compromisso falha no Google -> sync_appointment devolve None
+        google.sync_appointment.side_effect = ["evt-1", None]
+        repo.list_unsynced_future.return_value = [
+            SimpleNamespace(id=1),
+            SimpleNamespace(id=2),
+        ]
+        service = AppointmentService(repo, clients, processes, google_sync=google)
+
+        result = service.sync_all_to_google(make_user())
+
+        assert (result.total, result.synced, result.failed) == (2, 1, 1)
+        assert repo.update.call_count == 1
+
+    def test_empty_when_nothing_to_sync(self, repo, clients, processes):
+        google = make_google_sync()
+        repo.list_unsynced_future.return_value = []
+        service = AppointmentService(repo, clients, processes, google_sync=google)
+
+        result = service.sync_all_to_google(make_user())
+
+        assert (result.total, result.synced, result.failed) == (0, 0, 0)

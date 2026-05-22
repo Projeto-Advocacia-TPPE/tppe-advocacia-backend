@@ -125,6 +125,37 @@ class TestList:
         assert {a.id for a in page1}.isdisjoint({a.id for a in page2})
 
 
+class TestListUnsyncedFuture:
+    def test_returns_only_future_unsynced(self, db: Session, user_id: int):
+        repo = AppointmentRepository(db)
+        now = datetime(2026, 11, 1, tzinfo=timezone.utc)
+
+        future_unsynced = create_appointment(
+            repo, user_id, starts_at=datetime(2026, 12, 1, 9, 0, tzinfo=timezone.utc)
+        )
+        # passado -> ignorado
+        create_appointment(
+            repo, user_id, starts_at=datetime(2026, 1, 1, 9, 0, tzinfo=timezone.utc)
+        )
+        # futuro mas já sincronizado -> ignorado
+        synced = create_appointment(
+            repo, user_id, starts_at=datetime(2026, 12, 5, 9, 0, tzinfo=timezone.utc)
+        )
+        repo.update(synced, {"is_synced_to_google": True, "google_event_id": "evt"})
+
+        result = repo.list_unsynced_future(user_id, now)
+        assert [a.id for a in result] == [future_unsynced.id]
+
+    def test_scoped_to_user(self, db: Session, user_id: int, other_user_id: int):
+        repo = AppointmentRepository(db)
+        now = datetime(2026, 11, 1, tzinfo=timezone.utc)
+        mine = create_appointment(repo, user_id)
+        create_appointment(repo, other_user_id)
+
+        result = repo.list_unsynced_future(user_id, now)
+        assert [a.id for a in result] == [mine.id]
+
+
 class TestUpdate:
     def test_update_applies_fields(self, db: Session, user_id: int):
         repo = AppointmentRepository(db)
