@@ -10,12 +10,17 @@ from datetime import date
 
 from app.config.settings import get_settings
 from app.db.database import SessionLocal
+from app.modules.datajud.datajud_service import DataJudApiService
+from app.modules.datajud.schema import DataJudBatchSyncRequest
+from app.modules.datajud.service import DataJudService
 from app.modules.deadlines.repository import (
     DeadlineAlertRepository,
     DeadlineRepository,
 )
 from app.modules.deadlines.service import DeadlineService
 from app.modules.email.resend_service import ResendEmailService
+from app.modules.external_api_logs.notifier import ExternalApiFailureNotifier
+from app.modules.external_api_logs.repository import ExternalApiLogRepository
 from app.modules.forensic_holidays.repository import ForensicHolidayRepository
 from app.modules.notifications.repository import NotificationPreferenceRepository
 from app.modules.notifications.service import NotificationService
@@ -48,3 +53,38 @@ def dispatch_deadline_alerts_job() -> None:
         logger.info("Deadline alerts job finished — %d alert(s) sent", sent)
     except Exception:
         logger.exception("Deadline alerts job failed")
+
+
+def dispatch_datajud_sync_job() -> None:
+    """Varre processos ativos e importa movimentações pelo DataJud (US-20)."""
+    logger.info("DataJud sync job started")
+    try:
+        settings = get_settings()
+        with SessionLocal() as db:
+            users = UserRepository(db)
+            notification_service = NotificationService(
+                NotificationPreferenceRepository(db),
+                users,
+                ResendEmailService(),
+            )
+            service = DataJudService(
+                process_repository=ProcessRepository(db),
+                log_repository=ExternalApiLogRepository(db),
+                datajud_client=DataJudApiService(),
+                failure_notifier=ExternalApiFailureNotifier(
+                    users,
+                    notification_service,
+                ),
+            )
+            result = service.sync_active_processes(
+                DataJudBatchSyncRequest(limit=settings.datajud_sync_limit),
+                actor_id=settings.datajud_sync_user_id,
+            )
+        logger.info(
+            "DataJud sync job finished — %d success, %d failure, %d imported",
+            result.success_count,
+            result.failure_count,
+            result.imported_count,
+        )
+    except Exception:
+        logger.exception("DataJud sync job failed")

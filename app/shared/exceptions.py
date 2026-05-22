@@ -209,6 +209,42 @@ class ProcessStatusUnchangedError(AppException):
         )
 
 
+class DataJudTribunalAliasRequiredError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "DATAJUD_TRIBUNAL_ALIAS_REQUIRED",
+            "DataJud tribunal alias is required for this process",
+        )
+
+
+class DataJudNotConfiguredError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "DATAJUD_NOT_CONFIGURED",
+            "DataJud integration is not configured",
+        )
+
+
+class DataJudUnavailableError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_502_BAD_GATEWAY,
+            "DATAJUD_UNAVAILABLE",
+            "DataJud request failed",
+        )
+
+
+class DataJudProcessNotFoundError(AppException):
+    def __init__(self) -> None:
+        super().__init__(
+            status.HTTP_404_NOT_FOUND,
+            "DATAJUD_PROCESS_NOT_FOUND",
+            "DataJud did not return this process",
+        )
+
+
 class TaskNotFoundError(AppException):
     def __init__(self) -> None:
         super().__init__(status.HTTP_404_NOT_FOUND, "TASK_NOT_FOUND", "Task not found")

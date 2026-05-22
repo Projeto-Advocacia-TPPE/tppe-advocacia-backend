@@ -44,6 +44,11 @@ class Process(Base):
         index=True,
     )
     court: Mapped[str] = mapped_column(String(120), nullable=False)
+    tribunal_alias: Mapped[str | None] = mapped_column(
+        String(30),
+        nullable=True,
+        index=True,
+    )
     action_type: Mapped[str] = mapped_column(String(120), nullable=False)
     opposing_party: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[ProcessStatus] = mapped_column(
@@ -82,6 +87,11 @@ class ProcessMovement(Base):
             "process_id",
             "occurred_at",
         ),
+        UniqueConstraint(
+            "process_id",
+            "external_id",
+            name="uq_process_movements_process_external_id",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
@@ -101,6 +111,11 @@ class ProcessMovement(Base):
         SAEnum(MovementSource, native_enum=False, length=10),
         nullable=False,
         default=MovementSource.MANUAL,
+    )
+    external_id: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+        index=True,
     )
     created_by: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", use_alter=True, name="fk_process_movements_created_by"),

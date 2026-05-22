@@ -572,6 +572,66 @@ Lista logs de auditoria com filtros opcionais e paginação.
 
 ---
 
+## External API Logs
+
+> Exige autenticação com role `ADMIN`.
+> Header obrigatório: `Authorization: Bearer <token>`
+
+### `GET /api/v1/external-api-logs`
+
+Lista logs de chamadas a APIs externas, incluindo sucesso/falha do DataJud.
+
+**Query params**
+
+| Parâmetro    | Tipo                  | Obrigatório | Descrição                          |
+| ------------ | --------------------- | ----------- | ---------------------------------- |
+| `provider`   | `DATAJUD`             | Não         | Filtra por provedor                |
+| `status`     | `SUCCESS` \| `FAILURE` | Não         | Filtra por status da chamada       |
+| `process_id` | `integer`             | Não         | Filtra por processo                |
+| `date_from`  | `datetime` (ISO 8601) | Não         | Filtra registros a partir da data  |
+| `date_to`    | `datetime` (ISO 8601) | Não         | Filtra registros até a data        |
+| `page`       | `integer` (≥ 1)       | Não         | Página atual (default: `1`)        |
+| `limit`      | `integer` (1–100)     | Não         | Itens por página (default: `20`)   |
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 10,
+      "provider": "DATAJUD",
+      "operation": "PROCESS_MOVEMENT_SYNC",
+      "status": "FAILURE",
+      "process_id": 1,
+      "tribunal_alias": "tjsp",
+      "request_identifier": "12345678920248260100",
+      "http_status": 503,
+      "error_code": "DATAJUD_REQUEST_FAILED",
+      "error_message": "DataJud returned an error response",
+      "created_by": 3,
+      "created_at": "2026-05-20T12:00:00Z"
+    }
+  ],
+  "meta": {
+    "total": 1,
+    "page": 1,
+    "limit": 20,
+    "pages": 1
+  }
+}
+```
+
+**Erros**
+
+| Status | Code           | Situação                        |
+| ------ | -------------- | ------------------------------- |
+| 401    | `UNAUTHORIZED` | Token ausente ou inválido       |
+| 403    | `FORBIDDEN`    | Usuário autenticado não é ADMIN |
+
+---
+
 ## Office Config
 
 ### `GET /api/v1/office-config`
@@ -1400,12 +1460,13 @@ Cria um novo processo judicial. Vincular a um cliente é opcional.
   "number": "1234567-89.2024.8.26.0100",
   "client_id": 7,
   "court": "TJSP",
+  "tribunal_alias": "tjsp",
   "action_type": "Ação Cível",
   "opposing_party": "Empresa X"
 }
 ```
 
-> `client_id` e `opposing_party` são opcionais. `number` aceita formato mascarado ou 20 dígitos.
+> `client_id`, `tribunal_alias` e `opposing_party` são opcionais. `tribunal_alias` identifica o tribunal na API pública do DataJud (ex.: `tjsp`, `trf-1`) e é usado no sync automático/manual.
 
 **Resposta 201**
 
@@ -1418,6 +1479,7 @@ Cria um novo processo judicial. Vincular a um cliente é opcional.
     "client_id": 7,
     "client_name": "João Silva",
     "court": "TJSP",
+    "tribunal_alias": "tjsp",
     "action_type": "Ação Cível",
     "opposing_party": "Empresa X",
     "status": "ATIVO",
@@ -1466,6 +1528,7 @@ Lista processos com filtros e paginação. Ordenado por `created_at DESC, id DES
       "client_id": 7,
       "client_name": "João Silva",
       "court": "TJSP",
+      "tribunal_alias": "tjsp",
       "action_type": "Ação Cível",
       "status": "ATIVO",
       "created_at": "2026-05-17T14:00:00Z"
@@ -1503,6 +1566,7 @@ Retorna dados completos de um processo.
     "client_id": 7,
     "client_name": "João Silva",
     "court": "TJSP",
+    "tribunal_alias": "tjsp",
     "action_type": "Ação Cível",
     "opposing_party": "Empresa X",
     "status": "ATIVO",
@@ -1577,6 +1641,7 @@ Registra uma movimentação manual no processo. Movimentações são imutáveis 
     "description": "Audiência designada para 30/06/2026 às 14h.",
     "occurred_at": "2026-05-17T10:30:00Z",
     "source": "MANUAL",
+    "external_id": null,
     "created_by": 3,
     "created_by_name": "Ana Lima",
     "created_at": "2026-05-17T14:00:00Z"
@@ -1621,6 +1686,7 @@ Lista movimentações do processo em ordem cronológica decrescente (`occurred_a
       "description": null,
       "occurred_at": "2026-05-15T09:00:00Z",
       "source": "MANUAL",
+      "external_id": null,
       "created_by": 3,
       "created_by_name": "Ana Lima",
       "created_at": "2026-05-17T14:05:00Z"
@@ -1631,7 +1697,8 @@ Lista movimentações do processo em ordem cronológica decrescente (`occurred_a
       "title": "Processo cadastrado",
       "description": null,
       "occurred_at": "2026-05-10T08:00:00Z",
-      "source": "MANUAL",
+      "source": "SYSTEM",
+      "external_id": null,
       "created_by": 3,
       "created_by_name": "Ana Lima",
       "created_at": "2026-05-17T14:00:00Z"
@@ -1652,6 +1719,111 @@ Lista movimentações do processo em ordem cronológica decrescente (`occurred_a
 | ------ | ------------------- | ------------------------- |
 | 401    | `UNAUTHORIZED`      | Token ausente ou inválido |
 | 404    | `PROCESS_NOT_FOUND` | Processo não encontrado   |
+
+---
+
+### `POST /api/v1/processes/{process_id}/sync`
+
+Sincroniza movimentações do processo com a API pública do DataJud. As movimentações importadas são persistidas em `process_movements` com `source = SYSTEM` e `external_id` preenchido para deduplicação por processo.
+
+> Se `tribunal_alias` não for enviado no body, a API usa o `tribunal_alias` salvo no processo. Falhas são registradas em `external_api_logs`; falhas de integração também disparam `EXTERNAL_API_FAILURE` para admins ativos.
+
+**Body**
+
+```json
+{
+  "tribunal_alias": "tjsp"
+}
+```
+
+> Body opcional. `tribunal_alias` aceita letras minúsculas/números/hífen, de 2 a 30 caracteres.
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "process_id": 1,
+    "process_number": "1234567-89.2024.8.26.0100",
+    "tribunal_alias": "tjsp",
+    "imported_count": 1,
+    "skipped_count": 0,
+    "external_api_log_id": 10,
+    "synced_at": "2026-05-20T12:00:00Z",
+    "movements": [
+      {
+        "id": 3,
+        "process_id": 1,
+        "title": "Conclusos para decisão",
+        "description": "Importado do DataJud",
+        "occurred_at": "2026-05-20T10:00:00Z",
+        "source": "SYSTEM",
+        "external_id": "2f1c...",
+        "created_by": 3,
+        "created_by_name": "Ana Lima",
+        "created_at": "2026-05-20T12:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                              | Situação                                      |
+| ------ | --------------------------------- | --------------------------------------------- |
+| 401    | `UNAUTHORIZED`                    | Token ausente ou inválido                     |
+| 404    | `PROCESS_NOT_FOUND`               | Processo não encontrado                       |
+| 404    | `DATAJUD_PROCESS_NOT_FOUND`       | DataJud não retornou o processo               |
+| 422    | `DATAJUD_TRIBUNAL_ALIAS_REQUIRED` | Processo sem tribunal DataJud salvo/fornecido |
+| 502    | `DATAJUD_UNAVAILABLE`             | Falha na chamada ao DataJud                   |
+| 503    | `DATAJUD_NOT_CONFIGURED`          | `DATAJUD_API_KEY` não configurada             |
+
+---
+
+### `POST /api/v1/datajud/sync-active-processes`
+
+Sincroniza em lote processos com `status = ATIVO`. Quando `tribunal_alias` é omitido, somente processos ativos com `tribunal_alias` salvo são varridos.
+
+> Exige autenticação com role `ADMIN`.
+
+**Body**
+
+```json
+{
+  "tribunal_alias": null,
+  "limit": 50
+}
+```
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "tribunal_alias": null,
+    "total_active_processes": 12,
+    "processed_count": 12,
+    "success_count": 11,
+    "failure_count": 1,
+    "imported_count": 18,
+    "skipped_count": 7,
+    "synced_at": "2026-05-20T12:00:00Z",
+    "results": []
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                  | Situação                        |
+| ------ | --------------------- | ------------------------------- |
+| 401    | `UNAUTHORIZED`        | Token ausente ou inválido       |
+| 403    | `FORBIDDEN`           | Usuário autenticado não é ADMIN |
+| 422    | `VALIDATION_ERROR`    | Body inválido                   |
+| 502    | `DATAJUD_UNAVAILABLE` | Falha geral na chamada DataJud  |
 
 ---
 
@@ -1815,7 +1987,7 @@ Lista anotações internas do processo em ordem cronológica decrescente (`creat
 > Todos os endpoints exigem autenticação (qualquer role).
 > Header obrigatório: `Authorization: Bearer <token>`
 
-Tipos de evento suportados: `PROCESS_MOVEMENT_CREATED`, `PROCESS_STATUS_CHANGED`, `LEAD_ASSIGNED`, `TASK_ASSIGNED`, `DEADLINE_APPROACHING`, `DEADLINE_EXPIRED`.
+Tipos de evento suportados: `PROCESS_MOVEMENT_CREATED`, `PROCESS_STATUS_CHANGED`, `LEAD_ASSIGNED`, `TASK_ASSIGNED`, `DEADLINE_APPROACHING`, `DEADLINE_EXPIRED`, `EXTERNAL_API_FAILURE`.
 Default para qualquer evento sem registro explícito é `true` (notificação habilitada).
 
 **Regras de disparo:**
@@ -1835,6 +2007,7 @@ Default para qualquer evento sem registro explícito é `true` (notificação ha
 | `POST /tasks` / `PATCH /tasks/{id}`            | `TASK_ASSIGNED`              | `assigned_to` quando definido/alterado |
 | Job cron diário de prazos                      | `DEADLINE_APPROACHING`       | `deadline.created_by`                 |
 | Job cron diário de prazos                      | `DEADLINE_EXPIRED`           | `deadline.created_by`                 |
+| Falha em integração externa                    | `EXTERNAL_API_FAILURE`       | admins ativos                         |
 
 \* Como o próprio criador é o autor, na prática ninguém é notificado pela movimentação inicial — o disparo fica em pé para o futuro (ex.: quando houver "responsável pelo processo" diferente do criador).
 
@@ -1856,7 +2029,10 @@ Retorna as preferências de notificação do usuário autenticado. Todos os tipo
       "PROCESS_MOVEMENT_CREATED": true,
       "PROCESS_STATUS_CHANGED": true,
       "LEAD_ASSIGNED": true,
-      "TASK_ASSIGNED": true
+      "TASK_ASSIGNED": true,
+      "DEADLINE_APPROACHING": true,
+      "DEADLINE_EXPIRED": true,
+      "EXTERNAL_API_FAILURE": true
     }
   }
 }
@@ -2606,6 +2782,9 @@ Um job cron diário (APScheduler) varre os prazos e dispara alertas por e-mail e
 | `SCHEDULER_ENABLED`       | `true`           | Liga/desliga o scheduler                           |
 | `DEADLINE_ALERT_CRON`     | `06:00`          | Horário diário do job, formato `HH:MM` (fuso local) |
 | `DEADLINE_ALERT_INTERVALS`| `30,15,7,3,2,1`  | Intervalos de alerta, em dias úteis                |
+| `DATAJUD_SYNC_INTERVAL_HOURS` | `6`          | Intervalo do job recorrente de sync DataJud        |
+| `DATAJUD_SYNC_LIMIT`      | `50`             | Máximo de processos ativos por ciclo DataJud       |
+| `DATAJUD_SYNC_USER_ID`    | `null`           | Usuário registrado como autor do sync agendado     |
 
 Regras de disparo:
 

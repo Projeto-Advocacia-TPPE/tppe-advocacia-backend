@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.modules.processes.model import MovementSource, ProcessStatus
+from app.shared.datajud import normalize_datajud_tribunal_alias
 
 CNJ_MASKED_REGEX = re.compile(r"^\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$")
 CNJ_DIGITS_REGEX = re.compile(r"^\d{20}$")
@@ -33,6 +34,7 @@ class ProcessCreate(BaseModel):
     number: str = Field(..., min_length=1, max_length=25)
     client_id: int | None = Field(default=None, gt=0)
     court: str = Field(..., min_length=1, max_length=120)
+    tribunal_alias: str | None = Field(default=None, min_length=2, max_length=30)
     action_type: str = Field(..., min_length=1, max_length=120)
     opposing_party: str | None = Field(default=None, max_length=255)
 
@@ -41,6 +43,11 @@ class ProcessCreate(BaseModel):
     def validate_number(cls, value: str) -> str:
         return normalize_cnj(value)
 
+    @field_validator("tribunal_alias")
+    @classmethod
+    def normalize_tribunal_alias(cls, value: str | None) -> str | None:
+        return normalize_datajud_tribunal_alias(value)
+
 
 class ProcessRead(BaseModel):
     id: int
@@ -48,6 +55,7 @@ class ProcessRead(BaseModel):
     client_id: int | None
     client_name: str | None
     court: str
+    tribunal_alias: str | None
     action_type: str
     opposing_party: str | None
     status: ProcessStatus
@@ -69,6 +77,7 @@ class ProcessRead(BaseModel):
             "client_id": data.client_id,
             "client_name": data.client.name if data.client else None,
             "court": data.court,
+            "tribunal_alias": data.tribunal_alias,
             "action_type": data.action_type,
             "opposing_party": data.opposing_party,
             "status": data.status,
@@ -90,6 +99,7 @@ class ProcessStatusChangeResponse(BaseModel):
     client_id: int | None
     client_name: str | None
     court: str
+    tribunal_alias: str | None
     action_type: str
     opposing_party: str | None
     status: ProcessStatus
@@ -111,6 +121,7 @@ class ProcessStatusChangeResponse(BaseModel):
             client_id=process.client_id,
             client_name=process.client.name if process.client else None,
             court=process.court,
+            tribunal_alias=process.tribunal_alias,
             action_type=process.action_type,
             opposing_party=process.opposing_party,
             status=process.status,
@@ -128,6 +139,7 @@ class ProcessListItem(BaseModel):
     client_id: int | None
     client_name: str | None
     court: str
+    tribunal_alias: str | None
     action_type: str
     status: ProcessStatus
     created_at: datetime
@@ -145,6 +157,7 @@ class ProcessListItem(BaseModel):
             "client_id": data.client_id,
             "client_name": data.client.name if data.client else None,
             "court": data.court,
+            "tribunal_alias": data.tribunal_alias,
             "action_type": data.action_type,
             "status": data.status,
             "created_at": data.created_at,
@@ -213,6 +226,7 @@ class MovementRead(BaseModel):
     description: str | None
     occurred_at: datetime
     source: MovementSource
+    external_id: str | None
     created_by: int | None
     created_by_name: str | None
     created_at: datetime
@@ -231,6 +245,7 @@ class MovementRead(BaseModel):
             "description": data.description,
             "occurred_at": data.occurred_at,
             "source": data.source,
+            "external_id": data.external_id,
             "created_by": data.created_by,
             "created_by_name": data.creator.name if data.creator else None,
             "created_at": data.created_at,

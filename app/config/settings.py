@@ -38,6 +38,49 @@ class Settings(BaseSettings):
         "onboarding@resend.dev", validation_alias="RESEND_FROM_EMAIL"
     )
 
+    datajud_api_key: str = Field("", validation_alias="DATAJUD_API_KEY")
+    datajud_base_url: str = Field(
+        "https://api-publica.datajud.cnj.jus.br",
+        validation_alias="DATAJUD_BASE_URL",
+    )
+    datajud_timeout_seconds: float = Field(
+        10.0,
+        gt=0,
+        le=60,
+        validation_alias="DATAJUD_TIMEOUT_SECONDS",
+    )
+    datajud_max_retries: int = Field(
+        2,
+        ge=0,
+        le=5,
+        validation_alias="DATAJUD_MAX_RETRIES",
+    )
+    datajud_retry_backoff_seconds: float = Field(
+        0.5,
+        ge=0,
+        le=10,
+        validation_alias="DATAJUD_RETRY_BACKOFF_SECONDS",
+    )
+    datajud_sync_interval_hours: int = Field(
+        6,
+        ge=1,
+        le=168,
+        validation_alias="DATAJUD_SYNC_INTERVAL_HOURS",
+    )
+    datajud_sync_limit: int = Field(
+        50, ge=1, le=100, validation_alias="DATAJUD_SYNC_LIMIT"
+    )
+    datajud_sync_user_id: int | None = Field(
+        None,
+        validation_alias="DATAJUD_SYNC_USER_ID",
+    )
+    integration_failure_email_throttle_minutes: int = Field(
+        30,
+        ge=0,
+        le=1440,
+        validation_alias="INTEGRATION_FAILURE_EMAIL_THROTTLE_MINUTES",
+    )
+
     lead_dedup_window_hours: int = Field(1, validation_alias="LEAD_DEDUP_WINDOW_HOURS")
 
     upload_dir: str = Field("uploads/media", validation_alias="UPLOAD_DIR")
@@ -70,6 +113,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     @field_validator("jwt_secret_key")

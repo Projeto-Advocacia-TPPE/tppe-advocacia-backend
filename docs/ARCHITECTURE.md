@@ -15,7 +15,7 @@ app/
 │   └── database.py                # conexão com o banco de dados
 ├── scheduler/                     # APScheduler — jobs agendados (cron)
 │   ├── scheduler.py               # setup/start/shutdown do BackgroundScheduler
-│   └── jobs.py                    # dispatch_deadline_alerts_job (US-28)
+│   └── jobs.py                    # deadline alerts + DataJud sync jobs
 ├── shared/                        # código transversal entre módulos
 │   ├── base_model.py              # DeclarativeBase do SQLAlchemy
 │   ├── exceptions.py              # exceções customizadas (AppException e subclasses)
@@ -67,6 +67,20 @@ app/
 │   │   ├── protocol.py            # EmailService (Protocol)
 │   │   ├── resend_service.py      # implementação Resend
 │   │   └── fake_service.py        # implementação fake para testes
+│   ├── datajud/                   # integração com API pública DataJud (US-20)
+│   │   ├── protocol.py            # DataJudClient (Protocol)
+│   │   ├── datajud_service.py     # implementação real via httpx
+│   │   ├── fake_service.py        # implementação fake para testes
+│   │   ├── service.py             # sync manual/lote, dedup e persistência
+│   │   ├── controller.py
+│   │   └── router.py              # /processes/{id}/sync, /datajud/sync-active-processes
+│   ├── external_api_logs/         # logs de sucesso/falha de integrações externas
+│   │   ├── model.py               # ORM: ExternalApiLog
+│   │   ├── repository.py
+│   │   ├── service.py
+│   │   ├── controller.py
+│   │   ├── notifier.py            # notifica admins em falhas via notifications
+│   │   └── router.py              # GET /external-api-logs (admin)
 │   ├── notifications/             # preferências e disparo de notificações por e-mail
 │   │   ├── model.py               # ORM: NotificationPreference
 │   │   ├── schema.py              # EventType, PreferencesRead, PreferencesUpdate
