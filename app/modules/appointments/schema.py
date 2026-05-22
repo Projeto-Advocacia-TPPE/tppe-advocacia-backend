@@ -37,6 +37,12 @@ class AppointmentUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class AppointmentSyncResult(BaseModel):
+    total: int
+    synced: int
+    failed: int
+
+
 class AppointmentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

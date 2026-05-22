@@ -6,20 +6,24 @@ from app.modules.appointments.repository import AppointmentRepository
 from app.modules.appointments.schema import (
     AppointmentCreate,
     AppointmentRead,
+    AppointmentSyncResult,
     AppointmentUpdate,
 )
 from app.modules.appointments.service import AppointmentService
 from app.modules.clients.repository import ClientRepository
+from app.modules.google_calendar.protocol import GoogleCalendarClient
+from app.modules.google_calendar.service import build_google_calendar_service
 from app.modules.processes.repository import ProcessRepository
 from app.modules.users.model import User
 
 
 class AppointmentController:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: Session, google_client: GoogleCalendarClient) -> None:
         self.service = AppointmentService(
             AppointmentRepository(db),
             ClientRepository(db),
             ProcessRepository(db),
+            google_sync=build_google_calendar_service(db, google_client),
         )
 
     def create_appointment(
@@ -50,3 +54,6 @@ class AppointmentController:
 
     def delete_appointment(self, appointment_id: int, current_user: User) -> None:
         self.service.delete_appointment(appointment_id, current_user)
+
+    def sync_all_to_google(self, current_user: User) -> AppointmentSyncResult:
+        return self.service.sync_all_to_google(current_user)

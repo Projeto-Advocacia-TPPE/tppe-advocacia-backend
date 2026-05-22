@@ -60,8 +60,7 @@ class Appointment(Base):
         ForeignKey("users.id", use_alter=True, name="fk_appointments_created_by"),
         nullable=False,
     )
-    # Campos da integração Google Calendar (US-26 Fase 2) — já criados aqui
-    # para que a Fase 2 não exija alteração de schema.
+    # Campos da integração Google Calendar
     google_event_id: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     is_synced_to_google: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False

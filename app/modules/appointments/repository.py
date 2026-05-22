@@ -91,3 +91,22 @@ class AppointmentRepository:
             ).all()
         )
         return items, total
+
+    def list_unsynced_future(self, created_by: int, now: datetime) -> list[Appointment]:
+        """Compromissos futuros do usuário ainda não sincronizados ao Google.
+
+        Usado pelo sync retroativo (`sync-all`). O filtro por
+        `is_synced_to_google` é o que torna a operação idempotente.
+        """
+        return list(
+            self.db.scalars(
+                select(Appointment)
+                .options(joinedload(Appointment.creator))
+                .where(
+                    Appointment.created_by == created_by,
+                    Appointment.is_synced_to_google.is_(False),
+                    Appointment.starts_at >= now,
+                )
+                .order_by(Appointment.starts_at.asc(), Appointment.id.asc())
+            ).all()
+        )
