@@ -2833,3 +2833,258 @@ Lista o histórico de alertas já disparados para um prazo. Acessível apenas ao
 | 403    | `FORBIDDEN`          | Usuário não é o autor do prazo nem ADMIN            |
 | 404    | `PROCESS_NOT_FOUND`  | Processo não encontrado                             |
 | 404    | `DEADLINE_NOT_FOUND` | Prazo não encontrado ou não pertence ao processo    |
+
+---
+
+## Appointments
+
+> Todos os endpoints exigem autenticação (qualquer role).
+> Header obrigatório: `Authorization: Bearer <token>`
+
+Agenda pessoal de compromissos. Cada compromisso pertence ao usuário que o criou (`created_by`). O dono acessa os seus; usuários com role `ADMIN` podem ver/editar/excluir qualquer compromisso. A listagem retorna apenas os compromissos do usuário autenticado.
+
+Datas são armazenadas em UTC. `type`: `AUDIENCIA` | `REUNIAO` | `PRAZO` | `OUTRO`. Os campos `google_event_id` e `is_synced_to_google` pertencem à integração com o Google Calendar (fase 2) e hoje vêm sempre `null`/`false`.
+
+---
+
+### `POST /api/v1/appointments`
+
+Cria um compromisso. O autor é o usuário autenticado.
+
+**Body**
+
+```json
+{
+  "title": "Audiência de conciliação",
+  "type": "AUDIENCIA",
+  "starts_at": "2026-12-01T14:00:00Z",
+  "duration_minutes": 60,
+  "client_id": 7,
+  "process_id": 12,
+  "description": "Levar procuração atualizada.",
+  "location": "Fórum Central, sala 3"
+}
+```
+
+> Obrigatórios: `title`, `type`, `starts_at`, `duration_minutes`. `client_id`, `process_id`, `description`, `location` são opcionais. `starts_at` não pode estar no passado. `duration_minutes` entre 1 e 1440.
+
+**Resposta 201**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "title": "Audiência de conciliação",
+    "type": "AUDIENCIA",
+    "starts_at": "2026-12-01T14:00:00Z",
+    "duration_minutes": 60,
+    "description": "Levar procuração atualizada.",
+    "location": "Fórum Central, sala 3",
+    "client_id": 7,
+    "process_id": 12,
+    "created_by": 3,
+    "created_by_name": "Ana Lima",
+    "google_event_id": null,
+    "is_synced_to_google": false,
+    "created_at": "2026-05-20T12:00:00Z",
+    "updated_at": "2026-05-20T12:00:00Z"
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                            | Situação                                      |
+| ------ | ------------------------------- | --------------------------------------------- |
+| 401    | `UNAUTHORIZED`                  | Token ausente ou inválido                     |
+| 422    | `APPOINTMENT_CLIENT_NOT_FOUND`  | `client_id` informado não existe              |
+| 422    | `APPOINTMENT_PROCESS_NOT_FOUND` | `process_id` informado não existe             |
+| 422    | `VALIDATION_ERROR`              | Body inválido ou `starts_at` no passado       |
+
+---
+
+### `GET /api/v1/appointments`
+
+Lista os compromissos do usuário autenticado, ordenados por `starts_at` ascendente, com filtros e paginação.
+
+**Query params**
+
+| Parâmetro    | Tipo                                                  | Obrigatório | Descrição                          |
+| ------------ | ----------------------------------------------------- | ----------- | ---------------------------------- |
+| `date_from`  | `datetime` (ISO 8601)                                 | Não         | Filtra `starts_at >= date_from`    |
+| `date_to`    | `datetime` (ISO 8601)                                 | Não         | Filtra `starts_at <= date_to`      |
+| `type`       | `AUDIENCIA` \| `REUNIAO` \| `PRAZO` \| `OUTRO`        | Não         | Filtra por tipo                    |
+| `client_id`  | `integer`                                             | Não         | Filtra por cliente vinculado       |
+| `process_id` | `integer`                                             | Não         | Filtra por processo vinculado      |
+| `page`       | `integer` (≥ 1)                                       | Não         | Página atual (default: `1`)        |
+| `limit`      | `integer` (1–100)                                     | Não         | Itens por página (default: `20`)   |
+
+**Resposta 200** — mesmo formato de item de `POST`, dentro de `PaginatedResponse`.
+
+**Erros**
+
+| Status | Code           | Situação                  |
+| ------ | -------------- | ------------------------- |
+| 401    | `UNAUTHORIZED` | Token ausente ou inválido |
+
+---
+
+### `GET /api/v1/appointments/{appointment_id}`
+
+Retorna os detalhes de um compromisso. Acessível ao dono ou a um `ADMIN`.
+
+**Erros**
+
+| Status | Code                    | Situação                              |
+| ------ | ----------------------- | ------------------------------------- |
+| 401    | `UNAUTHORIZED`          | Token ausente ou inválido             |
+| 403    | `FORBIDDEN`             | Usuário não é o dono nem ADMIN        |
+| 404    | `APPOINTMENT_NOT_FOUND` | Compromisso não encontrado            |
+
+---
+
+### `PATCH /api/v1/appointments/{appointment_id}`
+
+Atualiza parcialmente um compromisso. Todos os campos são opcionais. Diferente da criação, `starts_at` pode estar no passado (correção de registro). Acessível ao dono ou a um `ADMIN`.
+
+**Erros**
+
+| Status | Code                            | Situação                          |
+| ------ | ------------------------------- | --------------------------------- |
+| 401    | `UNAUTHORIZED`                  | Token ausente ou inválido         |
+| 403    | `FORBIDDEN`                     | Usuário não é o dono nem ADMIN    |
+| 404    | `APPOINTMENT_NOT_FOUND`         | Compromisso não encontrado        |
+| 422    | `APPOINTMENT_CLIENT_NOT_FOUND`  | `client_id` informado não existe  |
+| 422    | `APPOINTMENT_PROCESS_NOT_FOUND` | `process_id` informado não existe |
+| 422    | `VALIDATION_ERROR`              | Body inválido                     |
+
+---
+
+### `DELETE /api/v1/appointments/{appointment_id}`
+
+Remove um compromisso. Acessível ao dono ou a um `ADMIN`. Retorna 204 sem corpo.
+
+**Erros**
+
+| Status | Code                    | Situação                       |
+| ------ | ----------------------- | ------------------------------ |
+| 401    | `UNAUTHORIZED`          | Token ausente ou inválido      |
+| 403    | `FORBIDDEN`             | Usuário não é o dono nem ADMIN |
+| 404    | `APPOINTMENT_NOT_FOUND` | Compromisso não encontrado     |
+
+---
+
+## Google Calendar (integração)
+
+> Os endpoints `auth-url`, `status` e `DELETE` exigem autenticação. O `callback` é aberto pelo browser via redirect do Google e não usa header de autenticação — ele identifica o usuário por um `state` assinado.
+
+Integração **opcional** e **unidirecional** (sistema → Google). Quando um usuário conecta sua conta, criar/editar/excluir um compromisso reflete a operação no Google Calendar dele. Falha no Google nunca bloqueia a operação local — é apenas logada. Mudanças feitas direto no Google **não** voltam para o sistema. Ver setup no [README](../README.md).
+
+Se o servidor não tiver as variáveis `GOOGLE_*` configuradas, `auth-url` responde 503 `GOOGLE_NOT_CONFIGURED` e `status` responde `connected: false`.
+
+---
+
+### `GET /api/v1/integrations/google/auth-url`
+
+Retorna a URL de consentimento OAuth do Google para o usuário iniciar a conexão.
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "auth_url": "https://accounts.google.com/o/oauth2/auth?..."
+  }
+}
+```
+
+**Erros**
+
+| Status | Code                   | Situação                                |
+| ------ | ---------------------- | --------------------------------------- |
+| 401    | `UNAUTHORIZED`         | Token ausente ou inválido               |
+| 503    | `GOOGLE_NOT_CONFIGURED`| Integração não configurada no servidor  |
+
+---
+
+### `GET /api/v1/integrations/google/callback`
+
+Callback do OAuth. O Google redireciona o browser para cá com `code` e `state`. O endpoint troca o `code` por tokens, persiste o `refresh_token` criptografado e redireciona (302) para o frontend.
+
+**Query params:** `code`, `state`, `error` (todos enviados pelo Google).
+
+**Resposta 302** — redirect para `{FRONTEND_URL}/?google_calendar=connected` em caso de sucesso, ou `?google_calendar=error` em qualquer falha (usuário negou, `state` inválido/expirado, erro na troca do code).
+
+---
+
+### `GET /api/v1/integrations/google/status`
+
+Indica se o usuário autenticado tem o Google Calendar conectado.
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "connected": true,
+    "connected_at": "2026-05-20T12:00:00Z",
+    "scope": "https://www.googleapis.com/auth/calendar.events"
+  }
+}
+```
+
+> Quando não conectado: `connected: false`, `connected_at: null`, `scope: null`.
+
+**Erros**
+
+| Status | Code           | Situação                  |
+| ------ | -------------- | ------------------------- |
+| 401    | `UNAUTHORIZED` | Token ausente ou inválido |
+
+---
+
+### `DELETE /api/v1/integrations/google`
+
+Desconecta o Google Calendar do usuário — remove a credencial local. Idempotente (retorna 204 mesmo se já não havia conexão). Eventos já sincronizados permanecem no Google Calendar do usuário.
+
+**Resposta 204** — sem corpo.
+
+**Erros**
+
+| Status | Code           | Situação                  |
+| ------ | -------------- | ------------------------- |
+| 401    | `UNAUTHORIZED` | Token ausente ou inválido |
+
+---
+
+### `POST /api/v1/integrations/google/sync-all`
+
+Sincronização retroativa: envia ao Google Calendar os compromissos **futuros** do usuário que ainda não foram sincronizados (`is_synced_to_google = false`). Útil logo após conectar a conta, já que conectar não empurra o histórico automaticamente.
+
+É **idempotente** — só varre os não-sincronizados, então rodar de novo não recria eventos. Compromissos no passado são ignorados. Falha pontual no Google é contabilizada em `failed` e não interrompe os demais.
+
+**Resposta 200**
+
+```json
+{
+  "success": true,
+  "data": {
+    "total": 5,
+    "synced": 5,
+    "failed": 0
+  }
+}
+```
+
+> `total` = compromissos elegíveis varridos; `synced` = enviados com sucesso; `failed` = falharam no Google (continuam com `is_synced_to_google = false`).
+
+**Erros**
+
+| Status | Code                    | Situação                                       |
+| ------ | ----------------------- | ---------------------------------------------- |
+| 401    | `UNAUTHORIZED`          | Token ausente ou inválido                      |
+| 409    | `GOOGLE_NOT_CONNECTED`  | Usuário não conectou uma conta Google          |
+| 503    | `GOOGLE_NOT_CONFIGURED` | Integração não configurada no servidor         |

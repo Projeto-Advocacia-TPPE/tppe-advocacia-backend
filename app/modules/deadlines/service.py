@@ -243,8 +243,10 @@ class DeadlineService:
         days_before: int,
         business_days_left: int | None,
     ) -> None:
-        assert self.notification_service is not None
-        assert self.alert_repository is not None
+        if self.notification_service is None or self.alert_repository is None:
+            raise RuntimeError(
+                "_send_alert exige notification_service e alert_repository"
+            )
 
         process = self.process_repository.get_by_id(deadline.process_id)
         process_number = (
