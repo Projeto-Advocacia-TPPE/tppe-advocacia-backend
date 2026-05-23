@@ -31,6 +31,7 @@ def client_fixture(db_session: Session, created_client_ids):
     c = ClientRepository(db_session).create(
         name="Cliente E2E Process", cpf="22233344455"
     )
+    db_session.commit()
     created_client_ids.append(c.id)
     return c
 
@@ -38,6 +39,7 @@ def client_fixture(db_session: Session, created_client_ids):
 @pytest.fixture
 def other_client_fixture(db_session: Session, created_client_ids):
     c = ClientRepository(db_session).create(name="Outro Cliente E2E", cpf="66677788899")
+    db_session.commit()
     created_client_ids.append(c.id)
     return c
 
@@ -154,6 +156,7 @@ class TestCreateProcess:
             court="TJSP",
             action_type="Ação Cível",
         )
+        db_session.commit()
         created_process_ids.append(existing.id)
 
         response = client.post(
@@ -191,6 +194,7 @@ class TestGetProcess:
             court="TJSP",
             action_type="Ação Cível",
         )
+        db_session.commit()
         created_process_ids.append(created.id)
 
         response = client.get(f"{PROCESSES_URL}/{created.id}", headers=user_headers)
@@ -235,6 +239,7 @@ class TestListProcesses:
             court="TJSP",
             action_type="Ação Cível",
         )
+        db_session.commit()
         created_process_ids.append(created.id)
 
         response = client.get(
@@ -280,6 +285,7 @@ class TestListProcessesByClient:
             court="TJSP",
             action_type="Ação Cível",
         )
+        db_session.commit()
         created_process_ids.extend([owned.id, other.id])
 
         response = client.get(

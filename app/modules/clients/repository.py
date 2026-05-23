@@ -189,5 +189,7 @@ class ClientRepository:
         note.updated_by = updated_by
         self.db.flush()
         return self.db.scalars(
-            self._note_query().where(ClientNote.id == note.id)
+            self._note_query()
+            .where(ClientNote.id == note.id)
+            .execution_options(populate_existing=True)
         ).first()

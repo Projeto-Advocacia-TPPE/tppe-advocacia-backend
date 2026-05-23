@@ -45,6 +45,7 @@ def process_fixture(db_session: Session, created_client_ids, created_process_ids
         court="TJSP",
         action_type="Ação Cível",
     )
+    db_session.commit()
     created_process_ids.append(process.id)
     return process
 
@@ -134,6 +135,7 @@ class TestListNotes:
             created_by=active_user["id"],
             content="segunda",
         )
+        db_session.commit()
         created_note_ids.extend([first.id, second.id])
 
         response = client.get(_url(process_fixture.id), headers=user_headers)
@@ -188,6 +190,7 @@ class TestUpdateNote:
             created_by=active_user["id"],
             content="alheia",
         )
+        db_session.commit()
         created_note_ids.append(note_in_other.id)
 
         response = client.patch(
@@ -213,6 +216,7 @@ class TestUpdateNote:
             created_by=active_user["id"],
             content="antiga",
         )
+        db_session.commit()
         created_note_ids.append(note.id)
 
         response = client.patch(
@@ -241,6 +245,7 @@ class TestUpdateNote:
             created_by=admin_user["id"],
             content="do admin",
         )
+        db_session.commit()
         created_note_ids.append(note.id)
 
         response = client.patch(
@@ -266,6 +271,7 @@ class TestUpdateNote:
             created_by=active_user["id"],
             content="do user",
         )
+        db_session.commit()
         created_note_ids.append(note.id)
 
         response = client.patch(
@@ -291,6 +297,7 @@ class TestUpdateNote:
             created_by=active_user["id"],
             content="ok",
         )
+        db_session.commit()
         created_note_ids.append(note.id)
 
         response = client.patch(

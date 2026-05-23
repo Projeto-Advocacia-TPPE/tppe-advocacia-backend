@@ -87,6 +87,7 @@ class TestDeleteClientActiveProcesses:
             client_id=anon_client.id,
             created_by=None,
         )
+        db_session.commit()
 
         response = client.delete(
             f"{CLIENTS_URL}/{anon_client.id}?confirm=true",
