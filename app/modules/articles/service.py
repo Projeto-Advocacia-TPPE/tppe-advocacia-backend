@@ -10,6 +10,7 @@ from app.modules.articles.schema import (
 )
 from app.modules.users.model import User
 from app.shared.exceptions import ArticleNotFoundError
+from app.shared.uow import unit_of_work
 
 
 class ArticleService:
@@ -17,15 +18,16 @@ class ArticleService:
         self.repository = repository
 
     def create(self, payload: ArticleCreate, author: User) -> ArticleRead:
-        article = self.repository.create(
-            title=payload.title,
-            content=payload.content,
-            category=payload.category,
-            author_id=author.id,
-            cover_image_url=payload.cover_image_url,
-            status=payload.status,
-            summary=payload.summary,
-        )
+        with unit_of_work(self.repository.db):
+            article = self.repository.create(
+                title=payload.title,
+                content=payload.content,
+                category=payload.category,
+                author_id=author.id,
+                cover_image_url=payload.cover_image_url,
+                status=payload.status,
+                summary=payload.summary,
+            )
         return self._to_read(article)
 
     def update(self, article_id: int, payload: ArticleUpdate) -> ArticleRead:
@@ -33,7 +35,8 @@ class ArticleService:
         if article is None:
             raise ArticleNotFoundError()
         data = payload.model_dump(exclude_none=True)
-        updated = self.repository.update(article, data)
+        with unit_of_work(self.repository.db):
+            updated = self.repository.update(article, data)
         return self._to_read(updated)
 
     def get_published_by_id(self, article_id: int) -> ArticleRead:

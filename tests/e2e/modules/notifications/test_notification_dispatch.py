@@ -26,6 +26,7 @@ def other_user(db_session: Session):
         hashed_password=_hash(password),
         role=Role.USER,
     )
+    db_session.commit()
     yield {"id": user.id, "email": user.email, "password": password}
     db_session.rollback()
     db_session.execute(delete(User).where(User.id == user.id))

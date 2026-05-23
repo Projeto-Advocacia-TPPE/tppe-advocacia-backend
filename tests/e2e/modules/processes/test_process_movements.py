@@ -46,6 +46,7 @@ def process_fixture(db_session: Session, created_client_ids, created_process_ids
         court="TJSP",
         action_type="Ação Cível",
     )
+    db_session.commit()
     created_process_ids.append(process.id)
     return process
 
@@ -155,6 +156,7 @@ class TestListMovements:
             occurred_at=base + timedelta(days=2),
             source=MovementSource.MANUAL,
         )
+        db_session.commit()
         created_movement_ids.extend([older.id, newer.id])
 
         response = client.get(_url(process_fixture.id), headers=user_headers)
@@ -186,6 +188,7 @@ class TestListMovements:
             occurred_at=datetime.now(timezone.utc),
             source=MovementSource.SYSTEM,
         )
+        db_session.commit()
         created_movement_ids.extend([manual.id, system.id])
 
         response = client.get(

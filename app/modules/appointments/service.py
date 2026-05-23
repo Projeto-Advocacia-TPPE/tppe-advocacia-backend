@@ -27,6 +27,7 @@ from app.shared.exceptions import (
     GoogleNotConnectedError,
 )
 from app.shared.types import Role
+from app.shared.uow import unit_of_work
 
 
 class AppointmentService:
@@ -46,17 +47,18 @@ class AppointmentService:
         self, payload: AppointmentCreate, created_by: User
     ) -> Appointment:
         self._validate_references(payload.client_id, payload.process_id)
-        appointment = self.repository.create(
-            title=payload.title,
-            type=payload.type,
-            starts_at=payload.starts_at,
-            duration_minutes=payload.duration_minutes,
-            description=payload.description,
-            location=payload.location,
-            client_id=payload.client_id,
-            process_id=payload.process_id,
-            created_by=created_by.id,
-        )
+        with unit_of_work(self.repository.db):
+            appointment = self.repository.create(
+                title=payload.title,
+                type=payload.type,
+                starts_at=payload.starts_at,
+                duration_minutes=payload.duration_minutes,
+                description=payload.description,
+                location=payload.location,
+                client_id=payload.client_id,
+                process_id=payload.process_id,
+                created_by=created_by.id,
+            )
         return self._sync_google(appointment, SYNC_CREATE)
 
     def get_appointment(self, appointment_id: int, current_user: User) -> Appointment:
@@ -78,7 +80,8 @@ class AppointmentService:
         data = payload.model_dump(exclude_unset=True)
         self._validate_references(data.get("client_id"), data.get("process_id"))
 
-        appointment = self.repository.update(appointment, data)
+        with unit_of_work(self.repository.db):
+            appointment = self.repository.update(appointment, data)
         return self._sync_google(appointment, SYNC_UPDATE)
 
     def delete_appointment(self, appointment_id: int, current_user: User) -> None:
@@ -87,7 +90,8 @@ class AppointmentService:
         if self.google_sync is not None:
             # Best-effort: apaga o evento no Google antes de remover local.
             self.google_sync.sync_appointment(appointment, SYNC_DELETE)
-        self.repository.delete(appointment)
+        with unit_of_work(self.repository.db):
+            self.repository.delete(appointment)
 
     def sync_all_to_google(self, current_user: User) -> AppointmentSyncResult:
         """Sincroniza retroativamente os compromissos futuros ainda não enviados.
@@ -107,10 +111,11 @@ class AppointmentService:
         for appointment in appointments:
             event_id = self.google_sync.sync_appointment(appointment, SYNC_CREATE)
             if event_id is not None:
-                self.repository.update(
-                    appointment,
-                    {"google_event_id": event_id, "is_synced_to_google": True},
-                )
+                with unit_of_work(self.repository.db):
+                    self.repository.update(
+                        appointment,
+                        {"google_event_id": event_id, "is_synced_to_google": True},
+                    )
                 synced += 1
 
         return AppointmentSyncResult(
@@ -151,8 +156,9 @@ class AppointmentService:
             event_id != appointment.google_event_id
             or not appointment.is_synced_to_google
         ):
-            return self.repository.update(
-                appointment,
-                {"google_event_id": event_id, "is_synced_to_google": True},
-            )
+            with unit_of_work(self.repository.db):
+                return self.repository.update(
+                    appointment,
+                    {"google_event_id": event_id, "is_synced_to_google": True},
+                )
         return appointment

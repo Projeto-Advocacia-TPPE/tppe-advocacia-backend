@@ -300,7 +300,6 @@ class TestAnonymize:
             client_id=1,
             client_name="João Silva",
             performed_by=performed_by,
-            commit=False,
         )
         repo.db.commit.assert_called_once()
         repo.db.refresh.assert_called_once_with(client)

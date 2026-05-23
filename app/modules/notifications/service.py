@@ -5,6 +5,7 @@ from app.modules.notifications.repository import NotificationPreferenceRepositor
 from app.modules.notifications.schema import EventType
 from app.modules.notifications.templates import TEMPLATES
 from app.modules.users.repository import UserRepository
+from app.shared.uow import unit_of_work
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +28,8 @@ class NotificationService:
     def update_preferences(
         self, user_id: int, prefs: dict[EventType, bool]
     ) -> dict[EventType, bool]:
-        self.repository.upsert_many(user_id, prefs)
+        with unit_of_work(self.repository.db):
+            self.repository.upsert_many(user_id, prefs)
         return self.get_preferences(user_id)
 
     def notify(self, user_id: int, event_type: EventType, payload: dict) -> None:

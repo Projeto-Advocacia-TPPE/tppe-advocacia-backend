@@ -20,6 +20,7 @@ from app.shared.exceptions import (
     InvalidCredentialsError,
     InvalidResetTokenError,
 )
+from app.shared.uow import unit_of_work
 
 settings = get_settings()
 
@@ -67,13 +68,14 @@ class AuthService:
         expires_at = datetime.now(timezone.utc) + timedelta(
             minutes=settings.password_reset_expire_minutes
         )
-        self.user_repository.update(
-            user,
-            {
-                "reset_token_hash": token_hash,
-                "reset_token_expires_at": expires_at,
-            },
-        )
+        with unit_of_work(self.user_repository.db):
+            self.user_repository.update(
+                user,
+                {
+                    "reset_token_hash": token_hash,
+                    "reset_token_expires_at": expires_at,
+                },
+            )
 
         reset_link = f"{settings.frontend_url}/reset-password?token={token}"
         self.email.send(
@@ -102,11 +104,12 @@ class AuthService:
         new_hashed = bcrypt.hashpw(
             payload.new_password.encode(), bcrypt.gensalt()
         ).decode()
-        self.user_repository.update(
-            user,
-            {
-                "hashed_password": new_hashed,
-                "reset_token_hash": None,  # clearing token field  # nosec B105
-                "reset_token_expires_at": None,  # clearing field  # nosec B105
-            },
-        )
+        with unit_of_work(self.user_repository.db):
+            self.user_repository.update(
+                user,
+                {
+                    "hashed_password": new_hashed,
+                    "reset_token_hash": None,  # nosec B105
+                    "reset_token_expires_at": None,  # nosec B105
+                },
+            )

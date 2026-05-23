@@ -191,6 +191,7 @@ class TestAtomicStatusChange:
     ):
         repo = ProcessRepository(db)
         process = make_process(repo, client_fixture, "12345678920248262301")
+        db.commit()
 
         repo.update_status_no_commit(process, ProcessStatus.SUSPENSO, updated_by=42)
         repo.create_movement_no_commit(

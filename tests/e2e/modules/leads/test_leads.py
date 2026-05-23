@@ -24,6 +24,7 @@ def lead(db_session: Session, created_lead_ids):
         email="e2e_lead@example.com",
         message="Quero uma consulta",
     )
+    db_session.commit()
     created_lead_ids.append(lead.id)
     return lead
 
@@ -55,6 +56,7 @@ class TestListLeads:
 
     def test_filters_by_status(self, client, admin_headers, lead, db_session):
         LeadRepository(db_session).update(lead, {"status": LeadStatus.FECHADO})
+        db_session.commit()
 
         response = client.get(f"{LEADS_URL}?status=fechado", headers=admin_headers)
 

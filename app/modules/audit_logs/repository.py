@@ -7,38 +7,13 @@ from app.modules.audit_logs.model import AuditAction, AuditLog
 
 
 class AuditLogRepository:
+    """Este repositório nunca comita. Operações de escrita usam db.add + db.flush
+    e o Service que orquestra a transação fecha com unit_of_work."""
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
     def create(
-        self,
-        action: AuditAction,
-        performed_by_id: int | None,
-        performed_by_name: str | None,
-        target_user_id: int | None = None,
-        target_user_name: str | None = None,
-        target_user_email: str | None = None,
-        target_user_role: str | None = None,
-        target_client_id: int | None = None,
-        target_client_name: str | None = None,
-    ) -> AuditLog:
-        log = AuditLog(
-            action=action,
-            performed_by_id=performed_by_id,
-            performed_by_name=performed_by_name,
-            target_user_id=target_user_id,
-            target_user_name=target_user_name,
-            target_user_email=target_user_email,
-            target_user_role=target_user_role,
-            target_client_id=target_client_id,
-            target_client_name=target_client_name,
-        )
-        self.db.add(log)
-        self.db.commit()
-        self.db.refresh(log)
-        return log
-
-    def create_no_commit(
         self,
         action: AuditAction,
         performed_by_id: int | None,

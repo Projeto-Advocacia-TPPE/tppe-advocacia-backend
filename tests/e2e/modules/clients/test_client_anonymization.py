@@ -31,6 +31,7 @@ def anon_client(db_session: Session, created_client_ids):
         cpf="88877766651",
         address="Rua A, 1",
     )
+    db_session.commit()
     created_client_ids.append(c.id)
     return c
 
@@ -86,6 +87,7 @@ class TestDeleteClientActiveProcesses:
             client_id=anon_client.id,
             created_by=None,
         )
+        db_session.commit()
 
         response = client.delete(
             f"{CLIENTS_URL}/{anon_client.id}?confirm=true",
@@ -172,6 +174,7 @@ class TestDeleteClientSuccessfulFlow:
             created_by=admin_user["id"],
             content="conteudo sensivel",
         )
+        db_session.commit()
 
         client.delete(
             f"{CLIENTS_URL}/{anon_client.id}?confirm=true",

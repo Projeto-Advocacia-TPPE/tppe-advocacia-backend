@@ -32,6 +32,7 @@ def other_user_headers(db_session: Session, client):
         hashed_password=hashed,
         role=Role.USER,
     )
+    db_session.commit()
     response = client.post(
         "/api/v1/auth/login",
         json={"email": user.email, "password": password},

@@ -30,6 +30,7 @@ def created_client_ids(db_session: Session):
 def test_client(db_session: Session, created_client_ids):
     repo = ClientRepository(db_session)
     c = repo.create(name="Cliente Nota Teste", cpf="11122233344")
+    db_session.commit()
     created_client_ids.append(c.id)
     return c
 
@@ -43,6 +44,7 @@ def second_user(db_session: Session):
         hashed_password=_hash(password),
         role=Role.USER,
     )
+    db_session.commit()
     yield {"id": user.id, "email": user.email, "password": password}
     db_session.execute(delete(User).where(User.id == user.id))
     db_session.commit()
@@ -264,6 +266,7 @@ class TestUpdateNote:
         other_client = ClientRepository(db_session).create(
             name="Outro Cliente", cpf="99988877766"
         )
+        db_session.commit()
         created_client_ids.append(other_client.id)
 
         create_resp = client.post(

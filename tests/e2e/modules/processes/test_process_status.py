@@ -47,6 +47,7 @@ def process_fixture(db_session: Session, created_client_ids, created_process_ids
         court="TJSP",
         action_type="Ação Cível",
     )
+    db_session.commit()
     created_process_ids.append(process.id)
     return process
 

@@ -35,6 +35,7 @@ def process_fixture(db_session: Session, active_user, cleanup_processes):
         action_type="Ação Cível",
         created_by=active_user["id"],
     )
+    db_session.commit()
     cleanup_processes.append(p.id)
     return p
 

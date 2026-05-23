@@ -52,6 +52,7 @@ def client_fixture(db_session: Session, created_records):
         name="Cliente E2E DataJud",
         cpf="12312312312",
     )
+    db_session.commit()
     created_records["client_ids"].append(client.id)
     return client
 
@@ -118,6 +119,7 @@ class TestDataJudSyncEndpoint:
             court="TJSP",
             action_type="Ação Cível",
         )
+        db_session.commit()
         created_records["process_ids"].append(process.id)
 
         response = client.post(

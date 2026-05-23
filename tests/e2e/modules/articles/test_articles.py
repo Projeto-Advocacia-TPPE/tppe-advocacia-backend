@@ -24,7 +24,9 @@ def make_article(db: Session, author_id: int, **kwargs):
         "status": ArticleStatus.DRAFT,
     }
     defaults.update(kwargs)
-    return repo.create(**defaults)
+    article = repo.create(**defaults)
+    db.commit()
+    return article
 
 
 class TestCreateArticle:

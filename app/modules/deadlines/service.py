@@ -28,6 +28,7 @@ from app.shared.exceptions import (
     ProcessNotFoundError,
 )
 from app.shared.types import Role
+from app.shared.uow import unit_of_work
 
 logger = logging.getLogger(__name__)
 
@@ -109,16 +110,18 @@ class DeadlineService:
             comarca=comarca,
         )
 
-        return self.repository.create(
-            process_id=process_id,
-            start_date=payload.start_date,
-            business_days=payload.business_days,
-            deadline_type=payload.deadline_type,
-            due_date=due_date,
-            court=court,
-            comarca=comarca,
-            created_by=created_by_id,
-        )
+        with unit_of_work(self.repository.db):
+            deadline = self.repository.create(
+                process_id=process_id,
+                start_date=payload.start_date,
+                business_days=payload.business_days,
+                deadline_type=payload.deadline_type,
+                due_date=due_date,
+                court=court,
+                comarca=comarca,
+                created_by=created_by_id,
+            )
+        return deadline
 
     def list_by_process(
         self, process_id: int, page: int, limit: int
@@ -153,23 +156,26 @@ class DeadlineService:
                 comarca=new_comarca,
             )
 
-        return self.repository.update(
-            deadline,
-            start_date=fields.get("start_date"),
-            business_days=fields.get("business_days"),
-            deadline_type=fields.get("deadline_type"),
-            comarca=fields.get("comarca")
-            if comarca_changed and fields["comarca"] is not None
-            else None,
-            due_date=new_due_date,
-            clear_comarca=comarca_changed and fields["comarca"] is None,
-        )
+        with unit_of_work(self.repository.db):
+            updated = self.repository.update(
+                deadline,
+                start_date=fields.get("start_date"),
+                business_days=fields.get("business_days"),
+                deadline_type=fields.get("deadline_type"),
+                comarca=fields.get("comarca")
+                if comarca_changed and fields["comarca"] is not None
+                else None,
+                due_date=new_due_date,
+                clear_comarca=comarca_changed and fields["comarca"] is None,
+            )
+        return updated
 
     def delete(self, deadline_id: int) -> None:
         deadline = self.repository.get_by_id(deadline_id)
         if deadline is None:
             raise DeadlineNotFoundError()
-        self.repository.delete(deadline)
+        with unit_of_work(self.repository.db):
+            self.repository.delete(deadline)
 
     def business_days_until(
         self,
@@ -263,7 +269,8 @@ class DeadlineService:
         self.notification_service.notify(deadline.created_by, event_type, payload)
         # Registra o disparo mesmo se o envio falhar/estiver desabilitado:
         # o alerta não é re-tentado (limitação assumida no MVP).
-        self.alert_repository.create(deadline.id, days_before)
+        with unit_of_work(self.alert_repository.db):
+            self.alert_repository.create(deadline.id, days_before)
         logger.info(
             "Deadline alert dispatched deadline_id=%s event=%s days_before=%s",
             deadline.id,

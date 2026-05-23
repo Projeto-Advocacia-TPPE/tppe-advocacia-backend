@@ -32,6 +32,7 @@ from app.shared.exceptions import (
     ProcessStatusUnchangedError,
 )
 from app.shared.types import Role
+from app.shared.uow import unit_of_work
 
 
 class ProcessService:
@@ -53,26 +54,25 @@ class ProcessService:
             raise ClientNotFoundForProcessError()
 
         try:
-            process = self.repository.create_no_commit(
-                number=payload.number,
-                client_id=payload.client_id,
-                court=payload.court,
-                tribunal_alias=payload.tribunal_alias,
-                action_type=payload.action_type,
-                opposing_party=payload.opposing_party,
-                created_by=created_by.id,
-            )
-            initial_movement = self.repository.create_movement_no_commit(
-                process_id=process.id,
-                title="Processo cadastrado",
-                description=None,
-                occurred_at=datetime.now(timezone.utc),
-                source=MovementSource.SYSTEM,
-                created_by=created_by.id,
-            )
-            self.repository.db.commit()
+            with unit_of_work(self.repository.db):
+                process = self.repository.create_no_commit(
+                    number=payload.number,
+                    client_id=payload.client_id,
+                    court=payload.court,
+                    tribunal_alias=payload.tribunal_alias,
+                    action_type=payload.action_type,
+                    opposing_party=payload.opposing_party,
+                    created_by=created_by.id,
+                )
+                initial_movement = self.repository.create_movement_no_commit(
+                    process_id=process.id,
+                    title="Processo cadastrado",
+                    description=None,
+                    occurred_at=datetime.now(timezone.utc),
+                    source=MovementSource.SYSTEM,
+                    created_by=created_by.id,
+                )
         except IntegrityError as exc:
-            self.repository.db.rollback()
             raise ProcessNumberAlreadyExistsError() from exc
 
         refreshed = self.repository.reload_with_client(process.id)
@@ -115,14 +115,15 @@ class ProcessService:
     ) -> ProcessMovement:
         process = self.get_process(process_id)
         occurred_at = payload.occurred_at or datetime.now(timezone.utc)
-        movement = self.repository.create_movement(
-            process_id=process_id,
-            title=payload.title,
-            description=payload.description,
-            occurred_at=occurred_at,
-            source=MovementSource.MANUAL,
-            created_by=created_by.id,
-        )
+        with unit_of_work(self.repository.db):
+            movement = self.repository.create_movement(
+                process_id=process_id,
+                title=payload.title,
+                description=payload.description,
+                occurred_at=occurred_at,
+                source=MovementSource.MANUAL,
+                created_by=created_by.id,
+            )
         self._notify_movement(process, movement, actor_id=created_by.id)
         return movement
 
@@ -135,15 +136,16 @@ class ProcessService:
         created_by: int | None = None,
     ) -> ProcessMovement:
         process = self.get_process(process_id)
-        movement = self.repository.create_movement(
-            process_id=process_id,
-            title=title,
-            description=description,
-            occurred_at=datetime.now(timezone.utc),
-            source=MovementSource.SYSTEM,
-            external_id=external_id,
-            created_by=created_by,
-        )
+        with unit_of_work(self.repository.db):
+            movement = self.repository.create_movement(
+                process_id=process_id,
+                title=title,
+                description=description,
+                occurred_at=datetime.now(timezone.utc),
+                source=MovementSource.SYSTEM,
+                external_id=external_id,
+                created_by=created_by,
+            )
         self._notify_movement(process, movement, actor_id=created_by)
         return movement
 
@@ -159,7 +161,7 @@ class ProcessService:
             raise ProcessStatusUnchangedError()
 
         previous = process.status
-        try:
+        with unit_of_work(self.repository.db):
             self.repository.update_status_no_commit(
                 process, payload.status, current_user.id
             )
@@ -171,10 +173,6 @@ class ProcessService:
                 source=MovementSource.SYSTEM,
                 created_by=current_user.id,
             )
-            self.repository.db.commit()
-        except Exception:
-            self.repository.db.rollback()
-            raise
 
         refreshed = self.repository.reload_with_client(process.id)
         reloaded_movement = self.repository.reload_movement(movement.id)
@@ -194,11 +192,13 @@ class ProcessService:
         current_user: User,
     ) -> ProcessNote:
         self.get_process(process_id)
-        return self.repository.create_note(
-            process_id=process_id,
-            created_by=current_user.id,
-            content=payload.content,
-        )
+        with unit_of_work(self.repository.db):
+            note = self.repository.create_note(
+                process_id=process_id,
+                created_by=current_user.id,
+                content=payload.content,
+            )
+        return note
 
     def list_notes(
         self, process_id: int, page: int = 1, limit: int = 20
@@ -224,9 +224,11 @@ class ProcessService:
         if note.created_by != current_user.id and current_user.role != Role.ADMIN:
             raise ForbiddenError()
 
-        return self.repository.update_note(
-            note=note, content=payload.content, updated_by=current_user.id
-        )
+        with unit_of_work(self.repository.db):
+            updated = self.repository.update_note(
+                note=note, content=payload.content, updated_by=current_user.id
+            )
+        return updated
 
     def list_movements(
         self,

@@ -33,6 +33,7 @@ from app.shared.exceptions import (
     DataJudUnavailableError,
     ProcessNotFoundError,
 )
+from app.shared.uow import unit_of_work
 
 
 class DataJudService:
@@ -104,7 +105,7 @@ class DataJudService:
         skipped_count = result.skipped_count
         synced_at = datetime.now(timezone.utc)
 
-        try:
+        with unit_of_work(self.process_repository.db):
             for movement in result.movements:
                 if self.process_repository.movement_external_id_exists(
                     process_id=process.id,
@@ -124,7 +125,7 @@ class DataJudService:
                 )
                 imported_ids.append(imported.id)
 
-            log = self.log_repository.create_no_commit(
+            log = self.log_repository.create(
                 provider=ExternalApiProvider.DATAJUD,
                 operation=ExternalApiOperation.PROCESS_MOVEMENT_SYNC,
                 status=ExternalApiStatus.SUCCESS,
@@ -135,10 +136,6 @@ class DataJudService:
                 created_by=actor_id,
             )
             log_id = log.id
-            self.process_repository.db.commit()
-        except Exception:
-            self.process_repository.db.rollback()
-            raise
 
         imported_movements = [
             self.process_repository.reload_movement(movement_id)
@@ -234,18 +231,20 @@ class DataJudService:
         created_by: int | None,
         http_status: int | None = None,
     ) -> None:
-        self.process_repository.db.rollback()
-        log = self.log_repository.create(
-            provider=ExternalApiProvider.DATAJUD,
-            operation=ExternalApiOperation.PROCESS_MOVEMENT_SYNC,
-            status=ExternalApiStatus.FAILURE,
-            process_id=process_id,
-            tribunal_alias=tribunal_alias,
-            request_identifier=request_identifier,
-            http_status=http_status,
-            error_code=error_code,
-            error_message=error_message[:500],
-            created_by=created_by,
-        )
+        # O log de falha é uma transação separada da síntese principal:
+        # mesmo quando a sincronização aborta, queremos a auditoria persistida.
+        with unit_of_work(self.process_repository.db):
+            log = self.log_repository.create(
+                provider=ExternalApiProvider.DATAJUD,
+                operation=ExternalApiOperation.PROCESS_MOVEMENT_SYNC,
+                status=ExternalApiStatus.FAILURE,
+                process_id=process_id,
+                tribunal_alias=tribunal_alias,
+                request_identifier=request_identifier,
+                http_status=http_status,
+                error_code=error_code,
+                error_message=error_message[:500],
+                created_by=created_by,
+            )
         if self.failure_notifier is not None:
             self.failure_notifier.notify_failure(log)

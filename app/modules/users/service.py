@@ -10,6 +10,7 @@ from app.modules.users.repository import UserRepository
 from app.modules.users.schema import UserCreate, UserRead, UserUpdate
 from app.shared.exceptions import EmailAlreadyExistsError, UserNotFoundError
 from app.shared.types import Role
+from app.shared.uow import unit_of_work
 
 
 class UserService:
@@ -50,13 +51,14 @@ class UserService:
             "utf-8"
         )
 
-        user = self.repository.create(
-            name=payload.name,
-            email=payload.email,
-            hashed_password=hashed,
-            role=Role.USER,
-            created_by=created_by.id,
-        )
+        with unit_of_work(self.repository.db):
+            user = self.repository.create(
+                name=payload.name,
+                email=payload.email,
+                hashed_password=hashed,
+                role=Role.USER,
+                created_by=created_by.id,
+            )
         self.email.send(
             to=payload.email,
             subject="Bem-vindo ao sistema",
@@ -80,7 +82,8 @@ class UserService:
                 raise EmailAlreadyExistsError()
 
         is_deactivating = updates.get("is_active") is False and user.is_active is True
-        updated = self.repository.update(user, updates)
+        with unit_of_work(self.repository.db):
+            updated = self.repository.update(user, updates)
 
         if is_deactivating:
             self.audit.log_user_deactivated(updated, updated_by)

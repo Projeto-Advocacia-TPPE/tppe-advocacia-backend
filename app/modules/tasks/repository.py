@@ -7,6 +7,9 @@ from app.modules.tasks.model import Task, TaskPriority, TaskStatus
 
 
 class TaskRepository:
+    """Este repositório nunca comita. Operações de escrita usam db.add + db.flush
+    e o Service que orquestra a transação fecha com unit_of_work."""
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
@@ -59,7 +62,7 @@ class TaskRepository:
             updated_by=created_by,
         )
         self.db.add(task)
-        self.db.commit()
+        self.db.flush()
         return self.get_by_id(task.id)
 
     def update(self, task: Task, data: dict, updated_by: int) -> Task:
@@ -82,7 +85,7 @@ class TaskRepository:
             setattr(task, key, value)
         task.updated_by = updated_by
 
-        self.db.commit()
+        self.db.flush()
         return self.get_by_id(task.id)
 
     @staticmethod
@@ -162,11 +165,7 @@ class TaskRepository:
         task.order = new_order
         task.updated_by = updated_by
 
-        try:
-            self.db.commit()
-        except Exception:
-            self.db.rollback()
-            raise
+        self.db.flush()
         return self.get_by_id(task.id)
 
     def delete(self, task: Task) -> None:
@@ -178,7 +177,7 @@ class TaskRepository:
             .where(and_(Task.status == status, Task.order > order))
             .values(order=Task.order - 1)
         )
-        self.db.commit()
+        self.db.flush()
 
     def list_kanban(
         self,

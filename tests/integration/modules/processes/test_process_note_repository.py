@@ -161,7 +161,6 @@ class TestCascadeDelete:
     def test_notes_deleted_when_process_deleted(
         self, db: Session, process_fixture, author
     ):
-        db.execute(text("PRAGMA foreign_keys=ON"))
         repo = ProcessRepository(db)
         repo.create_note(
             process_id=process_fixture.id, created_by=author.id, content="a"
@@ -169,7 +168,11 @@ class TestCascadeDelete:
         repo.create_note(
             process_id=process_fixture.id, created_by=author.id, content="b"
         )
+        db.commit()
 
+        # SQLite PRAGMA é no-op mid-transaction; reaplicar após commit para que
+        # ON DELETE CASCADE seja honrado no delete abaixo.
+        db.execute(text("PRAGMA foreign_keys=ON"))
         db.delete(process_fixture)
         db.commit()
 

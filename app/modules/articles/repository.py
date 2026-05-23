@@ -5,6 +5,9 @@ from app.modules.articles.model import Article, ArticleStatus
 
 
 class ArticleRepository:
+    """Este repositório nunca comita. Operações de escrita usam db.add + db.flush
+    e o Service que orquestra a transação fecha com unit_of_work."""
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
@@ -28,8 +31,7 @@ class ArticleRepository:
             summary=summary,
         )
         self.db.add(article)
-        self.db.commit()
-        self.db.refresh(article)
+        self.db.flush()
         return article
 
     def get_by_id(self, article_id: int) -> Article | None:
@@ -64,6 +66,5 @@ class ArticleRepository:
     def update(self, article: Article, data: dict) -> Article:
         for key, value in data.items():
             setattr(article, key, value)
-        self.db.commit()
-        self.db.refresh(article)
+        self.db.flush()
         return article

@@ -9,6 +9,9 @@ from app.modules.forensic_holidays.model import ForensicHoliday, HolidayScope
 
 
 class ForensicHolidayRepository:
+    """Este repositório nunca comita. Operações de escrita usam db.add + db.flush
+    e o Service que orquestra a transação fecha com unit_of_work."""
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
@@ -28,8 +31,7 @@ class ForensicHolidayRepository:
             comarca=comarca,
         )
         self.db.add(holiday)
-        self.db.commit()
-        self.db.refresh(holiday)
+        self.db.flush()
         return holiday
 
     def get_by_id(self, holiday_id: int) -> ForensicHoliday | None:
@@ -81,13 +83,12 @@ class ForensicHolidayRepository:
             holiday.comarca = comarca
         elif clear_comarca:
             holiday.comarca = None
-        self.db.commit()
-        self.db.refresh(holiday)
+        self.db.flush()
         return holiday
 
     def delete(self, holiday: ForensicHoliday) -> None:
         self.db.delete(holiday)
-        self.db.commit()
+        self.db.flush()
 
     def list(
         self,

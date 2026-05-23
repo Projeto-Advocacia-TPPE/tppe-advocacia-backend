@@ -15,6 +15,7 @@ from app.shared.exceptions import (
     TaskProcessNotFoundError,
 )
 from app.shared.types import Role
+from app.shared.uow import unit_of_work
 
 
 class TaskService:
@@ -39,17 +40,18 @@ class TaskService:
             process_id=payload.process_id,
         )
 
-        task = self.repository.create(
-            title=payload.title,
-            description=payload.description,
-            due_date=payload.due_date,
-            priority=payload.priority,
-            status=TaskStatus.TODO,
-            assigned_to=payload.assigned_to,
-            client_id=payload.client_id,
-            process_id=payload.process_id,
-            created_by=created_by.id,
-        )
+        with unit_of_work(self.repository.db):
+            task = self.repository.create(
+                title=payload.title,
+                description=payload.description,
+                due_date=payload.due_date,
+                priority=payload.priority,
+                status=TaskStatus.TODO,
+                assigned_to=payload.assigned_to,
+                client_id=payload.client_id,
+                process_id=payload.process_id,
+                created_by=created_by.id,
+            )
 
         if task.assigned_to is not None:
             self._notify_assignee(task, actor_id=created_by.id)
@@ -92,7 +94,8 @@ class TaskService:
         old_assignee = task.assigned_to
         new_assignee = data.get("assigned_to", old_assignee)
 
-        updated = self.repository.update(task, data, updated_by=updated_by.id)
+        with unit_of_work(self.repository.db):
+            updated = self.repository.update(task, data, updated_by=updated_by.id)
 
         if (
             "assigned_to" in data
@@ -105,18 +108,21 @@ class TaskService:
 
     def move_task(self, task_id: int, payload: TaskMove, updated_by: User) -> Task:
         task = self.get_task(task_id)
-        return self.repository.move(
-            task,
-            new_status=payload.status,
-            new_order=payload.order,
-            updated_by=updated_by.id,
-        )
+        with unit_of_work(self.repository.db):
+            moved = self.repository.move(
+                task,
+                new_status=payload.status,
+                new_order=payload.order,
+                updated_by=updated_by.id,
+            )
+        return moved
 
     def delete_task(self, task_id: int, current_user: User) -> None:
         task = self.get_task(task_id)
         if current_user.role != Role.ADMIN and task.created_by != current_user.id:
             raise ForbiddenError()
-        self.repository.delete(task)
+        with unit_of_work(self.repository.db):
+            self.repository.delete(task)
 
     def _validate_references(
         self,

@@ -36,6 +36,7 @@ def process_fixture(db_session: Session, active_user, cleanup_processes) -> Proc
         action_type="Ação Cível",
         created_by=active_user["id"],
     )
+    db_session.commit()
     cleanup_processes.append(p.id)
     return p
 
@@ -70,6 +71,7 @@ def other_user_headers(db_session: Session, client):
         hashed_password=hashed,
         role=Role.USER,
     )
+    db_session.commit()
     response = client.post(
         "/api/v1/auth/login",
         json={"email": user.email, "password": password},
@@ -145,6 +147,7 @@ class TestListAlerts:
             court="TJSP",
             action_type="x",
         )
+        db_session.commit()
         cleanup_processes.append(other.id)
         r = client.get(
             _url(other.id, deadline_with_alerts["deadline_id"]),

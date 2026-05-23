@@ -75,6 +75,7 @@ def active_user(db_session):
         hashed_password=_hash(password),
         role=Role.USER,
     )
+    db_session.commit()
     yield {"id": user.id, "email": user.email, "password": password}
     _teardown_user(db_session, user.id)
 
@@ -90,6 +91,7 @@ def inactive_user(db_session):
         role=Role.USER,
     )
     repo.update(user, {"is_active": False})
+    db_session.commit()
     yield {"id": user.id, "email": user.email, "password": password}
     _teardown_user(db_session, user.id)
 
@@ -103,6 +105,7 @@ def admin_user(db_session):
         hashed_password=_hash(password),
         role=Role.ADMIN,
     )
+    db_session.commit()
     yield {"id": user.id, "email": user.email, "password": password}
     _teardown_user(db_session, user.id)
 

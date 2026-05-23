@@ -15,6 +15,13 @@ from app.modules.processes.model import (
 
 
 class ProcessRepository:
+    """Acesso a dados de Process/ProcessMovement/ProcessNote.
+
+    Convenção: este repositório nunca comita. Operações de escrita usam
+    `db.add` + `db.flush` (para popular IDs/constraints) e o `Service` que
+    orquestra a transação fecha com `unit_of_work`.
+    """
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
@@ -65,7 +72,6 @@ class ProcessRepository:
             opposing_party=opposing_party,
             created_by=created_by,
         )
-        self.db.commit()
         return self.db.scalars(self._query().where(Process.id == process.id)).first()
 
     def update_status_no_commit(
@@ -238,7 +244,6 @@ class ProcessRepository:
             external_id=external_id,
             created_by=created_by,
         )
-        self.db.commit()
         return self.db.scalars(
             self._movement_query().where(ProcessMovement.id == movement.id)
         ).first()
@@ -303,7 +308,7 @@ class ProcessRepository:
             process_id=process_id, created_by=created_by, content=content
         )
         self.db.add(note)
-        self.db.commit()
+        self.db.flush()
         return self.db.scalars(
             self._note_query().where(ProcessNote.id == note.id)
         ).first()
@@ -339,7 +344,9 @@ class ProcessRepository:
     ) -> ProcessNote:
         note.content = content
         note.updated_by = updated_by
-        self.db.commit()
+        self.db.flush()
         return self.db.scalars(
-            self._note_query().where(ProcessNote.id == note.id)
+            self._note_query()
+            .where(ProcessNote.id == note.id)
+            .execution_options(populate_existing=True)
         ).first()

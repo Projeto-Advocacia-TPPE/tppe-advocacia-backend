@@ -5,6 +5,9 @@ from app.modules.office_config.model import OfficeConfig
 
 
 class OfficeConfigRepository:
+    """Este repositório nunca comita. Operações de escrita usam db.add + db.flush
+    e o Service que orquestra a transação fecha com unit_of_work."""
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
@@ -15,6 +18,5 @@ class OfficeConfigRepository:
         config = self.get_config()
         for key, value in data.items():
             setattr(config, key, value)
-        self.db.commit()
-        self.db.refresh(config)
+        self.db.flush()
         return config
