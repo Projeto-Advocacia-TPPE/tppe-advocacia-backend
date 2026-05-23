@@ -9,6 +9,13 @@ from app.modules.clients.model import Client, ClientNote
 
 
 class ClientRepository:
+    """Acesso a dados de Client/ClientNote.
+
+    Convenção: este repositório nunca comita. Operações de escrita usam
+    `db.add` + `db.flush` (para popular IDs/constraints) e o `Service` que
+    orquestra a transação fecha com `unit_of_work`.
+    """
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
@@ -33,8 +40,7 @@ class ClientRepository:
             updated_by=created_by,
         )
         self.db.add(client)
-        self.db.commit()
-        self.db.refresh(client)
+        self.db.flush()
         return client
 
     def get_by_id(self, client_id: int, include_deleted: bool = False) -> Client | None:
@@ -81,8 +87,7 @@ class ClientRepository:
     def update(self, client: Client, data: dict) -> Client:
         for key, value in data.items():
             setattr(client, key, value)
-        self.db.commit()
-        self.db.refresh(client)
+        self.db.flush()
         return client
 
     def _note_query(self) -> object:
@@ -94,7 +99,7 @@ class ClientRepository:
     def create_note(self, client_id: int, created_by: int, content: str) -> ClientNote:
         note = ClientNote(client_id=client_id, created_by=created_by, content=content)
         self.db.add(note)
-        self.db.commit()
+        self.db.flush()
         return self.db.scalars(
             self._note_query().where(ClientNote.id == note.id)
         ).first()
@@ -182,7 +187,7 @@ class ClientRepository:
     ) -> ClientNote:
         note.content = content
         note.updated_by = updated_by
-        self.db.commit()
+        self.db.flush()
         return self.db.scalars(
             self._note_query().where(ClientNote.id == note.id)
         ).first()

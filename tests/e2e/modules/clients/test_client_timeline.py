@@ -50,6 +50,7 @@ def created_note_ids(db_session: Session):
 @pytest.fixture
 def empty_client(db_session, created_client_ids):
     c = ClientRepository(db_session).create(name="Vazio TL", cpf="99988877766")
+    db_session.commit()
     created_client_ids.append(c.id)
     return c
 
@@ -66,6 +67,7 @@ def populated_client(
     prepo = ProcessRepository(db_session)
 
     client = crepo.create(name="Populado TL", cpf="88877766655")
+    db_session.commit()
     created_client_ids.append(client.id)
 
     for i in range(2):
@@ -75,6 +77,7 @@ def populated_client(
             content=f"nota {i}",
         )
         created_note_ids.append(n.id)
+    db_session.commit()
 
     base = datetime.now(timezone.utc) - timedelta(days=10)
     processes_info = []

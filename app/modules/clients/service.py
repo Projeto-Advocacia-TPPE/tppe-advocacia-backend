@@ -20,6 +20,7 @@ from app.shared.exceptions import (
     ForbiddenError,
 )
 from app.shared.types import Role
+from app.shared.uow import unit_of_work
 
 
 class ClientService:
@@ -40,15 +41,17 @@ class ClientService:
         if payload.cnpj and self.repository.get_by_cnpj(payload.cnpj):
             raise ClientCnpjAlreadyExistsError()
 
-        return self.repository.create(
-            name=payload.name,
-            email=payload.email,
-            phone=payload.phone,
-            cpf=payload.cpf,
-            cnpj=payload.cnpj,
-            address=payload.address,
-            created_by=created_by.id,
-        )
+        with unit_of_work(self.repository.db):
+            client = self.repository.create(
+                name=payload.name,
+                email=payload.email,
+                phone=payload.phone,
+                cpf=payload.cpf,
+                cnpj=payload.cnpj,
+                address=payload.address,
+                created_by=created_by.id,
+            )
+        return client
 
     def get_client(self, client_id: int, requester: User | None = None) -> Client:
         is_admin = requester is not None and requester.role == Role.ADMIN
@@ -88,7 +91,9 @@ class ClientService:
             data["cpf"] = None
 
         data["updated_by"] = updated_by.id
-        return self.repository.update(client, data)
+        with unit_of_work(self.repository.db):
+            updated = self.repository.update(client, data)
+        return updated
 
     def anonymize(self, client_id: int, performed_by: User) -> Client:
         if self.process_repository is None or self.audit is None:
@@ -107,7 +112,7 @@ class ClientService:
         original_name = client.name
         now = datetime.now(timezone.utc)
 
-        try:
+        with unit_of_work(self.repository.db):
             self.repository.anonymize_no_commit(client, anonymized_at=now)
             self.audit.log_client_anonymized(
                 client_id=client.id,
@@ -115,10 +120,6 @@ class ClientService:
                 performed_by=performed_by,
                 commit=False,
             )
-            self.repository.db.commit()
-        except Exception:
-            self.repository.db.rollback()
-            raise
 
         self.repository.db.refresh(client)
         return client
@@ -127,11 +128,13 @@ class ClientService:
         self, client_id: int, payload: ClientNoteCreate, current_user: User
     ) -> ClientNote:
         self.get_client(client_id)
-        return self.repository.create_note(
-            client_id=client_id,
-            created_by=current_user.id,
-            content=payload.content,
-        )
+        with unit_of_work(self.repository.db):
+            note = self.repository.create_note(
+                client_id=client_id,
+                created_by=current_user.id,
+                content=payload.content,
+            )
+        return note
 
     def list_notes(
         self, client_id: int, page: int = 1, limit: int = 20
@@ -157,6 +160,8 @@ class ClientService:
         if note.created_by != current_user.id and current_user.role != Role.ADMIN:
             raise ForbiddenError()
 
-        return self.repository.update_note(
-            note=note, content=payload.content, updated_by=current_user.id
-        )
+        with unit_of_work(self.repository.db):
+            updated = self.repository.update_note(
+                note=note, content=payload.content, updated_by=current_user.id
+            )
+        return updated

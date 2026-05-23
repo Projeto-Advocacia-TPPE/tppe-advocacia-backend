@@ -20,6 +20,7 @@ def created_client_ids(db_session: Session):
 def client_cpf(db_session: Session, created_client_ids):
     repo = ClientRepository(db_session)
     c = repo.create(name="Carlos Teste", cpf="12345678901")
+    db_session.commit()
     created_client_ids.append(c.id)
     return c
 
@@ -28,6 +29,7 @@ def client_cpf(db_session: Session, created_client_ids):
 def client_cnpj(db_session: Session, created_client_ids):
     repo = ClientRepository(db_session)
     c = repo.create(name="Empresa Teste", cnpj="12345678000195")
+    db_session.commit()
     created_client_ids.append(c.id)
     return c
 
@@ -223,6 +225,7 @@ class TestUpdateClient:
     ):
         repo = ClientRepository(db_session)
         other = repo.create(name="Outro Cliente", cpf="99988877766")
+        db_session.commit()
         created_client_ids.append(other.id)
 
         response = client.patch(
