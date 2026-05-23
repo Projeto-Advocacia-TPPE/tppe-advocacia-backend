@@ -6,6 +6,9 @@ from app.modules.notifications.schema import EventType
 
 
 class NotificationPreferenceRepository:
+    """Este repositório nunca comita. Operações de escrita usam db.add + db.flush
+    e o Service que orquestra a transação fecha com unit_of_work."""
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
@@ -34,5 +37,5 @@ class NotificationPreferenceRepository:
             elif row.enabled != enabled:
                 row.enabled = enabled
 
-        self.db.commit()
+        self.db.flush()
         return self.get_by_user(user_id)
