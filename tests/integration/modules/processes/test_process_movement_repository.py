@@ -140,7 +140,12 @@ class TestCascadeDelete:
         repo = ProcessRepository(db)
         make_movement(repo, process_fixture, title="X")
         make_movement(repo, process_fixture, title="Y")
+        db.commit()
 
+        # SQLite PRAGMA é por conexão; o commit acima pode rotacionar a
+        # connection do pool, então reaplicamos antes do DELETE para garantir
+        # que o ON DELETE CASCADE seja honrado.
+        db.execute(text("PRAGMA foreign_keys=ON"))
         db.delete(process_fixture)
         db.commit()
 
