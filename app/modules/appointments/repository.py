@@ -9,6 +9,9 @@ from app.modules.appointments.model import Appointment, AppointmentType
 
 
 class AppointmentRepository:
+    """Este repositório nunca comita. Operações de escrita usam db.add + db.flush
+    e o Service que orquestra a transação fecha com unit_of_work."""
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
@@ -44,18 +47,18 @@ class AppointmentRepository:
             created_by=created_by,
         )
         self.db.add(appointment)
-        self.db.commit()
+        self.db.flush()
         return self.get_by_id(appointment.id)
 
     def update(self, appointment: Appointment, data: dict) -> Appointment:
         for key, value in data.items():
             setattr(appointment, key, value)
-        self.db.commit()
+        self.db.flush()
         return self.get_by_id(appointment.id)
 
     def delete(self, appointment: Appointment) -> None:
         self.db.delete(appointment)
-        self.db.commit()
+        self.db.flush()
 
     def list(
         self,
