@@ -97,6 +97,7 @@ def populated_client(
             created_by=active_user["id"],
         )
         processes_info.append((p, last))
+    db_session.commit()
 
     return {"client": client, "processes": processes_info}
 

@@ -7,6 +7,9 @@ from app.modules.google_calendar.model import GoogleCredential
 
 
 class GoogleCredentialRepository:
+    """Este repositório nunca comita. Operações de escrita usam db.add + db.flush
+    e o Service que orquestra a transação fecha com unit_of_work."""
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
@@ -29,8 +32,7 @@ class GoogleCredentialRepository:
         else:
             credential.encrypted_refresh_token = encrypted_refresh_token
             credential.scope = scope
-        self.db.commit()
-        self.db.refresh(credential)
+        self.db.flush()
         return credential
 
     def delete_by_user(self, user_id: int) -> bool:
@@ -38,5 +40,5 @@ class GoogleCredentialRepository:
         if credential is None:
             return False
         self.db.delete(credential)
-        self.db.commit()
+        self.db.flush()
         return True

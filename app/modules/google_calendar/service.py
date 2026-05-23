@@ -14,6 +14,7 @@ from app.modules.google_calendar.protocol import GoogleCalendarClient
 from app.modules.google_calendar.repository import GoogleCredentialRepository
 from app.modules.google_calendar.schema import GoogleStatusRead
 from app.shared.exceptions import GoogleNotConfiguredError
+from app.shared.uow import unit_of_work
 
 logger = logging.getLogger(__name__)
 
@@ -78,11 +79,12 @@ class GoogleCalendarService:
         if not refresh_token:
             raise GoogleOAuthError("Google did not return a refresh token")
 
-        self.repository.upsert(
-            user_id=user_id,
-            encrypted_refresh_token=self.cipher.encrypt(refresh_token),
-            scope=scope,
-        )
+        with unit_of_work(self.repository.db):
+            self.repository.upsert(
+                user_id=user_id,
+                encrypted_refresh_token=self.cipher.encrypt(refresh_token),
+                scope=scope,
+            )
         return user_id
 
     def disconnect(self, user_id: int) -> None:
@@ -91,7 +93,8 @@ class GoogleCalendarService:
         Eventos já sincronizados permanecem no Google Calendar do usuário
         (não tentamos apagá-los — falharia e não deve bloquear nada).
         """
-        self.repository.delete_by_user(user_id)
+        with unit_of_work(self.repository.db):
+            self.repository.delete_by_user(user_id)
 
     def get_status(self, user_id: int) -> GoogleStatusRead:
         credential = self.repository.get_by_user(user_id)
