@@ -9,6 +9,9 @@ from app.modules.deadlines.model import Deadline, DeadlineAlert
 
 
 class DeadlineRepository:
+    """Este repositório nunca comita. Operações de escrita usam db.add + db.flush
+    e o Service que orquestra a transação fecha com unit_of_work."""
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
@@ -34,8 +37,7 @@ class DeadlineRepository:
             created_by=created_by,
         )
         self.db.add(deadline)
-        self.db.commit()
-        self.db.refresh(deadline)
+        self.db.flush()
         return deadline
 
     def get_by_id(self, deadline_id: int) -> Deadline | None:
@@ -79,8 +81,7 @@ class DeadlineRepository:
             deadline.comarca = None
         if due_date is not None:
             deadline.due_date = due_date
-        self.db.commit()
-        self.db.refresh(deadline)
+        self.db.flush()
         return deadline
 
     def list_all(self) -> list[Deadline]:
@@ -88,10 +89,13 @@ class DeadlineRepository:
 
     def delete(self, deadline: Deadline) -> None:
         self.db.delete(deadline)
-        self.db.commit()
+        self.db.flush()
 
 
 class DeadlineAlertRepository:
+    """Este repositório nunca comita. Operações de escrita usam db.add + db.flush
+    e o Service que orquestra a transação fecha com unit_of_work."""
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
@@ -107,8 +111,7 @@ class DeadlineAlertRepository:
     def create(self, deadline_id: int, days_before: int) -> DeadlineAlert:
         alert = DeadlineAlert(deadline_id=deadline_id, days_before=days_before)
         self.db.add(alert)
-        self.db.commit()
-        self.db.refresh(alert)
+        self.db.flush()
         return alert
 
     def list_by_deadline(self, deadline_id: int) -> list[DeadlineAlert]:
