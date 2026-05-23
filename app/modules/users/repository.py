@@ -6,6 +6,9 @@ from app.shared.types import Role
 
 
 class UserRepository:
+    """Este repositório nunca comita. Operações de escrita usam db.add + db.flush
+    e o Service que orquestra a transação fecha com unit_of_work."""
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
@@ -62,8 +65,7 @@ class UserRepository:
             created_by=created_by,
         )
         self.db.add(user)
-        self.db.commit()
-        self.db.refresh(user)
+        self.db.flush()
         return user
 
     def get_by_reset_token_hash(self, token_hash: str) -> User | None:
@@ -74,6 +76,5 @@ class UserRepository:
     def update(self, user: User, data: dict) -> User:
         for key, value in data.items():
             setattr(user, key, value)
-        self.db.commit()
-        self.db.refresh(user)
+        self.db.flush()
         return user
