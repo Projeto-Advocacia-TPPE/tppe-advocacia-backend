@@ -2,7 +2,6 @@ from starlette.requests import Request
 
 from app.modules.articles.model import ArticleStatus
 from app.modules.articles.repository import ArticleRepository
-from app.shared.uow import unit_of_work
 from app.modules.articles.schema import (
     ArticleCreate,
     ArticleListItem,
@@ -11,6 +10,7 @@ from app.modules.articles.schema import (
 )
 from app.modules.users.model import User
 from app.shared.exceptions import ArticleNotFoundError
+from app.shared.uow import unit_of_work
 
 
 class ArticleService:
