@@ -8,6 +8,7 @@ from app.modules.forensic_holidays.schema import (
     _validate_scope_consistency,
 )
 from app.shared.exceptions import ForensicHolidayNotFoundError
+from app.shared.uow import unit_of_work
 
 
 class ForensicHolidayService:
@@ -15,13 +16,15 @@ class ForensicHolidayService:
         self.repository = repository
 
     def create(self, payload: HolidayCreate) -> ForensicHoliday:
-        return self.repository.create(
-            date_=payload.date,
-            description=payload.description,
-            scope=payload.scope,
-            court=payload.court,
-            comarca=payload.comarca,
-        )
+        with unit_of_work(self.repository.db):
+            holiday = self.repository.create(
+                date_=payload.date,
+                description=payload.description,
+                scope=payload.scope,
+                court=payload.court,
+                comarca=payload.comarca,
+            )
+        return holiday
 
     def get(self, holiday_id: int) -> ForensicHoliday:
         holiday = self.repository.get_by_id(holiday_id)
@@ -49,19 +52,22 @@ class ForensicHolidayService:
 
         _validate_scope_consistency(new_scope, new_court, new_comarca)
 
-        return self.repository.update(
-            holiday,
-            date_=fields.get("date"),
-            description=fields.get("description"),
-            scope=fields.get("scope"),
-            court=fields.get("court") if fields.get("court") is not None else None,
-            comarca=fields.get("comarca")
-            if fields.get("comarca") is not None
-            else None,
-            clear_court="court" in fields and fields["court"] is None,
-            clear_comarca="comarca" in fields and fields["comarca"] is None,
-        )
+        with unit_of_work(self.repository.db):
+            updated = self.repository.update(
+                holiday,
+                date_=fields.get("date"),
+                description=fields.get("description"),
+                scope=fields.get("scope"),
+                court=fields.get("court") if fields.get("court") is not None else None,
+                comarca=fields.get("comarca")
+                if fields.get("comarca") is not None
+                else None,
+                clear_court="court" in fields and fields["court"] is None,
+                clear_comarca="comarca" in fields and fields["comarca"] is None,
+            )
+        return updated
 
     def delete(self, holiday_id: int) -> None:
         holiday = self.get(holiday_id)
-        self.repository.delete(holiday)
+        with unit_of_work(self.repository.db):
+            self.repository.delete(holiday)
