@@ -125,7 +125,7 @@ class DataJudService:
                 )
                 imported_ids.append(imported.id)
 
-            log = self.log_repository.create_no_commit(
+            log = self.log_repository.create(
                 provider=ExternalApiProvider.DATAJUD,
                 operation=ExternalApiOperation.PROCESS_MOVEMENT_SYNC,
                 status=ExternalApiStatus.SUCCESS,
@@ -234,7 +234,7 @@ class DataJudService:
         # O log de falha é uma transação separada da síntese principal:
         # mesmo quando a sincronização aborta, queremos a auditoria persistida.
         with unit_of_work(self.process_repository.db):
-            log = self.log_repository.create_no_commit(
+            log = self.log_repository.create(
                 provider=ExternalApiProvider.DATAJUD,
                 operation=ExternalApiOperation.PROCESS_MOVEMENT_SYNC,
                 status=ExternalApiStatus.FAILURE,

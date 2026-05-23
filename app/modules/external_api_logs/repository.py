@@ -12,10 +12,13 @@ from app.modules.external_api_logs.model import (
 
 
 class ExternalApiLogRepository:
+    """Este repositório nunca comita. Operações de escrita usam db.add + db.flush
+    e o Service que orquestra a transação fecha com unit_of_work."""
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    def create_no_commit(
+    def create(
         self,
         provider: ExternalApiProvider,
         operation: ExternalApiOperation,
@@ -42,35 +45,6 @@ class ExternalApiLogRepository:
         )
         self.db.add(log)
         self.db.flush()
-        return log
-
-    def create(
-        self,
-        provider: ExternalApiProvider,
-        operation: ExternalApiOperation,
-        status: ExternalApiStatus,
-        process_id: int | None = None,
-        tribunal_alias: str | None = None,
-        request_identifier: str | None = None,
-        http_status: int | None = None,
-        error_code: str | None = None,
-        error_message: str | None = None,
-        created_by: int | None = None,
-    ) -> ExternalApiLog:
-        log = self.create_no_commit(
-            provider=provider,
-            operation=operation,
-            status=status,
-            process_id=process_id,
-            tribunal_alias=tribunal_alias,
-            request_identifier=request_identifier,
-            http_status=http_status,
-            error_code=error_code,
-            error_message=error_message,
-            created_by=created_by,
-        )
-        self.db.commit()
-        self.db.refresh(log)
         return log
 
     def list(
