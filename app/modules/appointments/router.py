@@ -1,20 +1,17 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, Response, status
-from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.modules.appointments.controller import AppointmentController
+from app.modules.appointments.deps import get_appointment_service
 from app.modules.appointments.model import AppointmentType
 from app.modules.appointments.schema import (
     AppointmentCreate,
     AppointmentRead,
     AppointmentUpdate,
 )
-from app.modules.google_calendar.google_service import GoogleCalendarApiClient
+from app.modules.appointments.service import AppointmentService
 from app.modules.users.model import User
 from app.shared.auth_deps import get_current_user
-from app.shared.google_deps import get_google_calendar_client
 from app.shared.responses import (
     PaginatedResponse,
     SuccessResponse,
@@ -35,15 +32,11 @@ router = APIRouter(prefix="/appointments", tags=["Appointments"])
 )
 def create_appointment(
     payload: AppointmentCreate,
-    db: Session = Depends(get_db),
-    google_client: GoogleCalendarApiClient = Depends(get_google_calendar_client),
+    service: AppointmentService = Depends(get_appointment_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[AppointmentRead]:
-    return ok(
-        AppointmentController(db, google_client).create_appointment(
-            payload, current_user
-        )
-    )
+    appointment = service.create_appointment(payload, current_user)
+    return ok(AppointmentRead.model_validate(appointment))
 
 
 @router.get(
@@ -60,11 +53,10 @@ def list_appointments(
     process_id: int | None = Query(None),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
-    google_client: GoogleCalendarApiClient = Depends(get_google_calendar_client),
+    service: AppointmentService = Depends(get_appointment_service),
     current_user: User = Depends(get_current_user),
 ) -> PaginatedResponse[AppointmentRead]:
-    items, total = AppointmentController(db, google_client).list_appointments(
+    items, total = service.list_appointments(
         current_user,
         date_from=date_from,
         date_to=date_to,
@@ -74,7 +66,12 @@ def list_appointments(
         page=page,
         limit=limit,
     )
-    return paginated(items, total=total, page=page, limit=limit)
+    return paginated(
+        [AppointmentRead.model_validate(a) for a in items],
+        total=total,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.get(
@@ -85,15 +82,11 @@ def list_appointments(
 )
 def get_appointment(
     appointment_id: int,
-    db: Session = Depends(get_db),
-    google_client: GoogleCalendarApiClient = Depends(get_google_calendar_client),
+    service: AppointmentService = Depends(get_appointment_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[AppointmentRead]:
-    return ok(
-        AppointmentController(db, google_client).get_appointment(
-            appointment_id, current_user
-        )
-    )
+    appointment = service.get_appointment(appointment_id, current_user)
+    return ok(AppointmentRead.model_validate(appointment))
 
 
 @router.patch(
@@ -105,15 +98,11 @@ def get_appointment(
 def update_appointment(
     appointment_id: int,
     payload: AppointmentUpdate,
-    db: Session = Depends(get_db),
-    google_client: GoogleCalendarApiClient = Depends(get_google_calendar_client),
+    service: AppointmentService = Depends(get_appointment_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[AppointmentRead]:
-    return ok(
-        AppointmentController(db, google_client).update_appointment(
-            appointment_id, payload, current_user
-        )
-    )
+    appointment = service.update_appointment(appointment_id, payload, current_user)
+    return ok(AppointmentRead.model_validate(appointment))
 
 
 @router.delete(
@@ -124,11 +113,8 @@ def update_appointment(
 )
 def delete_appointment(
     appointment_id: int,
-    db: Session = Depends(get_db),
-    google_client: GoogleCalendarApiClient = Depends(get_google_calendar_client),
+    service: AppointmentService = Depends(get_appointment_service),
     current_user: User = Depends(get_current_user),
 ) -> Response:
-    AppointmentController(db, google_client).delete_appointment(
-        appointment_id, current_user
-    )
+    service.delete_appointment(appointment_id, current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

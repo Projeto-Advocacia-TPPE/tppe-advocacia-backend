@@ -1,16 +1,13 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.modules.auth.controller import AuthController
+from app.modules.auth.deps import get_auth_service
 from app.modules.auth.schema import (
     LoginRequest,
     PasswordResetConfirm,
     PasswordResetRequest,
     TokenResponse,
 )
-from app.modules.email.protocol import EmailService
-from app.shared.email_deps import get_email_service
+from app.modules.auth.service import AuthService
 from app.shared.responses import SuccessResponse, error_responses, ok
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -24,10 +21,9 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 )
 def login(
     payload: LoginRequest,
-    db: Session = Depends(get_db),
-    email: EmailService = Depends(get_email_service),
+    service: AuthService = Depends(get_auth_service),
 ) -> SuccessResponse[TokenResponse]:
-    return ok(AuthController(db, email).login(payload))
+    return ok(service.login(payload))
 
 
 @router.post(
@@ -38,10 +34,9 @@ def login(
 )
 def request_password_reset(
     payload: PasswordResetRequest,
-    db: Session = Depends(get_db),
-    email: EmailService = Depends(get_email_service),
+    service: AuthService = Depends(get_auth_service),
 ) -> SuccessResponse[None]:
-    AuthController(db, email).request_password_reset(payload)
+    service.request_reset(payload)
     return ok(None)
 
 
@@ -53,8 +48,7 @@ def request_password_reset(
 )
 def confirm_password_reset(
     payload: PasswordResetConfirm,
-    db: Session = Depends(get_db),
-    email: EmailService = Depends(get_email_service),
+    service: AuthService = Depends(get_auth_service),
 ) -> SuccessResponse[None]:
-    AuthController(db, email).confirm_password_reset(payload)
+    service.confirm_reset(payload)
     return ok(None)

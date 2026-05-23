@@ -1,11 +1,8 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.modules.email.protocol import EmailService
-from app.modules.processes.controller import ProcessController
+from app.modules.processes.deps import get_process_service
 from app.modules.processes.model import MovementSource, ProcessStatus
 from app.modules.processes.schema import (
     MovementCreate,
@@ -19,9 +16,9 @@ from app.modules.processes.schema import (
     ProcessStatusChange,
     ProcessStatusChangeResponse,
 )
+from app.modules.processes.service import ProcessService
 from app.modules.users.model import User
 from app.shared.auth_deps import get_current_user
-from app.shared.email_deps import get_email_service
 from app.shared.responses import (
     PaginatedResponse,
     SuccessResponse,
@@ -42,13 +39,10 @@ router = APIRouter(tags=["Processes"])
 )
 def create_process(
     payload: ProcessCreate,
-    db: Session = Depends(get_db),
-    email: EmailService = Depends(get_email_service),
+    service: ProcessService = Depends(get_process_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessRead]:
-    return ok(
-        ProcessController(db, email).create_process(payload, created_by=current_user)
-    )
+    return ok(service.create_process(payload, created_by=current_user))
 
 
 @router.get(
@@ -63,10 +57,10 @@ def list_processes(
     search: str | None = Query(None),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    service: ProcessService = Depends(get_process_service),
     _: User = Depends(get_current_user),
 ) -> PaginatedResponse[ProcessListItem]:
-    items, total = ProcessController(db).list_processes(
+    items, total = service.list_processes(
         client_id=client_id,
         status=status_filter,
         search=search,
@@ -84,10 +78,10 @@ def list_processes(
 )
 def get_process(
     process_id: int,
-    db: Session = Depends(get_db),
+    service: ProcessService = Depends(get_process_service),
     _: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessRead]:
-    return ok(ProcessController(db).get_process(process_id))
+    return ok(service.get_process(process_id))
 
 
 @router.patch(
@@ -99,13 +93,10 @@ def get_process(
 def change_process_status(
     process_id: int,
     payload: ProcessStatusChange,
-    db: Session = Depends(get_db),
-    email: EmailService = Depends(get_email_service),
+    service: ProcessService = Depends(get_process_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessStatusChangeResponse]:
-    process, movement = ProcessController(db, email).change_status(
-        process_id, payload, current_user
-    )
+    process, movement = service.change_status(process_id, payload, current_user)
     return ok(ProcessStatusChangeResponse.from_process(process, movement.id))
 
 
@@ -119,15 +110,10 @@ def change_process_status(
 def create_movement(
     process_id: int,
     payload: MovementCreate,
-    db: Session = Depends(get_db),
-    email: EmailService = Depends(get_email_service),
+    service: ProcessService = Depends(get_process_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[MovementRead]:
-    return ok(
-        ProcessController(db, email).create_movement(
-            process_id, payload, created_by=current_user
-        )
-    )
+    return ok(service.create_movement(process_id, payload, created_by=current_user))
 
 
 @router.get(
@@ -143,10 +129,10 @@ def list_movements(
     date_to: datetime | None = Query(None),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    service: ProcessService = Depends(get_process_service),
     _: User = Depends(get_current_user),
 ) -> PaginatedResponse[MovementRead]:
-    items, total = ProcessController(db).list_movements(
+    items, total = service.list_movements(
         process_id,
         source=source,
         date_from=date_from,
@@ -167,14 +153,10 @@ def list_movements(
 def create_process_note(
     process_id: int,
     payload: ProcessNoteCreate,
-    db: Session = Depends(get_db),
+    service: ProcessService = Depends(get_process_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessNoteRead]:
-    return ok(
-        ProcessController(db).create_note(
-            process_id, payload, current_user=current_user
-        )
-    )
+    return ok(service.create_note(process_id, payload, current_user=current_user))
 
 
 @router.get(
@@ -187,10 +169,10 @@ def list_process_notes(
     process_id: int,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    service: ProcessService = Depends(get_process_service),
     _: User = Depends(get_current_user),
 ) -> PaginatedResponse[ProcessNoteRead]:
-    items, total = ProcessController(db).list_notes(process_id, page=page, limit=limit)
+    items, total = service.list_notes(process_id, page=page, limit=limit)
     return paginated(items, total=total, page=page, limit=limit)
 
 
@@ -204,14 +186,10 @@ def update_process_note(
     process_id: int,
     note_id: int,
     payload: ProcessNoteUpdate,
-    db: Session = Depends(get_db),
+    service: ProcessService = Depends(get_process_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessNoteRead]:
-    return ok(
-        ProcessController(db).update_note(
-            process_id, note_id, payload, current_user=current_user
-        )
-    )
+    return ok(service.update_note(process_id, note_id, payload, current_user=current_user))
 
 
 @router.get(
@@ -224,10 +202,8 @@ def list_processes_by_client(
     client_id: int,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    service: ProcessService = Depends(get_process_service),
     _: User = Depends(get_current_user),
 ) -> PaginatedResponse[ProcessListItem]:
-    items, total = ProcessController(db).list_by_client(
-        client_id, page=page, limit=limit
-    )
+    items, total = service.list_by_client(client_id, page=page, limit=limit)
     return paginated(items, total=total, page=page, limit=limit)

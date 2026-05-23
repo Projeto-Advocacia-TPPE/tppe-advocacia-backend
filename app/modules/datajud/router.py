@@ -1,20 +1,15 @@
 from fastapi import APIRouter, Body, Depends
-from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.modules.datajud.controller import DataJudController
-from app.modules.datajud.deps import get_datajud_client
-from app.modules.datajud.protocol import DataJudClient
+from app.modules.datajud.deps import get_datajud_service
 from app.modules.datajud.schema import (
     DataJudBatchSyncRequest,
     DataJudBatchSyncResponse,
     DataJudSyncRequest,
     DataJudSyncResponse,
 )
-from app.modules.email.protocol import EmailService
+from app.modules.datajud.service import DataJudService
 from app.modules.users.model import User
 from app.shared.auth_deps import get_current_user, require_admin
-from app.shared.email_deps import get_email_service
 from app.shared.responses import SuccessResponse, error_responses, ok
 
 router = APIRouter(tags=["DataJud"])
@@ -29,13 +24,11 @@ router = APIRouter(tags=["DataJud"])
 def sync_process_movements_from_datajud(
     process_id: int,
     payload: DataJudSyncRequest | None = Body(default=None),
-    db: Session = Depends(get_db),
+    service: DataJudService = Depends(get_datajud_service),
     current_user: User = Depends(get_current_user),
-    datajud_client: DataJudClient = Depends(get_datajud_client),
-    email: EmailService = Depends(get_email_service),
 ) -> SuccessResponse[DataJudSyncResponse]:
     return ok(
-        DataJudController(db, datajud_client, email).sync_process_movements(
+        service.sync_process_movements(
             process_id=process_id,
             payload=payload or DataJudSyncRequest(),
             actor_id=current_user.id,
@@ -51,13 +44,11 @@ def sync_process_movements_from_datajud(
 )
 def sync_active_processes_from_datajud(
     payload: DataJudBatchSyncRequest,
-    db: Session = Depends(get_db),
+    service: DataJudService = Depends(get_datajud_service),
     current_user: User = Depends(require_admin),
-    datajud_client: DataJudClient = Depends(get_datajud_client),
-    email: EmailService = Depends(get_email_service),
 ) -> SuccessResponse[DataJudBatchSyncResponse]:
     return ok(
-        DataJudController(db, datajud_client, email).sync_active_processes(
+        service.sync_active_processes(
             payload=payload,
             actor_id=current_user.id,
         )

@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, Request, UploadFile
 from fastapi.responses import FileResponse
 
-from app.modules.media.controller import MediaController
+from app.modules.media.deps import get_media_service
 from app.modules.media.schema import MediaUploadResponse
+from app.modules.media.service import MediaService
 from app.modules.users.model import User
 from app.shared.auth_deps import get_current_user
 from app.shared.responses import SuccessResponse, error_responses, ok
@@ -20,9 +21,10 @@ router = APIRouter(prefix="/media", tags=["Media"])
 def upload_file(
     request: Request,
     file: UploadFile,
+    service: MediaService = Depends(get_media_service),
     _: User = Depends(get_current_user),
 ) -> SuccessResponse[MediaUploadResponse]:
-    return ok(MediaController().upload(file, str(request.base_url)))
+    return ok(service.upload(file, str(request.base_url)))
 
 
 @router.get(
@@ -30,6 +32,9 @@ def upload_file(
     responses=error_responses(404),
     summary="Serve an uploaded file",
 )
-def serve_file(filename: str) -> FileResponse:
-    path = MediaController().get_file_path(filename)
+def serve_file(
+    filename: str,
+    service: MediaService = Depends(get_media_service),
+) -> FileResponse:
+    path = service.get_file_path(filename)
     return FileResponse(path)
