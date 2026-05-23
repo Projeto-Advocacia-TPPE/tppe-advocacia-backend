@@ -11,6 +11,7 @@ from app.shared.exceptions import (
     LeadDuplicateError,
     LeadNotFoundError,
 )
+from app.shared.uow import unit_of_work
 
 settings = get_settings()
 
@@ -48,12 +49,14 @@ class LeadService:
             payload.email, settings.lead_dedup_window_hours
         ):
             raise LeadDuplicateError()
-        return self.repository.create(
-            name=payload.name,
-            email=payload.email,
-            phone=payload.phone,
-            message=payload.message,
-        )
+        with unit_of_work(self.repository.db):
+            lead = self.repository.create(
+                name=payload.name,
+                email=payload.email,
+                phone=payload.phone,
+                message=payload.message,
+            )
+        return lead
 
     def update_lead(
         self, lead_id: int, payload: LeadUpdate, current_user: User | None = None
@@ -69,7 +72,8 @@ class LeadService:
             raise AssigneeNotFoundError()
 
         previous_assignee = lead.assigned_to
-        updated = self.repository.update(lead, data)
+        with unit_of_work(self.repository.db):
+            updated = self.repository.update(lead, data)
 
         new_assignee = data.get("assigned_to")
         actor_id = current_user.id if current_user is not None else None

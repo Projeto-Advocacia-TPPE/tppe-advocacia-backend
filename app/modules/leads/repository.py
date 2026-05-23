@@ -7,6 +7,9 @@ from app.modules.leads.model import Lead, LeadStatus
 
 
 class LeadRepository:
+    """Este repositório nunca comita. Operações de escrita usam db.add + db.flush
+    e o Service que orquestra a transação fecha com unit_of_work."""
+
     def __init__(self, db: Session) -> None:
         self.db = db
 
@@ -55,13 +58,11 @@ class LeadRepository:
             name=name, email=email, phone=phone, message=message, status=LeadStatus.NOVO
         )
         self.db.add(lead)
-        self.db.commit()
-        self.db.refresh(lead)
+        self.db.flush()
         return lead
 
     def update(self, lead: Lead, data: dict) -> Lead:
         for key, value in data.items():
             setattr(lead, key, value)
-        self.db.commit()
-        self.db.refresh(lead)
+        self.db.flush()
         return lead
