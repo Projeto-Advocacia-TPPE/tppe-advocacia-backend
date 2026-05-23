@@ -1,5 +1,6 @@
 from app.modules.office_config.repository import OfficeConfigRepository
 from app.modules.office_config.schema import OfficeConfigRead, OfficeConfigUpdate
+from app.shared.uow import unit_of_work
 
 
 class OfficeConfigService:
@@ -12,5 +13,6 @@ class OfficeConfigService:
 
     def update(self, payload: OfficeConfigUpdate) -> OfficeConfigRead:
         data = payload.model_dump(exclude_none=True)
-        config = self.repository.update_config(data)
+        with unit_of_work(self.repository.db):
+            config = self.repository.update_config(data)
         return OfficeConfigRead.model_validate(config)
