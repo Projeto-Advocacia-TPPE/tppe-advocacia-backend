@@ -118,7 +118,6 @@ class ClientService:
                 client_id=client.id,
                 client_name=original_name,
                 performed_by=performed_by,
-                commit=False,
             )
 
         self.repository.db.refresh(client)
