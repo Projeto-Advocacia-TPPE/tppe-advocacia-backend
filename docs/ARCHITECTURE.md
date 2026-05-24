@@ -48,6 +48,13 @@ app/
 │   │   ├── service.py
 │   │   ├── deps.py
 │   │   └── router.py
+│   ├── articles/                  # base de conhecimento / blog
+│   │   ├── model.py               # ORM: Article
+│   │   ├── schema.py              # ArticleCreate, ArticleUpdate, ArticleRead, ArticleListItem
+│   │   ├── repository.py
+│   │   ├── service.py             # CRUD + listagem paginada (published / all)
+│   │   ├── deps.py
+│   │   └── router.py              # /articles (público), /articles/admin (autenticado)
 │   ├── audit_logs/                # log de auditoria
 │   │   ├── model.py
 │   │   ├── schema.py
@@ -67,6 +74,15 @@ app/
 │   │   ├── protocol.py            # EmailService (Protocol)
 │   │   ├── resend_service.py      # implementação Resend
 │   │   └── fake_service.py        # implementação fake para testes
+│   ├── clients/                   # gestão de clientes (PF e PJ)
+│   │   ├── model.py               # ORM: Client, ClientNote
+│   │   ├── schema.py              # ClientCreate/Update/Read, ClientNoteCreate/Update/Read, ClientTimelineRead
+│   │   ├── repository.py
+│   │   ├── timeline_repository.py # queries agregadas para a visão 360º do cliente
+│   │   ├── service.py             # CRUD + anonimização LGPD + notas
+│   │   ├── timeline_service.py    # monta o feed de atividades do cliente
+│   │   ├── deps.py                # get_client_service(), get_client_timeline_service()
+│   │   └── router.py              # /clients, /clients/{id}, /clients/{id}/notes, /clients/{id}/timeline
 │   ├── datajud/                   # integração com API pública DataJud (US-20)
 │   │   ├── protocol.py            # DataJudClient (Protocol)
 │   │   ├── datajud_service.py     # implementação real via httpx
@@ -124,6 +140,13 @@ app/
 │   │   ├── service.py             # GoogleCalendarService + sync_appointment
 │   │   ├── deps.py
 │   │   └── router.py              # /integrations/google/*
+│   ├── processes/                 # processos judiciais (core do domínio)
+│   │   ├── model.py               # ORM: Process, ProcessMovement, ProcessNote, ProcessStatus
+│   │   ├── schema.py              # ProcessCreate/Read, MovementCreate/Read, ProcessNoteCreate/Update/Read
+│   │   ├── repository.py
+│   │   ├── service.py             # CRUD + mudança de status + movimentações + notas + notificações
+│   │   ├── deps.py
+│   │   └── router.py              # /processes, /processes/{id}, .../status, .../movements, .../notes
 │   ├── tasks/                     # tarefas em Kanban (CRUD + move atômico)
 │   │   ├── model.py               # ORM: Task, TaskStatus, TaskPriority
 │   │   ├── schema.py              # TaskCreate, TaskUpdate, TaskMove, TaskRead
