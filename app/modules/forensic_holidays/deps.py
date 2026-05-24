@@ -6,5 +6,7 @@ from app.modules.forensic_holidays.repository import ForensicHolidayRepository
 from app.modules.forensic_holidays.service import ForensicHolidayService
 
 
-def get_forensic_holiday_service(db: Session = Depends(get_db)) -> ForensicHolidayService:
+def get_forensic_holiday_service(
+    db: Session = Depends(get_db),
+) -> ForensicHolidayService:
     return ForensicHolidayService(ForensicHolidayRepository(db))

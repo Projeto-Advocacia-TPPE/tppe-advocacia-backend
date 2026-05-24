@@ -32,7 +32,7 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
     status_code=status.HTTP_201_CREATED,
     response_model=SuccessResponse[TaskRead],
     responses=error_responses(401, 422),
-    summary="Create a new task",
+    summary="Cria uma nova tarefa",
 )
 def create_task(
     payload: TaskCreate,
@@ -47,7 +47,7 @@ def create_task(
     "",
     response_model=PaginatedResponse[TaskRead],
     responses=error_responses(401),
-    summary="List tasks with filters and pagination",
+    summary="Lista tarefas com filtros e paginação",
 )
 def list_tasks(
     assigned_to: int | None = Query(None),
@@ -85,7 +85,7 @@ def list_tasks(
     "/kanban",
     response_model=SuccessResponse[KanbanRead],
     responses=error_responses(401),
-    summary="Get tasks grouped by status (Kanban view)",
+    summary="Obtém tarefas agrupadas por status (visualização Kanban)",
 )
 def get_kanban(
     assigned_to: int | None = Query(None),
@@ -116,7 +116,7 @@ def get_kanban(
     "/{task_id}",
     response_model=SuccessResponse[TaskRead],
     responses=error_responses(401, 404),
-    summary="Get a task by ID",
+    summary="Obtém uma tarefa por ID",
 )
 def get_task(
     task_id: int,
@@ -131,7 +131,7 @@ def get_task(
     "/{task_id}",
     response_model=SuccessResponse[TaskRead],
     responses=error_responses(401, 404, 422),
-    summary="Partially update a task",
+    summary="Atualiza parcialmente uma tarefa",
 )
 def update_task(
     task_id: int,
@@ -147,7 +147,7 @@ def update_task(
     "/{task_id}/move",
     response_model=SuccessResponse[TaskRead],
     responses=error_responses(401, 404, 422),
-    summary="Move a task between columns (Kanban) with atomic reorder",
+    summary="Move uma tarefa entre colunas (Kanban) com reordenação atômica",
 )
 def move_task(
     task_id: int,
@@ -163,7 +163,7 @@ def move_task(
     "/{task_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     responses=error_responses(401, 403, 404),
-    summary="Delete a task (admin or creator only)",
+    summary="Remove uma tarefa (apenas administrador ou criador)",
 )
 def delete_task(
     task_id: int,

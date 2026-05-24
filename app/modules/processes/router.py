@@ -42,7 +42,11 @@ def create_process(
     service: ProcessService = Depends(get_process_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessRead]:
-    return ok(ProcessRead.model_validate(service.create_process(payload, created_by=current_user)))
+    return ok(
+        ProcessRead.model_validate(
+            service.create_process(payload, created_by=current_user)
+        )
+    )
 
 
 @router.get(
@@ -118,7 +122,11 @@ def create_movement(
     service: ProcessService = Depends(get_process_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[MovementRead]:
-    return ok(MovementRead.model_validate(service.create_movement(process_id, payload, created_by=current_user)))
+    return ok(
+        MovementRead.model_validate(
+            service.create_movement(process_id, payload, created_by=current_user)
+        )
+    )
 
 
 @router.get(
@@ -166,7 +174,11 @@ def create_process_note(
     service: ProcessService = Depends(get_process_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessNoteRead]:
-    return ok(ProcessNoteRead.model_validate(service.create_note(process_id, payload, current_user=current_user)))
+    return ok(
+        ProcessNoteRead.model_validate(
+            service.create_note(process_id, payload, current_user=current_user)
+        )
+    )
 
 
 @router.get(
@@ -204,7 +216,11 @@ def update_process_note(
     service: ProcessService = Depends(get_process_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessNoteRead]:
-    return ok(ProcessNoteRead.model_validate(service.update_note(process_id, note_id, payload, current_user=current_user)))
+    return ok(
+        ProcessNoteRead.model_validate(
+            service.update_note(process_id, note_id, payload, current_user=current_user)
+        )
+    )
 
 
 @router.get(

@@ -21,7 +21,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
     "",
     response_model=PaginatedResponse[UserRead],
     responses=error_responses(401, 403),
-    summary="List users with filters and pagination",
+    summary="Lista usuários com filtros e paginação",
 )
 def list_users(
     role: Role | None = Query(None),
@@ -31,7 +31,9 @@ def list_users(
     service: UserService = Depends(get_user_service),
     _: User = Depends(require_admin),
 ) -> PaginatedResponse[UserRead]:
-    items, total = service.list_users(role=role, is_active=is_active, page=page, limit=limit)
+    items, total = service.list_users(
+        role=role, is_active=is_active, page=page, limit=limit
+    )
     return paginated(
         [UserRead.model_validate(u) for u in items],
         total=total,
@@ -45,21 +47,23 @@ def list_users(
     status_code=201,
     response_model=SuccessResponse[UserRead],
     responses=error_responses(401, 403, 409, 422),
-    summary="Create a new user",
+    summary="Cria um novo usuário",
 )
 def create_user(
     payload: UserCreate,
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_admin),
 ) -> SuccessResponse[UserRead]:
-    return ok(UserRead.model_validate(service.create_user(payload, created_by=current_user)))
+    return ok(
+        UserRead.model_validate(service.create_user(payload, created_by=current_user))
+    )
 
 
 @router.get(
     "/{user_id}",
     response_model=SuccessResponse[UserRead],
     responses=error_responses(401, 403, 404),
-    summary="Get a user by ID",
+    summary="Obtém um usuário por ID",
 )
 def get_user(
     user_id: int,
@@ -73,7 +77,7 @@ def get_user(
     "/{user_id}",
     response_model=SuccessResponse[UserRead],
     responses=error_responses(401, 403, 404, 409, 422),
-    summary="Update user data, role, or status",
+    summary="Atualiza dados do usuário, papel ou status",
 )
 def update_user(
     user_id: int,
@@ -81,4 +85,8 @@ def update_user(
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_admin),
 ) -> SuccessResponse[UserRead]:
-    return ok(UserRead.model_validate(service.update_user(user_id, payload, updated_by=current_user)))
+    return ok(
+        UserRead.model_validate(
+            service.update_user(user_id, payload, updated_by=current_user)
+        )
+    )

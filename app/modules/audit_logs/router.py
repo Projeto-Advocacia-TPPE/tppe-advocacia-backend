@@ -17,7 +17,7 @@ router = APIRouter(prefix="/audit-logs", tags=["Audit Logs"])
     "",
     response_model=PaginatedResponse[AuditLogRead],
     responses=error_responses(401, 403),
-    summary="List audit logs for user operations",
+    summary="Lista registros de auditoria para operações de usuários",
 )
 def list_audit_logs(
     action: AuditAction | None = Query(None),

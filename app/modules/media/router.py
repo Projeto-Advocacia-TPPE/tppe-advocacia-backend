@@ -16,7 +16,7 @@ router = APIRouter(prefix="/media", tags=["Media"])
     status_code=201,
     response_model=SuccessResponse[MediaUploadResponse],
     responses=error_responses(401, 413, 415, 422),
-    summary="Upload an image file",
+    summary="Carrega um arquivo de imagem",
 )
 def upload_file(
     request: Request,
@@ -30,7 +30,7 @@ def upload_file(
 @router.get(
     "/{filename}",
     responses=error_responses(404),
-    summary="Serve an uploaded file",
+    summary="Serve um arquivo enviado",
 )
 def serve_file(
     filename: str,

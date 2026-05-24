@@ -42,7 +42,9 @@ class ArticleService:
             lambda: self.repository.get_by_id(article_id), ArticleNotFoundError
         )
 
-    def list_published(self, page: int = 1, limit: int = 20) -> tuple[list[Article], int]:
+    def list_published(
+        self, page: int = 1, limit: int = 20
+    ) -> tuple[list[Article], int]:
         return self.repository.get_published(page=page, limit=limit)
 
     def list_all(self, page: int = 1, limit: int = 20) -> tuple[list[Article], int]:

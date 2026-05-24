@@ -325,9 +325,7 @@ class TestChangeStatus:
             make_user(7),
         )
 
-        repo.update_status.assert_called_once_with(
-            process, ProcessStatus.SUSPENSO, 7
-        )
+        repo.update_status.assert_called_once_with(process, ProcessStatus.SUSPENSO, 7)
         mov_kwargs = repo.create_movement.call_args.kwargs
         assert mov_kwargs["process_id"] == process.id
         assert mov_kwargs["title"] == "Status alterado: ATIVO -> SUSPENSO"

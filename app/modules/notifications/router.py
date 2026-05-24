@@ -14,7 +14,7 @@ router = APIRouter(prefix="/notifications", tags=["Notifications"])
     "/preferences",
     response_model=SuccessResponse[PreferencesRead],
     responses=error_responses(401),
-    summary="Get notification preferences for the authenticated user",
+    summary="Obtém preferências de notificação do usuário autenticado",
 )
 def get_preferences(
     service: NotificationService = Depends(get_notification_service),
@@ -28,7 +28,7 @@ def get_preferences(
     "/preferences",
     response_model=SuccessResponse[PreferencesRead],
     responses=error_responses(401, 422),
-    summary="Update notification preferences for the authenticated user",
+    summary="Atualiza preferências de notificação do usuário autenticado",
 )
 def update_preferences(
     payload: PreferencesUpdate,

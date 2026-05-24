@@ -26,7 +26,7 @@ router = APIRouter(prefix="/articles", tags=["Articles"])
     status_code=201,
     response_model=SuccessResponse[ArticleRead],
     responses=error_responses(401, 422),
-    summary="Create a new article",
+    summary="Cria um novo artigo",
 )
 def create_article(
     payload: ArticleCreate,
@@ -40,7 +40,7 @@ def create_article(
     "/{article_id}",
     response_model=SuccessResponse[ArticleRead],
     responses=error_responses(401, 404, 422),
-    summary="Update an article",
+    summary="Atualiza um artigo",
 )
 def update_article(
     article_id: int,
@@ -55,7 +55,7 @@ def update_article(
     "/admin",
     response_model=PaginatedResponse[ArticleListItem],
     responses=error_responses(401),
-    summary="List all articles including drafts (authenticated)",
+    summary="Lista todos os artigos incluindo rascunhos (autenticado)",
 )
 def list_all_articles(
     request: Request,
@@ -87,7 +87,7 @@ def list_all_articles(
     "/{article_id}/preview",
     response_model=SuccessResponse[ArticleRead],
     responses=error_responses(401, 404),
-    summary="Preview an article regardless of status",
+    summary="Visualiza um artigo independente do status",
 )
 def preview_article(
     article_id: int,
@@ -101,7 +101,7 @@ def preview_article(
     "/{article_id}",
     response_model=SuccessResponse[ArticleRead],
     responses=error_responses(404),
-    summary="Get a published article by ID",
+    summary="Obtém um artigo publicado por ID",
 )
 def get_article(
     article_id: int,
@@ -113,7 +113,7 @@ def get_article(
 @router.get(
     "",
     response_model=PaginatedResponse[ArticleListItem],
-    summary="List published articles",
+    summary="Lista artigos publicados",
 )
 def list_articles(
     request: Request,

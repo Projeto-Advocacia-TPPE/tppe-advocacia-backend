@@ -108,9 +108,7 @@ class TestDeleteClientActiveProcesses:
             client_id=anon_client.id,
             created_by=None,
         )
-        process_repo.update_status(
-            process, ProcessStatus.SUSPENSO, updated_by=None
-        )
+        process_repo.update_status(process, ProcessStatus.SUSPENSO, updated_by=None)
         db_session.commit()
 
         response = client.delete(
@@ -131,9 +129,7 @@ class TestDeleteClientActiveProcesses:
             client_id=anon_client.id,
             created_by=None,
         )
-        process_repo.update_status(
-            process, ProcessStatus.ARQUIVADO, updated_by=None
-        )
+        process_repo.update_status(process, ProcessStatus.ARQUIVADO, updated_by=None)
         db_session.commit()
 
         response = client.delete(

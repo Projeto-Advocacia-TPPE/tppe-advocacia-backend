@@ -6,5 +6,7 @@ from app.modules.external_api_logs.repository import ExternalApiLogRepository
 from app.modules.external_api_logs.service import ExternalApiLogService
 
 
-def get_external_api_log_service(db: Session = Depends(get_db)) -> ExternalApiLogService:
+def get_external_api_log_service(
+    db: Session = Depends(get_db),
+) -> ExternalApiLogService:
     return ExternalApiLogService(ExternalApiLogRepository(db))

@@ -17,7 +17,7 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
     "/login",
     response_model=SuccessResponse[TokenResponse],
     responses=error_responses(401, 403, 422),
-    summary="Authenticate user and return JWT",
+    summary="Autentica usuário e retorna JWT",
 )
 def login(
     payload: LoginRequest,
@@ -30,7 +30,7 @@ def login(
     "/password-reset/request",
     response_model=SuccessResponse[None],
     responses=error_responses(422),
-    summary="Request password reset email",
+    summary="Solicita email de redefinição de senha",
 )
 def request_password_reset(
     payload: PasswordResetRequest,
@@ -44,7 +44,7 @@ def request_password_reset(
     "/password-reset/confirm",
     response_model=SuccessResponse[None],
     responses=error_responses(400, 422),
-    summary="Confirm password reset with token",
+    summary="Confirma redefinição de senha com token",
 )
 def confirm_password_reset(
     payload: PasswordResetConfirm,

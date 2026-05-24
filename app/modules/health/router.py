@@ -13,5 +13,7 @@ router = APIRouter(prefix="/health", tags=["Health"])
     response_model=SuccessResponse[HealthResponse],
     summary="Verifica a saúde da API",
 )
-def read_health(service: HealthService = Depends(get_health_service)) -> SuccessResponse[HealthResponse]:
+def read_health(
+    service: HealthService = Depends(get_health_service),
+) -> SuccessResponse[HealthResponse]:
     return ok(service.get_status())

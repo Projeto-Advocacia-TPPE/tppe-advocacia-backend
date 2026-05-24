@@ -31,7 +31,9 @@ class UserService:
         page: int,
         limit: int,
     ) -> tuple[list[User], int]:
-        return self.repository.get_all(role=role, is_active=is_active, page=page, limit=limit)
+        return self.repository.get_all(
+            role=role, is_active=is_active, page=page, limit=limit
+        )
 
     def get_user(self, user_id: int) -> User:
         user = self.repository.get_by_id(user_id)

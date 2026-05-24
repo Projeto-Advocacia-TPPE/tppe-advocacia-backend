@@ -146,8 +146,7 @@ class DataJudService:
             external_api_log_id=log_id,
             synced_at=synced_at,
             movements=[
-                MovementRead.model_validate(movement)
-                for movement in imported_movements
+                MovementRead.model_validate(movement) for movement in imported_movements
             ],
         )
 

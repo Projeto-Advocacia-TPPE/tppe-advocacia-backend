@@ -140,9 +140,7 @@ class AppointmentService:
     def _validate_references(
         self, client_id: int | None, process_id: int | None
     ) -> None:
-        ensure_exists(
-            self.clients.get_by_id, client_id, AppointmentClientNotFoundError
-        )
+        ensure_exists(self.clients.get_by_id, client_id, AppointmentClientNotFoundError)
         ensure_exists(
             self.processes.get_by_id, process_id, AppointmentProcessNotFoundError
         )

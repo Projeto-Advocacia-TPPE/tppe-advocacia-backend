@@ -31,11 +31,11 @@ def read_leads(
     service: LeadService = Depends(get_lead_service),
     _: User = Depends(require_admin),
 ) -> PaginatedResponse[LeadRead]:
-    items, total = service.list_leads(
+    leads, total = service.list_leads(
         status=status, assigned_to=assigned_to, page=page, limit=limit
     )
     return paginated(
-        [LeadRead.model_validate(l) for l in items],
+        [LeadRead.model_validate(lead) for lead in leads],
         total=total,
         page=page,
         limit=limit,
@@ -68,4 +68,8 @@ def update_lead(
     service: LeadService = Depends(get_lead_service),
     current_user: User = Depends(require_admin),
 ) -> SuccessResponse[LeadRead]:
-    return ok(LeadRead.model_validate(service.update_lead(lead_id, payload, current_user=current_user)))
+    return ok(
+        LeadRead.model_validate(
+            service.update_lead(lead_id, payload, current_user=current_user)
+        )
+    )
