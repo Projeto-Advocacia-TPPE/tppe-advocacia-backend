@@ -194,6 +194,22 @@ Cada módulo em `modules/` contém as mesmas camadas internas:
 
 Ponto de entrada de cada requisição. Define os endpoints, valida entrada via schemas Pydantic, injeta dependências via `Depends` e chama o service diretamente. Não contém lógica de negócio.
 
+**Fronteira de serialização:** o router é o único ponto onde ORM é convertido para schema Pydantic. Services sempre retornam ORM; o router chama `ModelRead.model_validate(orm_obj)` explicitamente antes de passar para `ok()` ou `paginated()`:
+
+```python
+# correto
+return ok(UserRead.model_validate(service.get_user(user_id)))
+return paginated([UserRead.model_validate(u) for u in items], total, page, limit)
+
+# errado — service não deve retornar Pydantic
+return ok(service.get_user(user_id))
+```
+
+Exceções justificadas (transformações que não são mapeamento 1-para-1 de ORM):
+- `articles` — `_to_read()` agrega campos de relações joined
+- `clients.timeline_service` — monta feed heterogêneo de múltiplos tipos de evento
+- `datajud` — `DataJudSyncResponse` é sumário de operação de sync, não mapeamento de entidade
+
 ### `deps.py` — Fábrica de dependências
 
 Expõe funções `get_X_service()` que constroem o grafo de dependências (repositories → services) e são registradas no FastAPI via `Depends`. É o único lugar do módulo que conhece quais repositories o service precisa.
@@ -396,7 +412,7 @@ Zero toque em código de outros módulos.
 
 - **Módulo autônomo:** cada módulo contém todas as suas camadas; mudança em um módulo não toca outros.
 - **Regras de negócio no service:** nenhuma lógica de domínio nas rotas, deps ou repositories.
-- **Schemas desacoplados dos models:** nunca expor diretamente um model ORM na resposta da API.
+- **Schemas desacoplados dos models:** nunca expor diretamente um model ORM na resposta da API. Services retornam ORM; routers serializam via `ModelRead.model_validate()` explícito.
 - **Repository como única porta para o banco:** nenhuma query fora do repository.
 - **Repository nunca comita:** transações são abertas e fechadas pelo service via `with unit_of_work(db):`.
 - **Dependências entre módulos apenas quando semânticas e unidirecionais:** evitar acoplamento arbitrário entre módulos. Dependências circulares são proibidas. Dependências com relação de domínio clara são permitidas (ex: `auth` depende de `users` porque autentica usuários, já o inverso não existe).
