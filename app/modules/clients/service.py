@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+from sqlalchemy.exc import IntegrityError
+
 from app.modules.audit_logs.service import AuditLogService
 from app.modules.clients.model import Client, ClientNote
 from app.modules.clients.repository import ClientRepository
@@ -12,6 +14,7 @@ from app.modules.clients.schema import (
 from app.modules.processes.repository import ProcessRepository
 from app.modules.users.model import User
 from app.shared.exceptions import (
+    AppException,
     ClientCnpjAlreadyExistsError,
     ClientCpfAlreadyExistsError,
     ClientHasActiveProcessesError,
@@ -21,6 +24,15 @@ from app.shared.exceptions import (
 from app.shared.service_helpers import assert_author_or_admin, get_or_raise
 from app.shared.types import Role
 from app.shared.uow import unit_of_work
+
+
+def _client_integrity_error(exc: IntegrityError) -> AppException:
+    name = getattr(getattr(exc.orig, "diag", None), "constraint_name", "") or ""
+    if "cpf" in name:
+        return ClientCpfAlreadyExistsError()
+    if "cnpj" in name:
+        return ClientCnpjAlreadyExistsError()
+    raise exc
 
 
 class ClientService:
@@ -35,22 +47,19 @@ class ClientService:
         self.audit = audit
 
     def create_client(self, payload: ClientCreate, created_by: User) -> Client:
-        if payload.cpf and self.repository.get_by_cpf(payload.cpf):
-            raise ClientCpfAlreadyExistsError()
-
-        if payload.cnpj and self.repository.get_by_cnpj(payload.cnpj):
-            raise ClientCnpjAlreadyExistsError()
-
-        with unit_of_work(self.repository.db):
-            client = self.repository.create(
-                name=payload.name,
-                email=payload.email,
-                phone=payload.phone,
-                cpf=payload.cpf,
-                cnpj=payload.cnpj,
-                address=payload.address,
-                created_by=created_by.id,
-            )
+        try:
+            with unit_of_work(self.repository.db):
+                client = self.repository.create(
+                    name=payload.name,
+                    email=payload.email,
+                    phone=payload.phone,
+                    cpf=payload.cpf,
+                    cnpj=payload.cnpj,
+                    address=payload.address,
+                    created_by=created_by.id,
+                )
+        except IntegrityError as exc:
+            raise _client_integrity_error(exc) from exc
         return client
 
     def get_client(self, client_id: int, requester: User | None = None) -> Client:

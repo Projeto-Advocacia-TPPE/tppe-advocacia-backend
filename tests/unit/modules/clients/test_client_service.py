@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.modules.clients.model import Client
 from app.modules.clients.schema import ClientCreate, ClientUpdate
@@ -14,6 +15,12 @@ from app.shared.exceptions import (
     ClientNotFoundError,
 )
 from app.shared.types import Role
+
+
+def make_integrity_error(constraint_name: str) -> IntegrityError:
+    orig = MagicMock()
+    orig.diag.constraint_name = constraint_name
+    return IntegrityError("stmt", "params", orig)
 
 
 def make_client(**kwargs) -> Client:
@@ -66,7 +73,6 @@ def anonymize_service(repo):
 
 class TestCreateClient:
     def test_creates_when_cpf_not_duplicate(self, service, repo):
-        repo.get_by_cpf.return_value = None
         client = make_client()
         repo.create.return_value = client
         payload = ClientCreate(name="João Silva", cpf="12345678901")
@@ -86,7 +92,6 @@ class TestCreateClient:
         )
 
     def test_creates_when_cnpj_not_duplicate(self, service, repo):
-        repo.get_by_cnpj.return_value = None
         client = make_client(cpf=None, cnpj="12345678000195")
         repo.create.return_value = client
         payload = ClientCreate(name="Empresa X", cnpj="12345678000195")
@@ -96,22 +101,18 @@ class TestCreateClient:
         assert result is client
 
     def test_raises_when_cpf_duplicate(self, service, repo):
-        repo.get_by_cpf.return_value = make_client()
+        repo.create.side_effect = make_integrity_error("uq_clients_cpf")
         payload = ClientCreate(name="João Silva", cpf="12345678901")
 
         with pytest.raises(ClientCpfAlreadyExistsError):
             service.create_client(payload, created_by=make_user())
 
-        repo.create.assert_not_called()
-
     def test_raises_when_cnpj_duplicate(self, service, repo):
-        repo.get_by_cnpj.return_value = make_client(cpf=None, cnpj="12345678000195")
+        repo.create.side_effect = make_integrity_error("uq_clients_cnpj")
         payload = ClientCreate(name="Empresa X", cnpj="12345678000195")
 
         with pytest.raises(ClientCnpjAlreadyExistsError):
             service.create_client(payload, created_by=make_user())
-
-        repo.create.assert_not_called()
 
 
 class TestGetClient:

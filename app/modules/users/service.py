@@ -2,6 +2,7 @@ import secrets
 import string
 
 import bcrypt
+from sqlalchemy.exc import IntegrityError
 
 from app.modules.audit_logs.service import AuditLogService
 from app.modules.email.protocol import EmailService
@@ -42,22 +43,23 @@ class UserService:
         return user
 
     def create_user(self, payload: UserCreate, created_by: User) -> User:
-        if self.repository.email_exists(payload.email):
-            raise EmailAlreadyExistsError()
-
         temp_password = self._generate_password()
         hashed = bcrypt.hashpw(temp_password.encode("utf-8"), bcrypt.gensalt()).decode(
             "utf-8"
         )
 
-        with unit_of_work(self.repository.db):
-            user = self.repository.create(
-                name=payload.name,
-                email=payload.email,
-                hashed_password=hashed,
-                role=Role.USER,
-                created_by=created_by.id,
-            )
+        try:
+            with unit_of_work(self.repository.db):
+                user = self.repository.create(
+                    name=payload.name,
+                    email=payload.email,
+                    hashed_password=hashed,
+                    role=Role.USER,
+                    created_by=created_by.id,
+                )
+        except IntegrityError as exc:
+            raise EmailAlreadyExistsError() from exc
+
         self.email.send(
             to=payload.email,
             subject="Bem-vindo ao sistema",

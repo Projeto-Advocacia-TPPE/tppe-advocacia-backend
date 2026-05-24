@@ -45,6 +45,8 @@ class LeadService:
         )
 
     def create_lead(self, payload: LeadCreate) -> Lead:
+        # Dedup por janela de tempo: sem unique constraint no DB, o pre-check é
+        # intencional. TOCTOU improvável em formulário público; aceito no MVP.
         if self.repository.find_recent_by_email(
             payload.email, settings.lead_dedup_window_hours
         ):
