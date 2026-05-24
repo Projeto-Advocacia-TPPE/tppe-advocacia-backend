@@ -34,7 +34,12 @@ def read_leads(
     items, total = service.list_leads(
         status=status, assigned_to=assigned_to, page=page, limit=limit
     )
-    return paginated(items, total=total, page=page, limit=limit)
+    return paginated(
+        [LeadRead.model_validate(l) for l in items],
+        total=total,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.post(
@@ -48,7 +53,7 @@ def create_new_lead(
     payload: LeadCreate,
     service: LeadService = Depends(get_lead_service),
 ) -> SuccessResponse[LeadRead]:
-    return ok(service.create_lead(payload))
+    return ok(LeadRead.model_validate(service.create_lead(payload)))
 
 
 @router.patch(
@@ -63,4 +68,4 @@ def update_lead(
     service: LeadService = Depends(get_lead_service),
     current_user: User = Depends(require_admin),
 ) -> SuccessResponse[LeadRead]:
-    return ok(service.update_lead(lead_id, payload, current_user=current_user))
+    return ok(LeadRead.model_validate(service.update_lead(lead_id, payload, current_user=current_user)))

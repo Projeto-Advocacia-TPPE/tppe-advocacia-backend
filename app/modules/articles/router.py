@@ -33,7 +33,7 @@ def create_article(
     service: ArticleService = Depends(get_article_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ArticleRead]:
-    return ok(service.create(payload, current_user))
+    return ok(ArticleRead.model_validate(service.create(payload, current_user)))
 
 
 @router.patch(
@@ -48,7 +48,7 @@ def update_article(
     service: ArticleService = Depends(get_article_service),
     _: User = Depends(get_current_user),
 ) -> SuccessResponse[ArticleRead]:
-    return ok(service.update(article_id, payload))
+    return ok(ArticleRead.model_validate(service.update(article_id, payload)))
 
 
 @router.get(
@@ -64,8 +64,23 @@ def list_all_articles(
     service: ArticleService = Depends(get_article_service),
     _: User = Depends(get_current_user),
 ) -> PaginatedResponse[ArticleListItem]:
-    items, total = service.list_all(request=request, page=page, limit=limit)
-    return paginated(items, total=total, page=page, limit=limit)
+    items, total = service.list_all(page=page, limit=limit)
+    return paginated(
+        [
+            ArticleListItem(
+                id=a.id,
+                title=a.title,
+                summary=a.summary,
+                status=a.status,
+                created_at=a.created_at,
+                url=str(request.url_for("preview_article", article_id=a.id)),
+            )
+            for a in items
+        ],
+        total=total,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.get(
@@ -79,7 +94,7 @@ def preview_article(
     service: ArticleService = Depends(get_article_service),
     _: User = Depends(get_current_user),
 ) -> SuccessResponse[ArticleRead]:
-    return ok(service.get_preview(article_id))
+    return ok(ArticleRead.model_validate(service.get_preview(article_id)))
 
 
 @router.get(
@@ -92,7 +107,7 @@ def get_article(
     article_id: int,
     service: ArticleService = Depends(get_article_service),
 ) -> SuccessResponse[ArticleRead]:
-    return ok(service.get_published_by_id(article_id))
+    return ok(ArticleRead.model_validate(service.get_published_by_id(article_id)))
 
 
 @router.get(
@@ -106,5 +121,20 @@ def list_articles(
     limit: int = Query(20, ge=1, le=100),
     service: ArticleService = Depends(get_article_service),
 ) -> PaginatedResponse[ArticleListItem]:
-    items, total = service.list_published(request=request, page=page, limit=limit)
-    return paginated(items, total=total, page=page, limit=limit)
+    items, total = service.list_published(page=page, limit=limit)
+    return paginated(
+        [
+            ArticleListItem(
+                id=a.id,
+                title=a.title,
+                summary=a.summary,
+                status=a.status,
+                created_at=a.created_at,
+                url=str(request.url_for("get_article", article_id=a.id)),
+            )
+            for a in items
+        ],
+        total=total,
+        page=page,
+        limit=limit,
+    )

@@ -39,7 +39,7 @@ def create_client(
     service: ClientService = Depends(get_client_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ClientRead]:
-    return ok(service.create_client(payload, created_by=current_user))
+    return ok(ClientRead.model_validate(service.create_client(payload, created_by=current_user)))
 
 
 @router.get(
@@ -56,7 +56,12 @@ def list_clients(
     _: User = Depends(get_current_user),
 ) -> PaginatedResponse[ClientListItem]:
     items, total = service.list_clients(search=search, page=page, limit=limit)
-    return paginated(items, total=total, page=page, limit=limit)
+    return paginated(
+        [ClientListItem.model_validate(c) for c in items],
+        total=total,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.get(
@@ -70,7 +75,7 @@ def get_client(
     service: ClientService = Depends(get_client_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ClientRead]:
-    return ok(service.get_client(client_id, requester=current_user))
+    return ok(ClientRead.model_validate(service.get_client(client_id, requester=current_user)))
 
 
 @router.patch(
@@ -85,7 +90,7 @@ def update_client(
     service: ClientService = Depends(get_client_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ClientRead]:
-    return ok(service.update_client(client_id, payload, updated_by=current_user))
+    return ok(ClientRead.model_validate(service.update_client(client_id, payload, updated_by=current_user)))
 
 
 @router.delete(
@@ -121,7 +126,7 @@ def create_note(
     service: ClientService = Depends(get_client_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ClientNoteRead]:
-    return ok(service.create_note(client_id, payload, current_user=current_user))
+    return ok(ClientNoteRead.model_validate(service.create_note(client_id, payload, current_user=current_user)))
 
 
 @router.get(
@@ -138,7 +143,12 @@ def list_notes(
     _: User = Depends(get_current_user),
 ) -> PaginatedResponse[ClientNoteRead]:
     items, total = service.list_notes(client_id, page=page, limit=limit)
-    return paginated(items, total=total, page=page, limit=limit)
+    return paginated(
+        [ClientNoteRead.model_validate(n) for n in items],
+        total=total,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.get(
@@ -179,4 +189,4 @@ def update_note(
     service: ClientService = Depends(get_client_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ClientNoteRead]:
-    return ok(service.update_note(client_id, note_id, payload, current_user=current_user))
+    return ok(ClientNoteRead.model_validate(service.update_note(client_id, note_id, payload, current_user=current_user)))

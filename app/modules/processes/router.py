@@ -42,7 +42,7 @@ def create_process(
     service: ProcessService = Depends(get_process_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessRead]:
-    return ok(service.create_process(payload, created_by=current_user))
+    return ok(ProcessRead.model_validate(service.create_process(payload, created_by=current_user)))
 
 
 @router.get(
@@ -67,7 +67,12 @@ def list_processes(
         page=page,
         limit=limit,
     )
-    return paginated(items, total=total, page=page, limit=limit)
+    return paginated(
+        [ProcessListItem.model_validate(p) for p in items],
+        total=total,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.get(
@@ -81,7 +86,7 @@ def get_process(
     service: ProcessService = Depends(get_process_service),
     _: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessRead]:
-    return ok(service.get_process(process_id))
+    return ok(ProcessRead.model_validate(service.get_process(process_id)))
 
 
 @router.patch(
@@ -113,7 +118,7 @@ def create_movement(
     service: ProcessService = Depends(get_process_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[MovementRead]:
-    return ok(service.create_movement(process_id, payload, created_by=current_user))
+    return ok(MovementRead.model_validate(service.create_movement(process_id, payload, created_by=current_user)))
 
 
 @router.get(
@@ -140,7 +145,12 @@ def list_movements(
         page=page,
         limit=limit,
     )
-    return paginated(items, total=total, page=page, limit=limit)
+    return paginated(
+        [MovementRead.model_validate(m) for m in items],
+        total=total,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.post(
@@ -156,7 +166,7 @@ def create_process_note(
     service: ProcessService = Depends(get_process_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessNoteRead]:
-    return ok(service.create_note(process_id, payload, current_user=current_user))
+    return ok(ProcessNoteRead.model_validate(service.create_note(process_id, payload, current_user=current_user)))
 
 
 @router.get(
@@ -173,7 +183,12 @@ def list_process_notes(
     _: User = Depends(get_current_user),
 ) -> PaginatedResponse[ProcessNoteRead]:
     items, total = service.list_notes(process_id, page=page, limit=limit)
-    return paginated(items, total=total, page=page, limit=limit)
+    return paginated(
+        [ProcessNoteRead.model_validate(n) for n in items],
+        total=total,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.patch(
@@ -189,7 +204,7 @@ def update_process_note(
     service: ProcessService = Depends(get_process_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ProcessNoteRead]:
-    return ok(service.update_note(process_id, note_id, payload, current_user=current_user))
+    return ok(ProcessNoteRead.model_validate(service.update_note(process_id, note_id, payload, current_user=current_user)))
 
 
 @router.get(
@@ -206,4 +221,9 @@ def list_processes_by_client(
     _: User = Depends(get_current_user),
 ) -> PaginatedResponse[ProcessListItem]:
     items, total = service.list_by_client(client_id, page=page, limit=limit)
-    return paginated(items, total=total, page=page, limit=limit)
+    return paginated(
+        [ProcessListItem.model_validate(p) for p in items],
+        total=total,
+        page=page,
+        limit=limit,
+    )

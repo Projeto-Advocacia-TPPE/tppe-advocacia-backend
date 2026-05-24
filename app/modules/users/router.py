@@ -32,7 +32,12 @@ def list_users(
     _: User = Depends(require_admin),
 ) -> PaginatedResponse[UserRead]:
     items, total = service.list_users(role=role, is_active=is_active, page=page, limit=limit)
-    return paginated(items, total=total, page=page, limit=limit)
+    return paginated(
+        [UserRead.model_validate(u) for u in items],
+        total=total,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.post(
@@ -47,7 +52,7 @@ def create_user(
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_admin),
 ) -> SuccessResponse[UserRead]:
-    return ok(service.create_user(payload, created_by=current_user))
+    return ok(UserRead.model_validate(service.create_user(payload, created_by=current_user)))
 
 
 @router.get(
@@ -61,7 +66,7 @@ def get_user(
     service: UserService = Depends(get_user_service),
     _: User = Depends(require_admin),
 ) -> SuccessResponse[UserRead]:
-    return ok(service.get_user(user_id))
+    return ok(UserRead.model_validate(service.get_user(user_id)))
 
 
 @router.patch(
@@ -76,4 +81,4 @@ def update_user(
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_admin),
 ) -> SuccessResponse[UserRead]:
-    return ok(service.update_user(user_id, payload, updated_by=current_user))
+    return ok(UserRead.model_validate(service.update_user(user_id, payload, updated_by=current_user)))

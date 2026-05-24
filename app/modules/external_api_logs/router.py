@@ -39,4 +39,9 @@ def list_external_api_logs(
         page=page,
         limit=limit,
     )
-    return paginated(items, total=total, page=page, limit=limit)
+    return paginated(
+        [ExternalApiLogRead.model_validate(log) for log in items],
+        total=total,
+        page=page,
+        limit=limit,
+    )

@@ -31,4 +31,9 @@ def list_audit_logs(
     items, total = service.list_logs(
         action=action, date_from=date_from, date_to=date_to, page=page, limit=limit
     )
-    return paginated(items, total=total, page=page, limit=limit)
+    return paginated(
+        [AuditLogRead.model_validate(log) for log in items],
+        total=total,
+        page=page,
+        limit=limit,
+    )

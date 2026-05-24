@@ -7,7 +7,7 @@ from app.modules.audit_logs.service import AuditLogService
 from app.modules.email.protocol import EmailService
 from app.modules.users.model import User
 from app.modules.users.repository import UserRepository
-from app.modules.users.schema import UserCreate, UserRead, UserUpdate
+from app.modules.users.schema import UserCreate, UserUpdate
 from app.shared.exceptions import EmailAlreadyExistsError, UserNotFoundError
 from app.shared.types import Role
 from app.shared.uow import unit_of_work
@@ -30,19 +30,16 @@ class UserService:
         is_active: bool | None,
         page: int,
         limit: int,
-    ) -> tuple[list[UserRead], int]:
-        users, total = self.repository.get_all(
-            role=role, is_active=is_active, page=page, limit=limit
-        )
-        return [UserRead.model_validate(u) for u in users], total
+    ) -> tuple[list[User], int]:
+        return self.repository.get_all(role=role, is_active=is_active, page=page, limit=limit)
 
-    def get_user(self, user_id: int) -> UserRead:
+    def get_user(self, user_id: int) -> User:
         user = self.repository.get_by_id(user_id)
         if user is None:
             raise UserNotFoundError()
-        return UserRead.model_validate(user)
+        return user
 
-    def create_user(self, payload: UserCreate, created_by: User) -> UserRead:
+    def create_user(self, payload: UserCreate, created_by: User) -> User:
         if self.repository.email_exists(payload.email):
             raise EmailAlreadyExistsError()
 
@@ -65,11 +62,9 @@ class UserService:
             html=f"<p>Olá, <b>{payload.name}</b>!</p><p>Sua senha temporária: <b>{temp_password}</b></p>",
         )
         self.audit.log_user_created(user, created_by)
-        return UserRead.model_validate(user)
+        return user
 
-    def update_user(
-        self, user_id: int, payload: UserUpdate, updated_by: User
-    ) -> UserRead:
+    def update_user(self, user_id: int, payload: UserUpdate, updated_by: User) -> User:
         user = self.repository.get_by_id(user_id)
         if user is None:
             raise UserNotFoundError()
@@ -88,7 +83,7 @@ class UserService:
         if is_deactivating:
             self.audit.log_user_deactivated(updated, updated_by)
 
-        return UserRead.model_validate(updated)
+        return updated
 
     @staticmethod
     def _generate_password(length: int = 12) -> str:

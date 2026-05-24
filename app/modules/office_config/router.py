@@ -18,7 +18,7 @@ router = APIRouter(prefix="/office-config", tags=["Office Config"])
 def get_office_config(
     service: OfficeConfigService = Depends(get_office_config_service),
 ) -> SuccessResponse[OfficeConfigRead]:
-    return ok(service.get())
+    return ok(OfficeConfigRead.model_validate(service.get()))
 
 
 @router.patch(
@@ -32,4 +32,4 @@ def update_office_config(
     service: OfficeConfigService = Depends(get_office_config_service),
     _: User = Depends(require_admin),
 ) -> SuccessResponse[OfficeConfigRead]:
-    return ok(service.update(payload))
+    return ok(OfficeConfigRead.model_validate(service.update(payload)))

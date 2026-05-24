@@ -5,7 +5,6 @@ import pytest
 from app.modules.office_config.model import OfficeConfig
 from app.modules.office_config.schema import (
     ListItem,
-    OfficeConfigRead,
     OfficeConfigUpdate,
 )
 from app.modules.office_config.service import OfficeConfigService
@@ -55,10 +54,10 @@ def service(repo):
 
 
 class TestGet:
-    def test_returns_office_config_read(self, service, repo):
-        repo.get_config.return_value = make_config()
-        result = service.get()
-        assert isinstance(result, OfficeConfigRead)
+    def test_returns_office_config_orm(self, service, repo):
+        config = make_config()
+        repo.get_config.return_value = config
+        assert service.get() is config
 
     def test_maps_fields_correctly(self, service, repo):
         repo.get_config.return_value = make_config(
@@ -68,13 +67,13 @@ class TestGet:
         assert result.office_name == "Escritório X"
         assert result.cnpj == "00.000.000/0001-00"
 
-    def test_none_list_fields_become_empty_list(self, service, repo):
+    def test_returns_raw_orm_values(self, service, repo):
         repo.get_config.return_value = make_config(
             differentials=None, areas_of_practice=None
         )
         result = service.get()
-        assert result.differentials == []
-        assert result.areas_of_practice == []
+        assert result.differentials is None
+        assert result.areas_of_practice is None
 
 
 class TestUpdate:
@@ -108,8 +107,9 @@ class TestUpdate:
         call_data = repo.update_config.call_args[0][0]
         assert call_data["areas_of_practice"] == [{"title": "A", "description": "B"}]
 
-    def test_returns_office_config_read(self, service, repo):
-        repo.update_config.return_value = make_config(office_name="X")
+    def test_returns_office_config_orm(self, service, repo):
+        config = make_config(office_name="X")
+        repo.update_config.return_value = config
         result = service.update(OfficeConfigUpdate(office_name="X"))
-        assert isinstance(result, OfficeConfigRead)
+        assert result is config
         assert result.office_name == "X"
