@@ -108,11 +108,14 @@ def run_sync(
             users,
             email or get_email_service(),
         )
+        log_repository = ExternalApiLogRepository(db)
         service = DataJudService(
             ProcessRepository(db),
-            ExternalApiLogRepository(db),
+            log_repository,
             datajud_client or DataJudApiService(),
-            failure_notifier=ExternalApiFailureNotifier(users, notifications),
+            failure_notifier=ExternalApiFailureNotifier(
+                users, notifications, log_repository
+            ),
         )
         return service.sync_active_processes(
             DataJudBatchSyncRequest(tribunal_alias=tribunal_alias, limit=limit),

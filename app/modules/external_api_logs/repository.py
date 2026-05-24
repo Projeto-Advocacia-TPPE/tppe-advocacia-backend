@@ -84,3 +84,23 @@ class ExternalApiLogRepository:
             ).all()
         )
         return logs, total
+
+    def count_recent_failures(
+        self,
+        provider: ExternalApiProvider,
+        operation: ExternalApiOperation,
+        since: datetime,
+        exclude_id: int,
+    ) -> int:
+        return (
+            self.db.scalar(
+                select(func.count())
+                .select_from(ExternalApiLog)
+                .where(ExternalApiLog.provider == provider)
+                .where(ExternalApiLog.operation == operation)
+                .where(ExternalApiLog.status == ExternalApiStatus.FAILURE)
+                .where(ExternalApiLog.created_at >= since)
+                .where(ExternalApiLog.id != exclude_id)
+            )
+            or 0
+        )

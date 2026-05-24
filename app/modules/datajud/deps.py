@@ -29,5 +29,9 @@ def get_datajud_service(
         ProcessRepository(db),
         ExternalApiLogRepository(db),
         datajud_client,
-        failure_notifier=ExternalApiFailureNotifier(UserRepository(db), notifications),
+        failure_notifier=ExternalApiFailureNotifier(
+            UserRepository(db),
+            notifications,
+            ExternalApiLogRepository(db),
+        ),
     )

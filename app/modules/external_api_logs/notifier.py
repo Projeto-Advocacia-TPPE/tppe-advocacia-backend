@@ -4,16 +4,11 @@ from datetime import datetime, timedelta, timezone
 
 from app.config.settings import get_settings
 from app.modules.external_api_logs.model import ExternalApiLog
+from app.modules.external_api_logs.repository import ExternalApiLogRepository
 from app.modules.notifications.schema import EventType
 from app.modules.notifications.service import NotificationService
 from app.modules.users.repository import UserRepository
 from app.shared.types import Role
-
-_last_notification_at: dict[tuple[str, str], datetime] = {}
-
-
-def clear_external_api_failure_notification_throttle() -> None:
-    _last_notification_at.clear()
 
 
 class ExternalApiFailureNotifier:
@@ -21,10 +16,12 @@ class ExternalApiFailureNotifier:
         self,
         users: UserRepository,
         notifications: NotificationService,
+        log_repository: ExternalApiLogRepository,
         throttle_minutes: int | None = None,
     ) -> None:
         self.users = users
         self.notifications = notifications
+        self.log_repository = log_repository
         self.throttle_minutes = (
             get_settings().integration_failure_email_throttle_minutes
             if throttle_minutes is None
@@ -32,9 +29,8 @@ class ExternalApiFailureNotifier:
         )
 
     def notify_failure(self, log: ExternalApiLog) -> int:
-        key = (log.provider.value, log.operation.value)
         now = datetime.now(timezone.utc)
-        if self._is_throttled(key, now):
+        if self._is_throttled(log, now):
             return 0
 
         admins, _ = self.users.get_all(
@@ -46,7 +42,6 @@ class ExternalApiFailureNotifier:
         if not admins:
             return 0
 
-        _last_notification_at[key] = now
         payload = {
             "provider": log.provider.value,
             "operation": log.operation.value,
@@ -64,12 +59,16 @@ class ExternalApiFailureNotifier:
             )
         return len(admins)
 
-    def _is_throttled(self, key: tuple[str, str], now: datetime) -> bool:
+    def _is_throttled(self, log: ExternalApiLog, now: datetime) -> bool:
         if self.throttle_minutes == 0:
             return False
-
-        last_notification = _last_notification_at.get(key)
-        if last_notification is None:
-            return False
-
-        return now - last_notification < timedelta(minutes=self.throttle_minutes)
+        since = now - timedelta(minutes=self.throttle_minutes)
+        return (
+            self.log_repository.count_recent_failures(
+                provider=log.provider,
+                operation=log.operation,
+                since=since,
+                exclude_id=log.id,
+            )
+            > 0
+        )
