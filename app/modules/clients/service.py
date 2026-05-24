@@ -27,8 +27,8 @@ class ClientService:
     def __init__(
         self,
         repository: ClientRepository,
-        process_repository: ProcessRepository | None = None,
-        audit: AuditLogService | None = None,
+        process_repository: ProcessRepository,
+        audit: AuditLogService,
     ) -> None:
         self.repository = repository
         self.process_repository = process_repository
@@ -96,11 +96,6 @@ class ClientService:
         return updated
 
     def anonymize(self, client_id: int, performed_by: User) -> Client:
-        if self.process_repository is None or self.audit is None:
-            raise RuntimeError(
-                "ClientService.anonymize requires process_repository and audit"
-            )
-
         client = self.repository.get_by_id(client_id, include_deleted=False)
         if client is None:
             raise ClientNotFoundError()

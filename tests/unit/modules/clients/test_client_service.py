@@ -51,19 +51,16 @@ def repo():
 
 @pytest.fixture
 def service(repo):
-    svc = ClientService.__new__(ClientService)
-    svc.repository = repo
-    svc.process_repository = None
-    svc.audit = None
-    return svc
+    return ClientService(repo, process_repository=MagicMock(), audit=MagicMock())
 
 
 @pytest.fixture
 def anonymize_service(repo):
-    svc = ClientService.__new__(ClientService)
-    svc.repository = repo
-    svc.process_repository = MagicMock()
-    svc.audit = MagicMock()
+    process_repo = MagicMock()
+    audit = MagicMock()
+    svc = ClientService(repo, process_repository=process_repo, audit=audit)
+    svc.process_repository = process_repo
+    svc.audit = audit
     return svc
 
 

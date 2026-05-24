@@ -42,8 +42,8 @@ class DeadlineService:
         repository: DeadlineRepository,
         holiday_repository: ForensicHolidayRepository,
         process_repository: ProcessRepository,
-        alert_repository: DeadlineAlertRepository | None = None,
-        notification_service: NotificationService | None = None,
+        alert_repository: DeadlineAlertRepository,
+        notification_service: NotificationService,
         alert_intervals: list[int] | None = None,
     ) -> None:
         self.repository = repository
@@ -203,11 +203,6 @@ class DeadlineService:
         return count
 
     def dispatch_alerts(self, today: date) -> int:
-        if self.alert_repository is None or self.notification_service is None:
-            raise RuntimeError(
-                "dispatch_alerts requires alert_repository and notification_service"
-            )
-
         sent_count = 0
         for deadline in self.repository.list_all():
             if deadline.created_by is None:
@@ -248,11 +243,6 @@ class DeadlineService:
         days_before: int,
         business_days_left: int | None,
     ) -> None:
-        if self.notification_service is None or self.alert_repository is None:
-            raise RuntimeError(
-                "_send_alert exige notification_service e alert_repository"
-            )
-
         process = self.process_repository.get_by_id(deadline.process_id)
         process_number = (
             format_cnj(process.number) if process else str(deadline.process_id)
@@ -280,9 +270,6 @@ class DeadlineService:
     def list_alerts(
         self, process_id: int, deadline_id: int, current_user: User
     ) -> list[DeadlineAlert]:
-        if self.alert_repository is None:
-            raise RuntimeError("list_alerts requires alert_repository")
-
         get_or_raise(
             lambda: self.process_repository.get_by_id(process_id), ProcessNotFoundError
         )
