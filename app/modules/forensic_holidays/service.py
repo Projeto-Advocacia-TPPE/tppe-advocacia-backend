@@ -8,6 +8,7 @@ from app.modules.forensic_holidays.schema import (
     _validate_scope_consistency,
 )
 from app.shared.exceptions import ForensicHolidayNotFoundError
+from app.shared.service_helpers import get_or_raise
 from app.shared.uow import unit_of_work
 
 
@@ -27,10 +28,10 @@ class ForensicHolidayService:
         return holiday
 
     def get(self, holiday_id: int) -> ForensicHoliday:
-        holiday = self.repository.get_by_id(holiday_id)
-        if holiday is None:
-            raise ForensicHolidayNotFoundError()
-        return holiday
+        return get_or_raise(
+            lambda: self.repository.get_by_id(holiday_id),
+            ForensicHolidayNotFoundError,
+        )
 
     def list(
         self,

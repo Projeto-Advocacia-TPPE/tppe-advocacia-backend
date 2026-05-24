@@ -22,11 +22,14 @@ from app.shared.exceptions import (
     AppointmentClientNotFoundError,
     AppointmentNotFoundError,
     AppointmentProcessNotFoundError,
-    ForbiddenError,
     GoogleNotConfiguredError,
     GoogleNotConnectedError,
 )
-from app.shared.types import Role
+from app.shared.service_helpers import (
+    assert_author_or_admin,
+    ensure_exists,
+    get_or_raise,
+)
 from app.shared.uow import unit_of_work
 
 
@@ -125,23 +128,24 @@ class AppointmentService:
         )
 
     def _get_or_404(self, appointment_id: int) -> Appointment:
-        appointment = self.repository.get_by_id(appointment_id)
-        if appointment is None:
-            raise AppointmentNotFoundError()
-        return appointment
+        return get_or_raise(
+            lambda: self.repository.get_by_id(appointment_id),
+            AppointmentNotFoundError,
+        )
 
     @staticmethod
     def _authorize(appointment: Appointment, user: User) -> None:
-        if user.role != Role.ADMIN and appointment.created_by != user.id:
-            raise ForbiddenError()
+        assert_author_or_admin(user, appointment.created_by)
 
     def _validate_references(
         self, client_id: int | None, process_id: int | None
     ) -> None:
-        if client_id is not None and self.clients.get_by_id(client_id) is None:
-            raise AppointmentClientNotFoundError()
-        if process_id is not None and self.processes.get_by_id(process_id) is None:
-            raise AppointmentProcessNotFoundError()
+        ensure_exists(
+            self.clients.get_by_id, client_id, AppointmentClientNotFoundError
+        )
+        ensure_exists(
+            self.processes.get_by_id, process_id, AppointmentProcessNotFoundError
+        )
 
     def _sync_google(self, appointment: Appointment, action: str) -> Appointment:
         """Sincroniza com o Google e persiste o google_event_id resultante.

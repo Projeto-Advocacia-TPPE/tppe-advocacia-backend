@@ -23,11 +23,10 @@ from app.modules.processes.schema import format_cnj
 from app.modules.users.model import User
 from app.shared.exceptions import (
     DeadlineNotFoundError,
-    ForbiddenError,
     InvalidDeadlineRangeError,
     ProcessNotFoundError,
 )
-from app.shared.types import Role
+from app.shared.service_helpers import assert_author_or_admin, get_or_raise
 from app.shared.uow import unit_of_work
 
 logger = logging.getLogger(__name__)
@@ -96,9 +95,9 @@ class DeadlineService:
         payload: DeadlineCreate,
         created_by_id: int | None,
     ) -> Deadline:
-        process = self.process_repository.get_by_id(process_id)
-        if process is None:
-            raise ProcessNotFoundError()
+        process = get_or_raise(
+            lambda: self.process_repository.get_by_id(process_id), ProcessNotFoundError
+        )
 
         court = process.court
         comarca = payload.comarca
@@ -126,15 +125,15 @@ class DeadlineService:
     def list_by_process(
         self, process_id: int, page: int, limit: int
     ) -> tuple[list[Deadline], int]:
-        process = self.process_repository.get_by_id(process_id)
-        if process is None:
-            raise ProcessNotFoundError()
+        get_or_raise(
+            lambda: self.process_repository.get_by_id(process_id), ProcessNotFoundError
+        )
         return self.repository.list_by_process(process_id, page=page, limit=limit)
 
     def update(self, deadline_id: int, payload: DeadlineUpdate) -> Deadline:
-        deadline = self.repository.get_by_id(deadline_id)
-        if deadline is None:
-            raise DeadlineNotFoundError()
+        deadline = get_or_raise(
+            lambda: self.repository.get_by_id(deadline_id), DeadlineNotFoundError
+        )
 
         fields = payload.model_dump(exclude_unset=True)
 
@@ -171,9 +170,9 @@ class DeadlineService:
         return updated
 
     def delete(self, deadline_id: int) -> None:
-        deadline = self.repository.get_by_id(deadline_id)
-        if deadline is None:
-            raise DeadlineNotFoundError()
+        deadline = get_or_raise(
+            lambda: self.repository.get_by_id(deadline_id), DeadlineNotFoundError
+        )
         with unit_of_work(self.repository.db):
             self.repository.delete(deadline)
 
@@ -284,18 +283,15 @@ class DeadlineService:
         if self.alert_repository is None:
             raise RuntimeError("list_alerts requires alert_repository")
 
-        process = self.process_repository.get_by_id(process_id)
-        if process is None:
-            raise ProcessNotFoundError()
+        get_or_raise(
+            lambda: self.process_repository.get_by_id(process_id), ProcessNotFoundError
+        )
 
         deadline = self.repository.get_by_id(deadline_id)
         if deadline is None or deadline.process_id != process_id:
             raise DeadlineNotFoundError()
 
-        is_admin = current_user.role == Role.ADMIN
-        is_author = deadline.created_by == current_user.id
-        if not (is_admin or is_author):
-            raise ForbiddenError()
+        assert_author_or_admin(current_user, deadline.created_by)
 
         return self.alert_repository.list_by_deadline(deadline_id)
 

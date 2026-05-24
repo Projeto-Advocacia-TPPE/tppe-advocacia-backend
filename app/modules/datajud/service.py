@@ -101,7 +101,7 @@ class DataJudService:
             )
             raise DataJudUnavailableError() from exc
 
-        imported_ids: list[int] = []
+        imported_movements: list = []
         skipped_count = result.skipped_count
         synced_at = datetime.now(timezone.utc)
 
@@ -114,7 +114,7 @@ class DataJudService:
                     skipped_count += 1
                     continue
 
-                imported = self.process_repository.create_movement_no_commit(
+                imported = self.process_repository.create_movement(
                     process_id=process.id,
                     title=movement.title,
                     description=movement.description,
@@ -123,7 +123,7 @@ class DataJudService:
                     external_id=movement.external_id,
                     created_by=actor_id,
                 )
-                imported_ids.append(imported.id)
+                imported_movements.append(imported)
 
             log = self.log_repository.create(
                 provider=ExternalApiProvider.DATAJUD,
@@ -137,22 +137,17 @@ class DataJudService:
             )
             log_id = log.id
 
-        imported_movements = [
-            self.process_repository.reload_movement(movement_id)
-            for movement_id in imported_ids
-        ]
         return DataJudSyncResponse(
             process_id=process.id,
             process_number=format_cnj(process.number),
             tribunal_alias=tribunal_alias,
-            imported_count=len(imported_ids),
+            imported_count=len(imported_movements),
             skipped_count=skipped_count,
             external_api_log_id=log_id,
             synced_at=synced_at,
             movements=[
                 MovementRead.model_validate(movement)
                 for movement in imported_movements
-                if movement is not None
             ],
         )
 

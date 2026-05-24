@@ -295,7 +295,7 @@ class TestAnonymize:
 
         result = anonymize_service.anonymize(1, performed_by=performed_by)
 
-        repo.anonymize_no_commit.assert_called_once()
+        repo.anonymize.assert_called_once()
         anonymize_service.audit.log_client_anonymized.assert_called_once_with(
             client_id=1,
             client_name="João Silva",
@@ -311,7 +311,7 @@ class TestAnonymize:
         with pytest.raises(ClientNotFoundError):
             anonymize_service.anonymize(99, performed_by=make_user())
 
-        repo.anonymize_no_commit.assert_not_called()
+        repo.anonymize.assert_not_called()
         anonymize_service.audit.log_client_anonymized.assert_not_called()
 
     def test_raises_when_has_active_processes(self, anonymize_service, repo):
@@ -322,7 +322,7 @@ class TestAnonymize:
         with pytest.raises(ClientHasActiveProcessesError):
             anonymize_service.anonymize(1, performed_by=make_user())
 
-        repo.anonymize_no_commit.assert_not_called()
+        repo.anonymize.assert_not_called()
         anonymize_service.audit.log_client_anonymized.assert_not_called()
 
     def test_rollback_on_failure(self, anonymize_service, repo):
@@ -330,7 +330,7 @@ class TestAnonymize:
         repo.get_by_id.return_value = client
         anonymize_service.process_repository.count_active_or_suspended_by_client.return_value = 0
         repo.db = MagicMock()
-        repo.anonymize_no_commit.side_effect = RuntimeError("boom")
+        repo.anonymize.side_effect = RuntimeError("boom")
 
         with pytest.raises(RuntimeError):
             anonymize_service.anonymize(1, performed_by=make_user())

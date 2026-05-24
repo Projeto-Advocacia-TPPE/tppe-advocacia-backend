@@ -28,7 +28,7 @@ class ProcessRepository:
     def _query(self):
         return select(Process).options(joinedload(Process.client))
 
-    def create_no_commit(
+    def create(
         self,
         number: str,
         court: str,
@@ -51,40 +51,24 @@ class ProcessRepository:
         )
         self.db.add(process)
         self.db.flush()
-        return process
+        return self.db.scalars(
+            self._query()
+            .where(Process.id == process.id)
+            .execution_options(populate_existing=True)
+        ).one()
 
-    def create(
-        self,
-        number: str,
-        court: str,
-        action_type: str,
-        client_id: int | None = None,
-        tribunal_alias: str | None = None,
-        opposing_party: str | None = None,
-        created_by: int | None = None,
-    ) -> Process:
-        process = self.create_no_commit(
-            number=number,
-            court=court,
-            action_type=action_type,
-            client_id=client_id,
-            tribunal_alias=tribunal_alias,
-            opposing_party=opposing_party,
-            created_by=created_by,
-        )
-        return self.db.scalars(self._query().where(Process.id == process.id)).first()
-
-    def update_status_no_commit(
+    def update_status(
         self, process: Process, new_status: ProcessStatus, updated_by: int | None
     ) -> Process:
         process.status = new_status
         process.updated_by = updated_by
         self.db.add(process)
         self.db.flush()
-        return process
-
-    def reload_with_client(self, process_id: int) -> Process | None:
-        return self.db.scalars(self._query().where(Process.id == process_id)).first()
+        return self.db.scalars(
+            self._query()
+            .where(Process.id == process.id)
+            .execution_options(populate_existing=True)
+        ).one()
 
     def get_by_id(self, process_id: int) -> Process | None:
         return self.db.scalars(self._query().where(Process.id == process_id)).first()
@@ -202,7 +186,7 @@ class ProcessRepository:
     def _movement_query(self):
         return select(ProcessMovement).options(joinedload(ProcessMovement.creator))
 
-    def create_movement_no_commit(
+    def create_movement(
         self,
         process_id: int,
         title: str,
@@ -223,32 +207,13 @@ class ProcessRepository:
         )
         self.db.add(movement)
         self.db.flush()
-        return movement
-
-    def create_movement(
-        self,
-        process_id: int,
-        title: str,
-        occurred_at: datetime,
-        source: MovementSource,
-        description: str | None = None,
-        external_id: str | None = None,
-        created_by: int | None = None,
-    ) -> ProcessMovement:
-        movement = self.create_movement_no_commit(
-            process_id=process_id,
-            title=title,
-            occurred_at=occurred_at,
-            source=source,
-            description=description,
-            external_id=external_id,
-            created_by=created_by,
-        )
         return self.db.scalars(
-            self._movement_query().where(ProcessMovement.id == movement.id)
-        ).first()
+            self._movement_query()
+            .where(ProcessMovement.id == movement.id)
+            .execution_options(populate_existing=True)
+        ).one()
 
-    def reload_movement(self, movement_id: int) -> ProcessMovement | None:
+    def get_movement_by_id(self, movement_id: int) -> ProcessMovement | None:
         return self.db.scalars(
             self._movement_query().where(ProcessMovement.id == movement_id)
         ).first()

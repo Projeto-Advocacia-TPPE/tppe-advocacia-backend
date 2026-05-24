@@ -3,6 +3,7 @@ from app.modules.articles.repository import ArticleRepository
 from app.modules.articles.schema import ArticleCreate, ArticleUpdate
 from app.modules.users.model import User
 from app.shared.exceptions import ArticleNotFoundError
+from app.shared.service_helpers import get_or_raise
 from app.shared.uow import unit_of_work
 
 
@@ -23,10 +24,10 @@ class ArticleService:
             )
 
     def update(self, article_id: int, payload: ArticleUpdate) -> Article:
-        article = self.repository.get_by_id(article_id)
-        if article is None:
-            raise ArticleNotFoundError()
-        data = payload.model_dump(exclude_none=True)
+        article = get_or_raise(
+            lambda: self.repository.get_by_id(article_id), ArticleNotFoundError
+        )
+        data = payload.model_dump(exclude_unset=True)
         with unit_of_work(self.repository.db):
             return self.repository.update(article, data)
 
@@ -37,10 +38,9 @@ class ArticleService:
         return article
 
     def get_preview(self, article_id: int) -> Article:
-        article = self.repository.get_by_id(article_id)
-        if article is None:
-            raise ArticleNotFoundError()
-        return article
+        return get_or_raise(
+            lambda: self.repository.get_by_id(article_id), ArticleNotFoundError
+        )
 
     def list_published(self, page: int = 1, limit: int = 20) -> tuple[list[Article], int]:
         return self.repository.get_published(page=page, limit=limit)

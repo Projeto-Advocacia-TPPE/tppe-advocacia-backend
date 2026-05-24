@@ -17,8 +17,8 @@ from app.shared.exceptions import (
     ClientHasActiveProcessesError,
     ClientNoteNotFoundError,
     ClientNotFoundError,
-    ForbiddenError,
 )
+from app.shared.service_helpers import assert_author_or_admin, get_or_raise
 from app.shared.types import Role
 from app.shared.uow import unit_of_work
 
@@ -74,7 +74,7 @@ class ClientService:
         self, client_id: int, payload: ClientUpdate, updated_by: User
     ) -> Client:
         client = self.get_client(client_id)
-        data = payload.model_dump(exclude_none=True)
+        data = payload.model_dump(exclude_unset=True)
 
         if not data:
             return client
@@ -113,7 +113,7 @@ class ClientService:
         now = datetime.now(timezone.utc)
 
         with unit_of_work(self.repository.db):
-            self.repository.anonymize_no_commit(client, anonymized_at=now)
+            self.repository.anonymize(client, anonymized_at=now)
             self.audit.log_client_anonymized(
                 client_id=client.id,
                 client_name=original_name,
@@ -151,13 +151,14 @@ class ClientService:
         current_user: User,
     ) -> ClientNote:
         self.get_client(client_id)
-        note = self.repository.get_note_by_id(note_id=note_id, client_id=client_id)
+        note = get_or_raise(
+            lambda: self.repository.get_note_by_id(
+                note_id=note_id, client_id=client_id
+            ),
+            ClientNoteNotFoundError,
+        )
 
-        if note is None:
-            raise ClientNoteNotFoundError()
-
-        if note.created_by != current_user.id and current_user.role != Role.ADMIN:
-            raise ForbiddenError()
+        assert_author_or_admin(current_user, note.created_by)
 
         with unit_of_work(self.repository.db):
             updated = self.repository.update_note(

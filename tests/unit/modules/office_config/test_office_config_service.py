@@ -77,15 +77,22 @@ class TestGet:
 
 
 class TestUpdate:
-    def test_calls_repository_with_non_none_fields_only(self, service, repo):
+    def test_calls_repository_with_set_fields_only(self, service, repo):
         repo.update_config.return_value = make_config(office_name="Novo")
         service.update(OfficeConfigUpdate(office_name="Novo"))
         repo.update_config.assert_called_once_with({"office_name": "Novo"})
 
-    def test_excludes_none_fields_from_update(self, service, repo):
+    def test_excludes_unset_fields_from_update(self, service, repo):
+        repo.update_config.return_value = make_config()
+        service.update(OfficeConfigUpdate())
+        repo.update_config.assert_called_once_with({})
+
+    def test_includes_explicit_none_to_clear_field(self, service, repo):
         repo.update_config.return_value = make_config()
         service.update(OfficeConfigUpdate(office_name=None, hero_title=None))
-        repo.update_config.assert_called_once_with({})
+        repo.update_config.assert_called_once_with(
+            {"office_name": None, "hero_title": None}
+        )
 
     def test_serializes_differentials_to_dicts(self, service, repo):
         repo.update_config.return_value = make_config(

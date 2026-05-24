@@ -184,7 +184,7 @@ class TestAnonymizeAndFiltering:
         note = repo.create_note(client_id=client.id, created_by=1, content="oi")
         now = datetime.now(timezone.utc)
 
-        repo.anonymize_no_commit(client, anonymized_at=now)
+        repo.anonymize(client, anonymized_at=now)
         db.commit()
         db.refresh(client)
 
@@ -210,7 +210,7 @@ class TestAnonymizeAndFiltering:
         repo = ClientRepository(db)
         active = make_client(repo, name="Ativo", cpf="30303030301")
         deleted = make_client(repo, name="Deletado", cpf="30303030302")
-        repo.anonymize_no_commit(deleted, anonymized_at=datetime.now(timezone.utc))
+        repo.anonymize(deleted, anonymized_at=datetime.now(timezone.utc))
         db.commit()
 
         clients, total = repo.list(limit=100)
@@ -222,7 +222,7 @@ class TestAnonymizeAndFiltering:
     def test_get_by_id_excludes_anonymized_by_default(self, db: Session):
         repo = ClientRepository(db)
         client = make_client(repo, cpf="40404040401")
-        repo.anonymize_no_commit(client, anonymized_at=datetime.now(timezone.utc))
+        repo.anonymize(client, anonymized_at=datetime.now(timezone.utc))
         db.commit()
 
         assert repo.get_by_id(client.id) is None
@@ -231,7 +231,7 @@ class TestAnonymizeAndFiltering:
     def test_get_by_cpf_returns_none_for_anonymized(self, db: Session):
         repo = ClientRepository(db)
         client = make_client(repo, cpf="50505050501")
-        repo.anonymize_no_commit(client, anonymized_at=datetime.now(timezone.utc))
+        repo.anonymize(client, anonymized_at=datetime.now(timezone.utc))
         db.commit()
 
         assert repo.get_by_cpf("50505050501") is None
@@ -239,7 +239,7 @@ class TestAnonymizeAndFiltering:
     def test_cpf_can_be_reused_after_anonymize(self, db: Session):
         repo = ClientRepository(db)
         first = make_client(repo, cpf="60606060601")
-        repo.anonymize_no_commit(first, anonymized_at=datetime.now(timezone.utc))
+        repo.anonymize(first, anonymized_at=datetime.now(timezone.utc))
         db.commit()
 
         new_client = make_client(repo, name="Novo Dono", cpf="60606060601")
@@ -251,7 +251,7 @@ class TestAnonymizeAndFiltering:
         repo = ClientRepository(db)
         client = make_client(repo, cpf="70707070701")
         repo.create_note(client_id=client.id, created_by=1, content="visivel")
-        repo.anonymize_no_commit(client, anonymized_at=datetime.now(timezone.utc))
+        repo.anonymize(client, anonymized_at=datetime.now(timezone.utc))
         db.commit()
 
         notes, total = repo.list_notes_by_client(client_id=client.id)

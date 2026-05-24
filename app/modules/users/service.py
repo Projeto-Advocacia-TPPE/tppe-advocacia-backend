@@ -69,7 +69,7 @@ class UserService:
         if user is None:
             raise UserNotFoundError()
 
-        updates = payload.model_dump(exclude_none=True)
+        updates = payload.model_dump(exclude_unset=True)
         updates["updated_by"] = updated_by.id
 
         if "email" in updates and updates["email"] != user.email:
