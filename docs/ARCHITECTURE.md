@@ -1,6 +1,6 @@
 # Arquitetura
 
-Este projeto segue o padrão **Modular Monolith** com camadas internas por módulo. Cada domínio (users, leads, auth, health) é uma pasta autônoma com suas próprias camadas — model, schema, repository, service, controller e router. Código verdadeiramente compartilhado entre módulos fica em `shared/`.
+Este projeto segue o padrão **Modular Monolith** com camadas internas por módulo. Cada domínio (users, leads, auth, health) é uma pasta autônoma com suas próprias camadas — model, schema, repository, service, deps e router. Código verdadeiramente compartilhado entre módulos fica em `shared/`.
 
 ---
 
@@ -27,38 +27,38 @@ app/
 │   │   ├── schema.py              # DTOs: UserCreate, UserRead, UserUpdate
 │   │   ├── repository.py          # queries de usuário
 │   │   ├── service.py             # regras de negócio de usuário
-│   │   ├── controller.py          # orquestração
+│   │   ├── deps.py                # get_user_service() — factory injetável via Depends
 │   │   └── router.py              # rotas HTTP /users
 │   ├── leads/                     # domínio de leads
 │   │   ├── model.py
 │   │   ├── schema.py
 │   │   ├── repository.py
 │   │   ├── service.py
-│   │   ├── controller.py
+│   │   ├── deps.py
 │   │   └── router.py
 │   ├── auth/                      # autenticação
 │   │   ├── schema.py
 │   │   ├── service.py
-│   │   ├── controller.py
+│   │   ├── deps.py
 │   │   └── router.py
 │   ├── office_config/             # configurações institucionais
 │   │   ├── model.py
 │   │   ├── schema.py
 │   │   ├── repository.py
 │   │   ├── service.py
-│   │   ├── controller.py
+│   │   ├── deps.py
 │   │   └── router.py
 │   ├── audit_logs/                # log de auditoria
 │   │   ├── model.py
 │   │   ├── schema.py
 │   │   ├── repository.py
 │   │   ├── service.py
-│   │   ├── controller.py
+│   │   ├── deps.py
 │   │   └── router.py
 │   ├── media/                     # upload e servimento de arquivos
 │   │   ├── schema.py
 │   │   ├── service.py
-│   │   ├── controller.py
+│   │   ├── deps.py
 │   │   ├── router.py
 │   │   └── storage/
 │   │       ├── protocol.py        # StorageProvider (Protocol)
@@ -72,13 +72,13 @@ app/
 │   │   ├── datajud_service.py     # implementação real via httpx
 │   │   ├── fake_service.py        # implementação fake para testes
 │   │   ├── service.py             # sync manual/lote, dedup e persistência
-│   │   ├── controller.py
+│   │   ├── deps.py                # get_datajud_client(), get_datajud_service()
 │   │   └── router.py              # /processes/{id}/sync, /datajud/sync-active-processes
 │   ├── external_api_logs/         # logs de sucesso/falha de integrações externas
 │   │   ├── model.py               # ORM: ExternalApiLog
 │   │   ├── repository.py
 │   │   ├── service.py
-│   │   ├── controller.py
+│   │   ├── deps.py
 │   │   ├── notifier.py            # notifica admins em falhas via notifications
 │   │   └── router.py              # GET /external-api-logs (admin)
 │   ├── notifications/             # preferências e disparo de notificações por e-mail
@@ -86,7 +86,7 @@ app/
 │   │   ├── schema.py              # EventType, PreferencesRead, PreferencesUpdate
 │   │   ├── repository.py
 │   │   ├── service.py             # notify(user_id, event_type, payload)
-│   │   ├── controller.py
+│   │   ├── deps.py
 │   │   ├── router.py              # GET/PATCH /notifications/preferences
 │   │   └── templates/             # subject + body por evento
 │   ├── forensic_holidays/         # feriados forenses (nacional, court, comarca)
@@ -94,7 +94,7 @@ app/
 │   │   ├── schema.py
 │   │   ├── repository.py
 │   │   ├── service.py
-│   │   ├── controller.py
+│   │   ├── deps.py
 │   │   ├── router.py              # /forensic-holidays (GET autenticado, CUD admin)
 │   │   ├── data/holidays.json     # nacionais + recesso + TJDFT
 │   │   └── seed.py                # `python -m app.modules.forensic_holidays.seed`
@@ -103,14 +103,14 @@ app/
 │   │   ├── schema.py              # DeadlineCalculate*, DeadlineCreate/Update/Read, DeadlineAlertRead
 │   │   ├── repository.py          # DeadlineRepository, DeadlineAlertRepository
 │   │   ├── service.py             # calculate_due_date, business_days_until, dispatch_alerts
-│   │   ├── controller.py
+│   │   ├── deps.py
 │   │   └── router.py              # /deadlines/calculate, /processes/{id}/deadlines, /deadlines/{id}, .../alerts
 │   ├── appointments/              # agenda de compromissos (CRUD pessoal)
 │   │   ├── model.py               # ORM: Appointment, AppointmentType
 │   │   ├── schema.py              # AppointmentCreate/Update/Read
 │   │   ├── repository.py
 │   │   ├── service.py             # CRUD + validação de refs + autorização + sync Google
-│   │   ├── controller.py
+│   │   ├── deps.py
 │   │   └── router.py              # /appointments, /appointments/{id}
 │   ├── google_calendar/           # integração OAuth + sync com Google Calendar
 │   │   ├── model.py               # ORM: GoogleCredential
@@ -122,18 +122,19 @@ app/
 │   │   ├── fake_service.py        # impl fake para testes
 │   │   ├── oauth.py               # fluxo OAuth (auth URL, troca de code)
 │   │   ├── service.py             # GoogleCalendarService + sync_appointment
-│   │   ├── controller.py
+│   │   ├── deps.py
 │   │   └── router.py              # /integrations/google/*
 │   ├── tasks/                     # tarefas em Kanban (CRUD + move atômico)
 │   │   ├── model.py               # ORM: Task, TaskStatus, TaskPriority
 │   │   ├── schema.py              # TaskCreate, TaskUpdate, TaskMove, TaskRead
 │   │   ├── repository.py          # CRUD + reordenação atômica em transação
 │   │   ├── service.py             # valida referências, dispara TASK_ASSIGNED
-│   │   ├── controller.py
+│   │   ├── deps.py
 │   │   └── router.py              # /tasks, /tasks/{id}, /tasks/{id}/move
 │   └── health/                    # health check
 │       ├── schema.py
-│       ├── controller.py
+│       ├── service.py
+│       ├── deps.py
 │       └── router.py
 └── api/
     └── router.py                  # agrega todos os modules/*/router.py
@@ -168,11 +169,11 @@ Cada módulo em `modules/` contém as mesmas camadas internas:
 
 ### `router.py` — Rotas (entrada HTTP)
 
-Ponto de entrada de cada requisição. Define os endpoints, aplica os schemas de validação de entrada e delega ao controller. Não contém lógica de negócio.
+Ponto de entrada de cada requisição. Define os endpoints, valida entrada via schemas Pydantic, injeta dependências via `Depends` e chama o service diretamente. Não contém lógica de negócio.
 
-### `controller.py` — Orquestração
+### `deps.py` — Fábrica de dependências
 
-Coordena o fluxo entre service e schemas. Recebe dados já validados da rota, chama o service e retorna a resposta serializada. Não acessa o banco diretamente.
+Expõe funções `get_X_service()` que constroem o grafo de dependências (repositories → services) e são registradas no FastAPI via `Depends`. É o único lugar do módulo que conhece quais repositories o service precisa.
 
 ### `service.py` — Regras de negócio
 
@@ -180,7 +181,7 @@ Concentra a lógica do domínio: validações de negócio, cálculos, decisões.
 
 ### `repository.py` — Acesso a dados
 
-Responsável exclusivamente por interagir com o banco: queries, inserções, atualizações e deleções. Recebe e retorna models ORM. Não conhece regras de negócio.
+Responsável exclusivamente por interagir com o banco: queries, inserções, atualizações e deleções. Recebe e retorna models ORM. Não conhece regras de negócio. Nunca chama `db.commit()` — a transação é fechada pelo service via `unit_of_work`.
 
 ### `model.py` — Modelo ORM
 
@@ -207,11 +208,11 @@ Código que pertence a nenhum módulo específico, mas é usado por vários:
 
 ```
 HTTP Request
-  └─► modules/*/router.py                      valida entrada com schema
-        └─► modules/*/controller               orquestra a operação
-              └─► modules/*/service            aplica regras de negócio
-                    └─► modules/*/repository   executa query no banco
-                          └─► modules/*/model  entidade ORM
+  └─► modules/*/router.py              valida entrada com schema
+        │  Depends(get_X_service)       deps.py constrói o grafo
+        └─► modules/*/service.py        aplica regras de negócio
+              └─► modules/*/repository  executa query no banco
+                    └─► modules/*/model entidade ORM
   ◄── HTTP Response
         schema serializa a saída
 ```
@@ -271,41 +272,49 @@ Para documentar respostas de erro no Swagger, usar o helper `error_responses(*co
 
 ## Injeção de dependência
 
-O projeto usa injeção manual (sem framework de DI). O padrão é:
+O projeto usa o sistema nativo de DI do FastAPI via `Depends`. O padrão é:
 
 ```
-router.py  →  resolve dependências via Depends()  →  instancia Controller inline
-controller.py  →  constrói o grafo (Repository → Service)  →  expõe métodos
-service.py  →  recebe dependências já construídas no __init__
+deps.py        →  get_X_service() constrói o grafo (Repository → Service)
+router.py      →  injeta o service via Depends(get_X_service)
+service.py     →  recebe dependências já construídas no __init__
+repository.py  →  único ponto que recebe Session
 ```
 
-### Regras
+### `deps.py` — construção do grafo
 
-**Router** — resolve dependências externas via `Depends` (db, email, auth) e instancia o controller diretamente no corpo da rota:
+Cada módulo tem um `deps.py` com funções que montam o service com suas dependências e são registradas no FastAPI via `Depends`:
 
 ```python
-def create_user(
-    payload: UserCreate,
+# users/deps.py
+def get_user_service(
     db: Session = Depends(get_db),
     email: EmailService = Depends(get_email_service),
-    current_user: User = Depends(require_admin),
-) -> SuccessResponse[UserRead]:
-    return ok(UserController(db, email).create_user(payload, created_by=current_user))
+) -> UserService:
+    return UserService(
+        UserRepository(db),
+        email,
+        AuditLogService(AuditLogRepository(db)),
+    )
 ```
 
-**Controller** — recebe dependências resolvidas, monta o grafo internamente, não acessa `Session` diretamente após o `__init__`:
+### `router.py` — injeção via Depends
+
+O router injeta o service como parâmetro da rota — FastAPI resolve o grafo automaticamente:
 
 ```python
-class UserController:
-    def __init__(self, db: Session, email: EmailService) -> None:
-        self.service = UserService(
-            UserRepository(db),
-            email,
-            AuditLogService(AuditLogRepository(db)),
-        )
+# users/router.py
+def create_user(
+    payload: UserCreate,
+    service: UserService = Depends(get_user_service),
+    current_user: User = Depends(require_admin),
+) -> SuccessResponse[UserRead]:
+    return ok(service.create_user(payload, created_by=current_user))
 ```
 
-**Service** — recebe repositórios e serviços já construídos, nunca recebe `Session`:
+### `service.py` — recebe dependências prontas
+
+Service recebe repositórios e serviços já construídos, nunca recebe `Session`:
 
 ```python
 class UserService:
@@ -315,7 +324,7 @@ class UserService:
         self.audit = audit
 ```
 
-**Repository** — único ponto que recebe `Session`:
+### `repository.py` — único ponto que recebe Session
 
 ```python
 class UserRepository:
@@ -325,32 +334,36 @@ class UserRepository:
 
 ### Módulos sem banco de dados
 
-Módulos sem persistência (ex: `media`) não recebem `db`. O controller aceita a dependência de infraestrutura como parâmetro opcional, com o provider padrão como fallback:
+Módulos sem persistência (ex: `media`) não recebem `db`. O `deps.py` instancia o provider padrão diretamente:
 
 ```python
-class MediaController:
-    def __init__(self, storage: StorageProvider | None = None) -> None:
-        self.service = MediaService(storage or LocalStorageProvider())
+# media/deps.py
+def get_media_service() -> MediaService:
+    return MediaService(LocalStorageProvider())
 ```
 
-Isso mantém o controller testável (passa mock de `storage`) sem exigir injeção via FastAPI.
+Para testes que precisam de um provider alternativo, usar `app.dependency_overrides`:
+
+```python
+app.dependency_overrides[get_media_service] = lambda: MediaService(FakeStorageProvider())
+```
 
 ### O que não fazer
 
-- **Service receber `Session` diretamente** — quem constrói repositories é o controller, não o service
-- **Controller hardcodar providers internamente sem parâmetro** — impede mock em testes
-- **Router instanciar repositories ou services** — responsabilidade do controller
+- **Service receber `Session` diretamente** — quem constrói repositories é o `deps.py`, não o service
+- **Router instanciar repositories ou services diretamente** — responsabilidade do `deps.py`
+- **`deps.py` conter lógica de negócio** — apenas constrói e injeta; lógica vai no service
 
 ---
 
 ## Adicionando um novo módulo
 
-Para cada nova história de usuário que introduz um novo domínio (ex: `email`):
+Para cada nova história de usuário que introduz um novo domínio (ex: `contracts`):
 
-1. Criar pasta `app/modules/email/`
-2. Criar os arquivos: `model.py`, `schema.py`, `repository.py`, `service.py`, `controller.py`, `router.py`
+1. Criar pasta `app/modules/contracts/`
+2. Criar os arquivos: `model.py`, `schema.py`, `repository.py`, `service.py`, `deps.py`, `router.py`
 3. Registrar o router em `app/api/router.py`
-4. Criar testes em `tests/unit/email/`, `tests/integration/email/`, `tests/e2e/email/`
+4. Criar testes em `tests/unit/contracts/`, `tests/integration/contracts/`, `tests/e2e/contracts/`
 
 Zero toque em código de outros módulos.
 
@@ -359,9 +372,10 @@ Zero toque em código de outros módulos.
 ## Princípios que guiam as decisões
 
 - **Módulo autônomo:** cada módulo contém todas as suas camadas; mudança em um módulo não toca outros.
-- **Regras de negócio no service:** nenhuma lógica de domínio nos controllers, rotas ou repositories.
+- **Regras de negócio no service:** nenhuma lógica de domínio nas rotas, deps ou repositories.
 - **Schemas desacoplados dos models:** nunca expor diretamente um model ORM na resposta da API.
 - **Repository como única porta para o banco:** nenhuma query fora do repository.
+- **Repository nunca comita:** transações são abertas e fechadas pelo service via `with unit_of_work(db):`.
 - **Dependências entre módulos apenas quando semânticas e unidirecionais:** evitar acoplamento arbitrário entre módulos. Dependências circulares são proibidas. Dependências com relação de domínio clara são permitidas (ex: `auth` depende de `users` porque autentica usuários, já o inverso não existe).
 - **Erros via exceções customizadas:** toda falha de negócio deve ser lançada como subclasse de `AppException`; nunca usar `HTTPException` diretamente nos services.
 - **Versionamento de rotas:** toda rota pública fica sob `/api/v1/` para permitir evolução sem quebrar contratos.
