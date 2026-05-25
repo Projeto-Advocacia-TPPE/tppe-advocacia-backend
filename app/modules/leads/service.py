@@ -6,13 +6,13 @@ from app.modules.notifications.schema import EventType
 from app.modules.notifications.service import NotificationService
 from app.modules.users.model import User
 from app.modules.users.repository import UserRepository
+from app.shared.db.uow import unit_of_work
 from app.shared.exceptions import (
     AssigneeNotFoundError,
     LeadDuplicateError,
     LeadNotFoundError,
 )
-from app.shared.service_helpers import ensure_exists, get_or_raise
-from app.shared.uow import unit_of_work
+from app.shared.service.helpers import ensure_exists, get_or_raise
 
 settings = get_settings()
 

@@ -1,7 +1,7 @@
 from app.modules.office_config.model import OfficeConfig
 from app.modules.office_config.repository import OfficeConfigRepository
 from app.modules.office_config.schema import OfficeConfigUpdate
-from app.shared.uow import unit_of_work
+from app.shared.db.uow import unit_of_work
 
 
 class OfficeConfigService:

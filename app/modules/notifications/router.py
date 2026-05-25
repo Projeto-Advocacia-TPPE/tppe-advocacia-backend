@@ -4,8 +4,8 @@ from app.modules.notifications.deps import get_notification_service
 from app.modules.notifications.schema import PreferencesRead, PreferencesUpdate
 from app.modules.notifications.service import NotificationService
 from app.modules.users.model import User
-from app.shared.auth_deps import get_current_user
-from app.shared.responses import SuccessResponse, error_responses, ok
+from app.shared.deps.auth import get_current_user
+from app.shared.http.responses import SuccessResponse, error_responses, ok
 
 router = APIRouter(prefix="/notifications", tags=["Notifications"])
 

@@ -7,9 +7,9 @@ from app.modules.forensic_holidays.schema import (
     HolidayUpdate,
     _validate_scope_consistency,
 )
+from app.shared.db.uow import unit_of_work
 from app.shared.exceptions import ForensicHolidayNotFoundError
-from app.shared.service_helpers import get_or_raise
-from app.shared.uow import unit_of_work
+from app.shared.service.helpers import get_or_raise
 
 
 class ForensicHolidayService:

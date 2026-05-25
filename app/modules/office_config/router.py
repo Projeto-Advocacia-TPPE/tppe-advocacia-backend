@@ -4,8 +4,8 @@ from app.modules.office_config.deps import get_office_config_service
 from app.modules.office_config.schema import OfficeConfigRead, OfficeConfigUpdate
 from app.modules.office_config.service import OfficeConfigService
 from app.modules.users.model import User
-from app.shared.auth_deps import require_admin
-from app.shared.responses import SuccessResponse, error_responses, ok
+from app.shared.deps.auth import require_admin
+from app.shared.http.responses import SuccessResponse, error_responses, ok
 
 router = APIRouter(prefix="/office-config", tags=["Office Config"])
 

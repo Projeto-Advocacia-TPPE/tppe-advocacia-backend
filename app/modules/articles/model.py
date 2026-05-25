@@ -5,7 +5,7 @@ from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.modules.users.model import User
-from app.shared.base_model import Base
+from app.shared.db.base_model import Base
 
 
 class ArticleStatus(enum.Enum):

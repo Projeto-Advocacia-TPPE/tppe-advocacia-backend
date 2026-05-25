@@ -2,9 +2,9 @@ from app.modules.articles.model import Article, ArticleStatus
 from app.modules.articles.repository import ArticleRepository
 from app.modules.articles.schema import ArticleCreate, ArticleUpdate
 from app.modules.users.model import User
+from app.shared.db.uow import unit_of_work
 from app.shared.exceptions import ArticleNotFoundError
-from app.shared.service_helpers import get_or_raise
-from app.shared.uow import unit_of_work
+from app.shared.service.helpers import get_or_raise
 
 
 class ArticleService:

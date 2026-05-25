@@ -7,7 +7,7 @@ from app.modules.audit_logs.service import AuditLogService
 from app.modules.email.protocol import EmailService
 from app.modules.users.repository import UserRepository
 from app.modules.users.service import UserService
-from app.shared.email_deps import get_email_service
+from app.shared.deps.email import get_email_service
 
 
 def get_user_service(

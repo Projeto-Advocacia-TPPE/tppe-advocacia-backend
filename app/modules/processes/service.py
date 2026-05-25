@@ -22,6 +22,7 @@ from app.modules.processes.schema import (
     format_cnj,
 )
 from app.modules.users.model import User
+from app.shared.db.uow import unit_of_work
 from app.shared.exceptions import (
     ClientNotFoundError,
     ClientNotFoundForProcessError,
@@ -30,8 +31,7 @@ from app.shared.exceptions import (
     ProcessNumberAlreadyExistsError,
     ProcessStatusUnchangedError,
 )
-from app.shared.service_helpers import assert_author_or_admin, get_or_raise
-from app.shared.uow import unit_of_work
+from app.shared.service.helpers import assert_author_or_admin, get_or_raise
 
 
 class ProcessService:

@@ -18,7 +18,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.modules.clients.model import Client
 from app.modules.processes.model import Process
 from app.modules.users.model import User
-from app.shared.base_model import Base
+from app.shared.db.base_model import Base
 
 
 class TaskStatus(str, Enum):

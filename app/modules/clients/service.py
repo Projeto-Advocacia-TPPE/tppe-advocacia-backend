@@ -13,6 +13,7 @@ from app.modules.clients.schema import (
 )
 from app.modules.processes.repository import ProcessRepository
 from app.modules.users.model import User
+from app.shared.db.uow import unit_of_work
 from app.shared.exceptions import (
     AppException,
     ClientCnpjAlreadyExistsError,
@@ -21,9 +22,8 @@ from app.shared.exceptions import (
     ClientNoteNotFoundError,
     ClientNotFoundError,
 )
-from app.shared.service_helpers import assert_author_or_admin, get_or_raise
+from app.shared.service.helpers import assert_author_or_admin, get_or_raise
 from app.shared.types import Role
-from app.shared.uow import unit_of_work
 
 
 def _client_integrity_error(exc: IntegrityError) -> AppException:

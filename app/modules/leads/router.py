@@ -5,8 +5,8 @@ from app.modules.leads.model import LeadStatus
 from app.modules.leads.schema import LeadCreate, LeadRead, LeadUpdate
 from app.modules.leads.service import LeadService
 from app.modules.users.model import User
-from app.shared.auth_deps import require_admin
-from app.shared.responses import (
+from app.shared.deps.auth import require_admin
+from app.shared.http.responses import (
     PaginatedResponse,
     SuccessResponse,
     error_responses,

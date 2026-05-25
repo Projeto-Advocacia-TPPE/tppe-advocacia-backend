@@ -7,7 +7,7 @@ from app.modules.google_calendar.service import (
     GoogleCalendarService,
     build_google_calendar_service,
 )
-from app.shared.google_deps import get_google_calendar_client
+from app.shared.deps.google import get_google_calendar_client
 
 
 def get_google_calendar_service(

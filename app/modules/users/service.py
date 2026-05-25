@@ -9,9 +9,9 @@ from app.modules.email.protocol import EmailService
 from app.modules.users.model import User
 from app.modules.users.repository import UserRepository
 from app.modules.users.schema import UserCreate, UserUpdate
+from app.shared.db.uow import unit_of_work
 from app.shared.exceptions import EmailAlreadyExistsError, UserNotFoundError
 from app.shared.types import Role
-from app.shared.uow import unit_of_work
 
 
 class UserService:

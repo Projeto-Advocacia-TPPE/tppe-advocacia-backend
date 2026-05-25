@@ -8,7 +8,7 @@ from app.modules.clients.repository import ClientRepository
 from app.modules.google_calendar.google_service import GoogleCalendarApiClient
 from app.modules.google_calendar.service import build_google_calendar_service
 from app.modules.processes.repository import ProcessRepository
-from app.shared.google_deps import get_google_calendar_client
+from app.shared.deps.google import get_google_calendar_client
 
 
 def get_appointment_service(

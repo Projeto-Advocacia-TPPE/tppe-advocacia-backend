@@ -18,6 +18,7 @@ from app.modules.google_calendar.service import (
 )
 from app.modules.processes.repository import ProcessRepository
 from app.modules.users.model import User
+from app.shared.db.uow import unit_of_work
 from app.shared.exceptions import (
     AppointmentClientNotFoundError,
     AppointmentNotFoundError,
@@ -25,12 +26,11 @@ from app.shared.exceptions import (
     GoogleNotConfiguredError,
     GoogleNotConnectedError,
 )
-from app.shared.service_helpers import (
+from app.shared.service.helpers import (
     assert_author_or_admin,
     ensure_exists,
     get_or_raise,
 )
-from app.shared.uow import unit_of_work
 
 
 class AppointmentService:

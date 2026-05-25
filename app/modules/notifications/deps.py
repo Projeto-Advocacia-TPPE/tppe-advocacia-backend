@@ -6,7 +6,7 @@ from app.modules.email.protocol import EmailService
 from app.modules.notifications.repository import NotificationPreferenceRepository
 from app.modules.notifications.service import NotificationService
 from app.modules.users.repository import UserRepository
-from app.shared.email_deps import get_email_service
+from app.shared.deps.email import get_email_service
 
 
 def get_notification_service(

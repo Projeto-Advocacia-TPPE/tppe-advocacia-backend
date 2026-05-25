@@ -7,8 +7,8 @@ from app.modules.external_api_logs.model import ExternalApiProvider, ExternalApi
 from app.modules.external_api_logs.schema import ExternalApiLogRead
 from app.modules.external_api_logs.service import ExternalApiLogService
 from app.modules.users.model import User
-from app.shared.auth_deps import require_admin
-from app.shared.responses import PaginatedResponse, error_responses, paginated
+from app.shared.deps.auth import require_admin
+from app.shared.http.responses import PaginatedResponse, error_responses, paginated
 
 router = APIRouter(prefix="/external-api-logs", tags=["External API Logs"])
 

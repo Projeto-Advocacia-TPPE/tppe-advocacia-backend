@@ -7,8 +7,8 @@ from app.modules.audit_logs.model import AuditAction
 from app.modules.audit_logs.schema import AuditLogRead
 from app.modules.audit_logs.service import AuditLogService
 from app.modules.users.model import User
-from app.shared.auth_deps import require_admin
-from app.shared.responses import PaginatedResponse, error_responses, paginated
+from app.shared.deps.auth import require_admin
+from app.shared.http.responses import PaginatedResponse, error_responses, paginated
 
 router = APIRouter(prefix="/audit-logs", tags=["Audit Logs"])
 

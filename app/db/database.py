@@ -4,7 +4,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config.settings import get_settings
-from app.shared.base_model import Base
+from app.shared.db.base_model import Base
 
 settings = get_settings()
 

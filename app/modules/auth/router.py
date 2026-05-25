@@ -8,7 +8,7 @@ from app.modules.auth.schema import (
     TokenResponse,
 )
 from app.modules.auth.service import AuthService
-from app.shared.responses import SuccessResponse, error_responses, ok
+from app.shared.http.responses import SuccessResponse, error_responses, ok
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 

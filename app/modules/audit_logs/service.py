@@ -3,7 +3,7 @@ from datetime import datetime
 from app.modules.audit_logs.model import AuditAction, AuditLog
 from app.modules.audit_logs.repository import AuditLogRepository
 from app.modules.users.model import User
-from app.shared.uow import unit_of_work
+from app.shared.db.uow import unit_of_work
 
 
 class AuditLogService:

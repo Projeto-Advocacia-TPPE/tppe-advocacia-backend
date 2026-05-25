@@ -7,18 +7,18 @@ from app.modules.tasks.repository import TaskRepository
 from app.modules.tasks.schema import TaskCreate, TaskMove, TaskUpdate
 from app.modules.users.model import User
 from app.modules.users.repository import UserRepository
+from app.shared.db.uow import unit_of_work
 from app.shared.exceptions import (
     AssigneeNotFoundError,
     TaskClientNotFoundError,
     TaskNotFoundError,
     TaskProcessNotFoundError,
 )
-from app.shared.service_helpers import (
+from app.shared.service.helpers import (
     assert_author_or_admin,
     ensure_exists,
     get_or_raise,
 )
-from app.shared.uow import unit_of_work
 
 
 class TaskService:

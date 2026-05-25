@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from app.modules.health.deps import get_health_service
 from app.modules.health.schema import HealthResponse
 from app.modules.health.service import HealthService
-from app.shared.responses import SuccessResponse, ok
+from app.shared.http.responses import SuccessResponse, ok
 
 router = APIRouter(prefix="/health", tags=["Health"])
 

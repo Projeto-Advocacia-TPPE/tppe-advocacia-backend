@@ -4,8 +4,8 @@ from app.modules.users.deps import get_user_service
 from app.modules.users.model import User
 from app.modules.users.schema import UserCreate, UserRead, UserUpdate
 from app.modules.users.service import UserService
-from app.shared.auth_deps import require_admin
-from app.shared.responses import (
+from app.shared.deps.auth import require_admin
+from app.shared.http.responses import (
     PaginatedResponse,
     SuccessResponse,
     error_responses,

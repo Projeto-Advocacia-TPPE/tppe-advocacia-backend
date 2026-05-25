@@ -9,8 +9,8 @@ from app.modules.datajud.schema import (
 )
 from app.modules.datajud.service import DataJudService
 from app.modules.users.model import User
-from app.shared.auth_deps import get_current_user, require_admin
-from app.shared.responses import SuccessResponse, error_responses, ok
+from app.shared.deps.auth import get_current_user, require_admin
+from app.shared.http.responses import SuccessResponse, error_responses, ok
 
 router = APIRouter(tags=["DataJud"])
 

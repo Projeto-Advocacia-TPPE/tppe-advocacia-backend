@@ -25,6 +25,7 @@ from app.modules.external_api_logs.repository import ExternalApiLogRepository
 from app.modules.processes.model import MovementSource
 from app.modules.processes.repository import ProcessRepository
 from app.modules.processes.schema import MovementRead, format_cnj
+from app.shared.db.uow import unit_of_work
 from app.shared.exceptions import (
     AppException,
     DataJudNotConfiguredError,
@@ -33,7 +34,6 @@ from app.shared.exceptions import (
     DataJudUnavailableError,
     ProcessNotFoundError,
 )
-from app.shared.uow import unit_of_work
 
 
 class DataJudService:

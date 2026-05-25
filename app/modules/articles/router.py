@@ -9,8 +9,8 @@ from app.modules.articles.schema import (
 )
 from app.modules.articles.service import ArticleService
 from app.modules.users.model import User
-from app.shared.auth_deps import get_current_user
-from app.shared.responses import (
+from app.shared.deps.auth import get_current_user
+from app.shared.http.responses import (
     PaginatedResponse,
     SuccessResponse,
     error_responses,

@@ -13,8 +13,8 @@ from app.modules.google_calendar.oauth import GoogleOAuthFlow
 from app.modules.google_calendar.protocol import GoogleCalendarClient
 from app.modules.google_calendar.repository import GoogleCredentialRepository
 from app.modules.google_calendar.schema import GoogleStatusRead
+from app.shared.db.uow import unit_of_work
 from app.shared.exceptions import GoogleNotConfiguredError
-from app.shared.uow import unit_of_work
 
 logger = logging.getLogger(__name__)
 
