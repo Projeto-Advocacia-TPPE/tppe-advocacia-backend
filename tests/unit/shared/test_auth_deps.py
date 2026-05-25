@@ -4,7 +4,7 @@ import jwt
 import pytest
 
 from app.modules.users.model import User
-from app.shared.auth_deps import get_current_user, require_admin
+from app.shared.deps.auth import get_current_user, require_admin
 from app.shared.exceptions import ForbiddenError, UnauthorizedError
 from app.shared.types import Role
 
@@ -67,7 +67,7 @@ class TestGetCurrentUser:
     def test_raises_when_user_not_found(self, db):
         token = make_valid_token(user_id=99)
 
-        with patch("app.shared.auth_deps.UserRepository") as mock_repo_cls:
+        with patch("app.shared.deps.auth.UserRepository") as mock_repo_cls:
             mock_repo_cls.return_value.get_by_id.return_value = None
 
             with pytest.raises(UnauthorizedError):
@@ -76,7 +76,7 @@ class TestGetCurrentUser:
     def test_raises_when_user_inactive(self, db):
         token = make_valid_token(user_id=1)
 
-        with patch("app.shared.auth_deps.UserRepository") as mock_repo_cls:
+        with patch("app.shared.deps.auth.UserRepository") as mock_repo_cls:
             mock_repo_cls.return_value.get_by_id.return_value = make_user(
                 is_active=False
             )
@@ -88,7 +88,7 @@ class TestGetCurrentUser:
         token = make_valid_token(user_id=1)
         user = make_user(id=1)
 
-        with patch("app.shared.auth_deps.UserRepository") as mock_repo_cls:
+        with patch("app.shared.deps.auth.UserRepository") as mock_repo_cls:
             mock_repo_cls.return_value.get_by_id.return_value = user
 
             result = get_current_user(make_credentials(token), db)
@@ -98,7 +98,7 @@ class TestGetCurrentUser:
     def test_looks_up_correct_user_id(self, db):
         token = make_valid_token(user_id=42)
 
-        with patch("app.shared.auth_deps.UserRepository") as mock_repo_cls:
+        with patch("app.shared.deps.auth.UserRepository") as mock_repo_cls:
             mock_repo_cls.return_value.get_by_id.return_value = make_user(id=42)
 
             get_current_user(make_credentials(token), db)

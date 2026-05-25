@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.modules.office_config.controller import OfficeConfigController
+from app.modules.office_config.deps import get_office_config_service
 from app.modules.office_config.schema import OfficeConfigRead, OfficeConfigUpdate
+from app.modules.office_config.service import OfficeConfigService
 from app.modules.users.model import User
-from app.shared.auth_deps import require_admin
-from app.shared.responses import SuccessResponse, error_responses, ok
+from app.shared.deps.auth import require_admin
+from app.shared.http.responses import SuccessResponse, error_responses, ok
 
 router = APIRouter(prefix="/office-config", tags=["Office Config"])
 
@@ -17,9 +16,9 @@ router = APIRouter(prefix="/office-config", tags=["Office Config"])
     summary="Retorna a configuração atual do escritório",
 )
 def get_office_config(
-    db: Session = Depends(get_db),
+    service: OfficeConfigService = Depends(get_office_config_service),
 ) -> SuccessResponse[OfficeConfigRead]:
-    return ok(OfficeConfigController(db).get())
+    return ok(OfficeConfigRead.model_validate(service.get()))
 
 
 @router.patch(
@@ -30,7 +29,7 @@ def get_office_config(
 )
 def update_office_config(
     payload: OfficeConfigUpdate,
-    db: Session = Depends(get_db),
+    service: OfficeConfigService = Depends(get_office_config_service),
     _: User = Depends(require_admin),
 ) -> SuccessResponse[OfficeConfigRead]:
-    return ok(OfficeConfigController(db).update(payload))
+    return ok(OfficeConfigRead.model_validate(service.update(payload)))

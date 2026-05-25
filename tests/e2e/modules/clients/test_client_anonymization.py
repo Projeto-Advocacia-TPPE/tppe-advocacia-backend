@@ -108,9 +108,7 @@ class TestDeleteClientActiveProcesses:
             client_id=anon_client.id,
             created_by=None,
         )
-        process_repo.update_status_no_commit(
-            process, ProcessStatus.SUSPENSO, updated_by=None
-        )
+        process_repo.update_status(process, ProcessStatus.SUSPENSO, updated_by=None)
         db_session.commit()
 
         response = client.delete(
@@ -131,9 +129,7 @@ class TestDeleteClientActiveProcesses:
             client_id=anon_client.id,
             created_by=None,
         )
-        process_repo.update_status_no_commit(
-            process, ProcessStatus.ARQUIVADO, updated_by=None
-        )
+        process_repo.update_status(process, ProcessStatus.ARQUIVADO, updated_by=None)
         db_session.commit()
 
         response = client.delete(
@@ -271,7 +267,7 @@ class TestVisibilityAfterAnonymization:
             client_id=anon_client.id,
             created_by=None,
         )
-        ProcessRepository(db_session).update_status_no_commit(
+        ProcessRepository(db_session).update_status(
             process, ProcessStatus.ARQUIVADO, updated_by=None
         )
         db_session.commit()

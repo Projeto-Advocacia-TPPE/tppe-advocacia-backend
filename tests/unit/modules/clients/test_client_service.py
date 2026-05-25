@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.modules.clients.model import Client
 from app.modules.clients.schema import ClientCreate, ClientUpdate
@@ -14,6 +15,12 @@ from app.shared.exceptions import (
     ClientNotFoundError,
 )
 from app.shared.types import Role
+
+
+def make_integrity_error(constraint_name: str) -> IntegrityError:
+    orig = MagicMock()
+    orig.diag.constraint_name = constraint_name
+    return IntegrityError("stmt", "params", orig)
 
 
 def make_client(**kwargs) -> Client:
@@ -51,25 +58,21 @@ def repo():
 
 @pytest.fixture
 def service(repo):
-    svc = ClientService.__new__(ClientService)
-    svc.repository = repo
-    svc.process_repository = None
-    svc.audit = None
-    return svc
+    return ClientService(repo, process_repository=MagicMock(), audit=MagicMock())
 
 
 @pytest.fixture
 def anonymize_service(repo):
-    svc = ClientService.__new__(ClientService)
-    svc.repository = repo
-    svc.process_repository = MagicMock()
-    svc.audit = MagicMock()
+    process_repo = MagicMock()
+    audit = MagicMock()
+    svc = ClientService(repo, process_repository=process_repo, audit=audit)
+    svc.process_repository = process_repo
+    svc.audit = audit
     return svc
 
 
 class TestCreateClient:
     def test_creates_when_cpf_not_duplicate(self, service, repo):
-        repo.get_by_cpf.return_value = None
         client = make_client()
         repo.create.return_value = client
         payload = ClientCreate(name="João Silva", cpf="12345678901")
@@ -89,7 +92,6 @@ class TestCreateClient:
         )
 
     def test_creates_when_cnpj_not_duplicate(self, service, repo):
-        repo.get_by_cnpj.return_value = None
         client = make_client(cpf=None, cnpj="12345678000195")
         repo.create.return_value = client
         payload = ClientCreate(name="Empresa X", cnpj="12345678000195")
@@ -99,22 +101,18 @@ class TestCreateClient:
         assert result is client
 
     def test_raises_when_cpf_duplicate(self, service, repo):
-        repo.get_by_cpf.return_value = make_client()
+        repo.create.side_effect = make_integrity_error("uq_clients_cpf")
         payload = ClientCreate(name="João Silva", cpf="12345678901")
 
         with pytest.raises(ClientCpfAlreadyExistsError):
             service.create_client(payload, created_by=make_user())
 
-        repo.create.assert_not_called()
-
     def test_raises_when_cnpj_duplicate(self, service, repo):
-        repo.get_by_cnpj.return_value = make_client(cpf=None, cnpj="12345678000195")
+        repo.create.side_effect = make_integrity_error("uq_clients_cnpj")
         payload = ClientCreate(name="Empresa X", cnpj="12345678000195")
 
         with pytest.raises(ClientCnpjAlreadyExistsError):
             service.create_client(payload, created_by=make_user())
-
-        repo.create.assert_not_called()
 
 
 class TestGetClient:
@@ -295,7 +293,7 @@ class TestAnonymize:
 
         result = anonymize_service.anonymize(1, performed_by=performed_by)
 
-        repo.anonymize_no_commit.assert_called_once()
+        repo.anonymize.assert_called_once()
         anonymize_service.audit.log_client_anonymized.assert_called_once_with(
             client_id=1,
             client_name="João Silva",
@@ -311,7 +309,7 @@ class TestAnonymize:
         with pytest.raises(ClientNotFoundError):
             anonymize_service.anonymize(99, performed_by=make_user())
 
-        repo.anonymize_no_commit.assert_not_called()
+        repo.anonymize.assert_not_called()
         anonymize_service.audit.log_client_anonymized.assert_not_called()
 
     def test_raises_when_has_active_processes(self, anonymize_service, repo):
@@ -322,7 +320,7 @@ class TestAnonymize:
         with pytest.raises(ClientHasActiveProcessesError):
             anonymize_service.anonymize(1, performed_by=make_user())
 
-        repo.anonymize_no_commit.assert_not_called()
+        repo.anonymize.assert_not_called()
         anonymize_service.audit.log_client_anonymized.assert_not_called()
 
     def test_rollback_on_failure(self, anonymize_service, repo):
@@ -330,7 +328,7 @@ class TestAnonymize:
         repo.get_by_id.return_value = client
         anonymize_service.process_repository.count_active_or_suspended_by_client.return_value = 0
         repo.db = MagicMock()
-        repo.anonymize_no_commit.side_effect = RuntimeError("boom")
+        repo.anonymize.side_effect = RuntimeError("boom")
 
         with pytest.raises(RuntimeError):
             anonymize_service.anonymize(1, performed_by=make_user())

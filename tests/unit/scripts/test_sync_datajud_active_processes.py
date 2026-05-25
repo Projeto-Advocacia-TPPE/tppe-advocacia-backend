@@ -15,7 +15,7 @@ from app.modules.external_api_logs.model import ExternalApiLog  # noqa: F401
 from app.modules.notifications.model import NotificationPreference  # noqa: F401
 from app.modules.processes.repository import ProcessRepository
 from app.modules.users.repository import UserRepository
-from app.shared.base_model import Base
+from app.shared.db.base_model import Base
 from app.shared.types import Role
 from scripts.sync_datajud_active_processes import (
     build_parser,

@@ -38,6 +38,8 @@ def service(repo, holidays, processes):
         repository=repo,
         holiday_repository=holidays,
         process_repository=processes,
+        alert_repository=MagicMock(),
+        notification_service=MagicMock(),
     )
 
 

@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 HEALTH_URL = "/api/v1/health"
-DB_CHECK = "app.modules.health.controller.check_database_connection"
+DB_CHECK = "app.modules.health.service.check_database_connection"
 
 
 class TestGetHealth:

@@ -1,17 +1,14 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.modules.auth.controller import AuthController
+from app.modules.auth.deps import get_auth_service
 from app.modules.auth.schema import (
     LoginRequest,
     PasswordResetConfirm,
     PasswordResetRequest,
     TokenResponse,
 )
-from app.modules.email.protocol import EmailService
-from app.shared.email_deps import get_email_service
-from app.shared.responses import SuccessResponse, error_responses, ok
+from app.modules.auth.service import AuthService
+from app.shared.http.responses import SuccessResponse, error_responses, ok
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -20,28 +17,26 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
     "/login",
     response_model=SuccessResponse[TokenResponse],
     responses=error_responses(401, 403, 422),
-    summary="Authenticate user and return JWT",
+    summary="Autentica usuário e retorna JWT",
 )
 def login(
     payload: LoginRequest,
-    db: Session = Depends(get_db),
-    email: EmailService = Depends(get_email_service),
+    service: AuthService = Depends(get_auth_service),
 ) -> SuccessResponse[TokenResponse]:
-    return ok(AuthController(db, email).login(payload))
+    return ok(service.login(payload))
 
 
 @router.post(
     "/password-reset/request",
     response_model=SuccessResponse[None],
     responses=error_responses(422),
-    summary="Request password reset email",
+    summary="Solicita email de redefinição de senha",
 )
 def request_password_reset(
     payload: PasswordResetRequest,
-    db: Session = Depends(get_db),
-    email: EmailService = Depends(get_email_service),
+    service: AuthService = Depends(get_auth_service),
 ) -> SuccessResponse[None]:
-    AuthController(db, email).request_password_reset(payload)
+    service.request_reset(payload)
     return ok(None)
 
 
@@ -49,12 +44,11 @@ def request_password_reset(
     "/password-reset/confirm",
     response_model=SuccessResponse[None],
     responses=error_responses(400, 422),
-    summary="Confirm password reset with token",
+    summary="Confirma redefinição de senha com token",
 )
 def confirm_password_reset(
     payload: PasswordResetConfirm,
-    db: Session = Depends(get_db),
-    email: EmailService = Depends(get_email_service),
+    service: AuthService = Depends(get_auth_service),
 ) -> SuccessResponse[None]:
-    AuthController(db, email).confirm_password_reset(payload)
+    service.confirm_reset(payload)
     return ok(None)

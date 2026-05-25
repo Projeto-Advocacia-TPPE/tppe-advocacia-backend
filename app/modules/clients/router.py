@@ -1,8 +1,6 @@
 from fastapi import APIRouter, Depends, Query, Response, status
-from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.modules.clients.controller import ClientController, ClientTimelineController
+from app.modules.clients.deps import get_client_service, get_client_timeline_service
 from app.modules.clients.schema import (
     ClientCreate,
     ClientListItem,
@@ -13,10 +11,12 @@ from app.modules.clients.schema import (
     ClientTimelineRead,
     ClientUpdate,
 )
+from app.modules.clients.service import ClientService
+from app.modules.clients.timeline_service import ClientTimelineService
 from app.modules.users.model import User
-from app.shared.auth_deps import get_current_user, require_admin
+from app.shared.deps.auth import get_current_user, require_admin
 from app.shared.exceptions import ConfirmationRequiredError
-from app.shared.responses import (
+from app.shared.http.responses import (
     PaginatedResponse,
     SuccessResponse,
     error_responses,
@@ -36,10 +36,14 @@ router = APIRouter(prefix="/clients", tags=["Clients"])
 )
 def create_client(
     payload: ClientCreate,
-    db: Session = Depends(get_db),
+    service: ClientService = Depends(get_client_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ClientRead]:
-    return ok(ClientController(db).create_client(payload, created_by=current_user))
+    return ok(
+        ClientRead.model_validate(
+            service.create_client(payload, created_by=current_user)
+        )
+    )
 
 
 @router.get(
@@ -52,13 +56,16 @@ def list_clients(
     search: str | None = Query(None),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    service: ClientService = Depends(get_client_service),
     _: User = Depends(get_current_user),
 ) -> PaginatedResponse[ClientListItem]:
-    items, total = ClientController(db).list_clients(
-        search=search, page=page, limit=limit
+    items, total = service.list_clients(search=search, page=page, limit=limit)
+    return paginated(
+        [ClientListItem.model_validate(c) for c in items],
+        total=total,
+        page=page,
+        limit=limit,
     )
-    return paginated(items, total=total, page=page, limit=limit)
 
 
 @router.get(
@@ -69,10 +76,12 @@ def list_clients(
 )
 def get_client(
     client_id: int,
-    db: Session = Depends(get_db),
+    service: ClientService = Depends(get_client_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ClientRead]:
-    return ok(ClientController(db).get_client(client_id, requester=current_user))
+    return ok(
+        ClientRead.model_validate(service.get_client(client_id, requester=current_user))
+    )
 
 
 @router.patch(
@@ -84,11 +93,13 @@ def get_client(
 def update_client(
     client_id: int,
     payload: ClientUpdate,
-    db: Session = Depends(get_db),
+    service: ClientService = Depends(get_client_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ClientRead]:
     return ok(
-        ClientController(db).update_client(client_id, payload, updated_by=current_user)
+        ClientRead.model_validate(
+            service.update_client(client_id, payload, updated_by=current_user)
+        )
     )
 
 
@@ -103,12 +114,12 @@ def anonymize_client(
     confirm: bool = Query(
         False, description="Deve ser true para confirmar a ação irreversível"
     ),
-    db: Session = Depends(get_db),
+    service: ClientService = Depends(get_client_service),
     current_user: User = Depends(require_admin),
 ) -> Response:
     if not confirm:
         raise ConfirmationRequiredError()
-    ClientController(db).anonymize_client(client_id, performed_by=current_user)
+    service.anonymize(client_id, performed_by=current_user)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -122,11 +133,13 @@ def anonymize_client(
 def create_note(
     client_id: int,
     payload: ClientNoteCreate,
-    db: Session = Depends(get_db),
+    service: ClientService = Depends(get_client_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ClientNoteRead]:
     return ok(
-        ClientController(db).create_note(client_id, payload, current_user=current_user)
+        ClientNoteRead.model_validate(
+            service.create_note(client_id, payload, current_user=current_user)
+        )
     )
 
 
@@ -140,11 +153,16 @@ def list_notes(
     client_id: int,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    service: ClientService = Depends(get_client_service),
     _: User = Depends(get_current_user),
 ) -> PaginatedResponse[ClientNoteRead]:
-    items, total = ClientController(db).list_notes(client_id, page=page, limit=limit)
-    return paginated(items, total=total, page=page, limit=limit)
+    items, total = service.list_notes(client_id, page=page, limit=limit)
+    return paginated(
+        [ClientNoteRead.model_validate(n) for n in items],
+        total=total,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.get(
@@ -158,11 +176,11 @@ def get_client_timeline(
     notes_limit: int = Query(10, ge=1, le=50),
     processes_limit: int = Query(20, ge=1, le=50),
     activity_limit: int = Query(20, ge=1, le=50),
-    db: Session = Depends(get_db),
+    service: ClientTimelineService = Depends(get_client_timeline_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ClientTimelineRead]:
     return ok(
-        ClientTimelineController(db).get_timeline(
+        service.get_timeline(
             client_id,
             requester=current_user,
             notes_limit=notes_limit,
@@ -182,11 +200,11 @@ def update_note(
     client_id: int,
     note_id: int,
     payload: ClientNoteUpdate,
-    db: Session = Depends(get_db),
+    service: ClientService = Depends(get_client_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ClientNoteRead]:
     return ok(
-        ClientController(db).update_note(
-            client_id, note_id, payload, current_user=current_user
+        ClientNoteRead.model_validate(
+            service.update_note(client_id, note_id, payload, current_user=current_user)
         )
     )

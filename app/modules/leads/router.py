@@ -1,15 +1,12 @@
 from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.modules.email.protocol import EmailService
-from app.modules.leads.controller import LeadController
+from app.modules.leads.deps import get_lead_service
 from app.modules.leads.model import LeadStatus
 from app.modules.leads.schema import LeadCreate, LeadRead, LeadUpdate
+from app.modules.leads.service import LeadService
 from app.modules.users.model import User
-from app.shared.auth_deps import require_admin
-from app.shared.email_deps import get_email_service
-from app.shared.responses import (
+from app.shared.deps.auth import require_admin
+from app.shared.http.responses import (
     PaginatedResponse,
     SuccessResponse,
     error_responses,
@@ -31,13 +28,18 @@ def read_leads(
     assigned_to: int | None = Query(None),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    service: LeadService = Depends(get_lead_service),
     _: User = Depends(require_admin),
 ) -> PaginatedResponse[LeadRead]:
-    items, total = LeadController(db).list_leads(
+    leads, total = service.list_leads(
         status=status, assigned_to=assigned_to, page=page, limit=limit
     )
-    return paginated(items, total=total, page=page, limit=limit)
+    return paginated(
+        [LeadRead.model_validate(lead) for lead in leads],
+        total=total,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.post(
@@ -48,9 +50,10 @@ def read_leads(
     summary="Cria um novo lead (público)",
 )
 def create_new_lead(
-    payload: LeadCreate, db: Session = Depends(get_db)
+    payload: LeadCreate,
+    service: LeadService = Depends(get_lead_service),
 ) -> SuccessResponse[LeadRead]:
-    return ok(LeadController(db).create_lead(payload))
+    return ok(LeadRead.model_validate(service.create_lead(payload)))
 
 
 @router.patch(
@@ -62,12 +65,11 @@ def create_new_lead(
 def update_lead(
     lead_id: int,
     payload: LeadUpdate,
-    db: Session = Depends(get_db),
-    email: EmailService = Depends(get_email_service),
+    service: LeadService = Depends(get_lead_service),
     current_user: User = Depends(require_admin),
 ) -> SuccessResponse[LeadRead]:
     return ok(
-        LeadController(db, email).update_lead(
-            lead_id, payload, current_user=current_user
+        LeadRead.model_validate(
+            service.update_lead(lead_id, payload, current_user=current_user)
         )
     )

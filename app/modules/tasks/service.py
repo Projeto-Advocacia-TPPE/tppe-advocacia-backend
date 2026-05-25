@@ -7,15 +7,18 @@ from app.modules.tasks.repository import TaskRepository
 from app.modules.tasks.schema import TaskCreate, TaskMove, TaskUpdate
 from app.modules.users.model import User
 from app.modules.users.repository import UserRepository
+from app.shared.db.uow import unit_of_work
 from app.shared.exceptions import (
     AssigneeNotFoundError,
-    ForbiddenError,
     TaskClientNotFoundError,
     TaskNotFoundError,
     TaskProcessNotFoundError,
 )
-from app.shared.types import Role
-from app.shared.uow import unit_of_work
+from app.shared.service.helpers import (
+    assert_author_or_admin,
+    ensure_exists,
+    get_or_raise,
+)
 
 
 class TaskService:
@@ -58,10 +61,9 @@ class TaskService:
         return task
 
     def get_task(self, task_id: int) -> Task:
-        task = self.repository.get_by_id(task_id)
-        if task is None:
-            raise TaskNotFoundError()
-        return task
+        return get_or_raise(
+            lambda: self.repository.get_by_id(task_id), TaskNotFoundError
+        )
 
     def list_tasks(self, **filters) -> tuple[list[Task], int]:
         return self.repository.list(**filters)
@@ -119,8 +121,7 @@ class TaskService:
 
     def delete_task(self, task_id: int, current_user: User) -> None:
         task = self.get_task(task_id)
-        if current_user.role != Role.ADMIN and task.created_by != current_user.id:
-            raise ForbiddenError()
+        assert_author_or_admin(current_user, task.created_by)
         with unit_of_work(self.repository.db):
             self.repository.delete(task)
 
@@ -130,12 +131,9 @@ class TaskService:
         client_id: int | None,
         process_id: int | None,
     ) -> None:
-        if assigned_to is not None and self.users.get_by_id(assigned_to) is None:
-            raise AssigneeNotFoundError()
-        if client_id is not None and self.clients.get_by_id(client_id) is None:
-            raise TaskClientNotFoundError()
-        if process_id is not None and self.processes.get_by_id(process_id) is None:
-            raise TaskProcessNotFoundError()
+        ensure_exists(self.users.get_by_id, assigned_to, AssigneeNotFoundError)
+        ensure_exists(self.clients.get_by_id, client_id, TaskClientNotFoundError)
+        ensure_exists(self.processes.get_by_id, process_id, TaskProcessNotFoundError)
 
     def _notify_assignee(self, task: Task, actor_id: int | None) -> None:
         if task.assigned_to is None or task.assigned_to == actor_id:

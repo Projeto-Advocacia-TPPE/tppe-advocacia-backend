@@ -1,16 +1,15 @@
 from fastapi import APIRouter, Depends, Query, Response, status
-from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.modules.forensic_holidays.controller import ForensicHolidayController
+from app.modules.forensic_holidays.deps import get_forensic_holiday_service
 from app.modules.forensic_holidays.schema import (
     HolidayCreate,
     HolidayRead,
     HolidayUpdate,
 )
+from app.modules.forensic_holidays.service import ForensicHolidayService
 from app.modules.users.model import User
-from app.shared.auth_deps import get_current_user, require_admin
-from app.shared.responses import (
+from app.shared.deps.auth import get_current_user, require_admin
+from app.shared.http.responses import (
     PaginatedResponse,
     SuccessResponse,
     error_responses,
@@ -33,13 +32,16 @@ def list_holidays(
     comarca: str | None = Query(None, max_length=120),
     page: int = Query(1, ge=1),
     limit: int = Query(100, ge=1, le=500),
-    db: Session = Depends(get_db),
+    service: ForensicHolidayService = Depends(get_forensic_holiday_service),
     _: User = Depends(get_current_user),
 ) -> PaginatedResponse[HolidayRead]:
-    items, total = ForensicHolidayController(db).list(
-        year=year, court=court, comarca=comarca, page=page, limit=limit
+    items, total = service.list(year, court, comarca, page=page, limit=limit)
+    return paginated(
+        [HolidayRead.model_validate(h) for h in items],
+        total=total,
+        page=page,
+        limit=limit,
     )
-    return paginated(items, total=total, page=page, limit=limit)
 
 
 @router.post(
@@ -51,10 +53,10 @@ def list_holidays(
 )
 def create_holiday(
     payload: HolidayCreate,
-    db: Session = Depends(get_db),
+    service: ForensicHolidayService = Depends(get_forensic_holiday_service),
     _: User = Depends(require_admin),
 ) -> SuccessResponse[HolidayRead]:
-    return ok(ForensicHolidayController(db).create(payload))
+    return ok(HolidayRead.model_validate(service.create(payload)))
 
 
 @router.patch(
@@ -66,10 +68,10 @@ def create_holiday(
 def update_holiday(
     holiday_id: int,
     payload: HolidayUpdate,
-    db: Session = Depends(get_db),
+    service: ForensicHolidayService = Depends(get_forensic_holiday_service),
     _: User = Depends(require_admin),
 ) -> SuccessResponse[HolidayRead]:
-    return ok(ForensicHolidayController(db).update(holiday_id, payload))
+    return ok(HolidayRead.model_validate(service.update(holiday_id, payload)))
 
 
 @router.delete(
@@ -80,8 +82,8 @@ def update_holiday(
 )
 def delete_holiday(
     holiday_id: int,
-    db: Session = Depends(get_db),
+    service: ForensicHolidayService = Depends(get_forensic_holiday_service),
     _: User = Depends(require_admin),
 ) -> Response:
-    ForensicHolidayController(db).delete(holiday_id)
+    service.delete(holiday_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

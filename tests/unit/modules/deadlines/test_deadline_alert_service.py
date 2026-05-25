@@ -167,12 +167,3 @@ class TestDispatchAlerts:
 
         assert service.dispatch_alerts(today=TODAY) == 0
         alerts.create.assert_not_called()
-
-    def test_requires_alert_and_notification_deps(self, repo, holidays, processes):
-        bare = DeadlineService(
-            repository=repo,
-            holiday_repository=holidays,
-            process_repository=processes,
-        )
-        with pytest.raises(RuntimeError):
-            bare.dispatch_alerts(today=TODAY)

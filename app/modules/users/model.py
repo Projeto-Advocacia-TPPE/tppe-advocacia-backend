@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.shared.base_model import Base
+from app.shared.db.base_model import Base
 from app.shared.types import Role
 
 

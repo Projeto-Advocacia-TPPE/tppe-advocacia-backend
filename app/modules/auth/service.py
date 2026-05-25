@@ -14,13 +14,13 @@ from app.modules.auth.schema import (
 )
 from app.modules.email.protocol import EmailService
 from app.modules.users.repository import UserRepository
+from app.shared.db.uow import unit_of_work
 from app.shared.exceptions import (
     ExpiredResetTokenError,
     InactiveUserError,
     InvalidCredentialsError,
     InvalidResetTokenError,
 )
-from app.shared.uow import unit_of_work
 
 settings = get_settings()
 

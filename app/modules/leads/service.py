@@ -6,12 +6,13 @@ from app.modules.notifications.schema import EventType
 from app.modules.notifications.service import NotificationService
 from app.modules.users.model import User
 from app.modules.users.repository import UserRepository
+from app.shared.db.uow import unit_of_work
 from app.shared.exceptions import (
     AssigneeNotFoundError,
     LeadDuplicateError,
     LeadNotFoundError,
 )
-from app.shared.uow import unit_of_work
+from app.shared.service.helpers import ensure_exists, get_or_raise
 
 settings = get_settings()
 
@@ -39,12 +40,13 @@ class LeadService:
         )
 
     def get_lead(self, lead_id: int) -> Lead:
-        lead = self.repository.get_by_id(lead_id)
-        if lead is None:
-            raise LeadNotFoundError()
-        return lead
+        return get_or_raise(
+            lambda: self.repository.get_by_id(lead_id), LeadNotFoundError
+        )
 
     def create_lead(self, payload: LeadCreate) -> Lead:
+        # Dedup por janela de tempo: sem unique constraint no DB, o pre-check é
+        # intencional. TOCTOU improvável em formulário público; aceito no MVP.
         if self.repository.find_recent_by_email(
             payload.email, settings.lead_dedup_window_hours
         ):
@@ -62,14 +64,15 @@ class LeadService:
         self, lead_id: int, payload: LeadUpdate, current_user: User | None = None
     ) -> Lead:
         lead = self.get_lead(lead_id)
-        data = payload.model_dump(exclude_none=True)
+        data = payload.model_dump(exclude_unset=True)
         if not data:
             return lead
-        if (
-            "assigned_to" in data
-            and self.user_repository.get_by_id(data["assigned_to"]) is None
-        ):
-            raise AssigneeNotFoundError()
+        if "assigned_to" in data:
+            ensure_exists(
+                self.user_repository.get_by_id,
+                data["assigned_to"],
+                AssigneeNotFoundError,
+            )
 
         previous_assignee = lead.assigned_to
         with unit_of_work(self.repository.db):

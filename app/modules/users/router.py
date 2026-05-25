@@ -1,14 +1,11 @@
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.modules.email.protocol import EmailService
-from app.modules.users.controller import UserController
+from app.modules.users.deps import get_user_service
 from app.modules.users.model import User
 from app.modules.users.schema import UserCreate, UserRead, UserUpdate
-from app.shared.auth_deps import require_admin
-from app.shared.email_deps import get_email_service
-from app.shared.responses import (
+from app.modules.users.service import UserService
+from app.shared.deps.auth import require_admin
+from app.shared.http.responses import (
     PaginatedResponse,
     SuccessResponse,
     error_responses,
@@ -24,21 +21,25 @@ router = APIRouter(prefix="/users", tags=["Users"])
     "",
     response_model=PaginatedResponse[UserRead],
     responses=error_responses(401, 403),
-    summary="List users with filters and pagination",
+    summary="Lista usuários com filtros e paginação",
 )
 def list_users(
     role: Role | None = Query(None),
     is_active: bool | None = Query(None),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
-    email: EmailService = Depends(get_email_service),
+    service: UserService = Depends(get_user_service),
     _: User = Depends(require_admin),
 ) -> PaginatedResponse[UserRead]:
-    items, total = UserController(db, email).list_users(
+    items, total = service.list_users(
         role=role, is_active=is_active, page=page, limit=limit
     )
-    return paginated(items, total=total, page=page, limit=limit)
+    return paginated(
+        [UserRead.model_validate(u) for u in items],
+        total=total,
+        page=page,
+        limit=limit,
+    )
 
 
 @router.post(
@@ -46,45 +47,46 @@ def list_users(
     status_code=201,
     response_model=SuccessResponse[UserRead],
     responses=error_responses(401, 403, 409, 422),
-    summary="Create a new user",
+    summary="Cria um novo usuário",
 )
 def create_user(
     payload: UserCreate,
-    db: Session = Depends(get_db),
-    email: EmailService = Depends(get_email_service),
+    service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_admin),
 ) -> SuccessResponse[UserRead]:
-    return ok(UserController(db, email).create_user(payload, created_by=current_user))
+    return ok(
+        UserRead.model_validate(service.create_user(payload, created_by=current_user))
+    )
 
 
 @router.get(
     "/{user_id}",
     response_model=SuccessResponse[UserRead],
     responses=error_responses(401, 403, 404),
-    summary="Get a user by ID",
+    summary="Obtém um usuário por ID",
 )
 def get_user(
     user_id: int,
-    db: Session = Depends(get_db),
-    email: EmailService = Depends(get_email_service),
+    service: UserService = Depends(get_user_service),
     _: User = Depends(require_admin),
 ) -> SuccessResponse[UserRead]:
-    return ok(UserController(db, email).get_user(user_id))
+    return ok(UserRead.model_validate(service.get_user(user_id)))
 
 
 @router.patch(
     "/{user_id}",
     response_model=SuccessResponse[UserRead],
     responses=error_responses(401, 403, 404, 409, 422),
-    summary="Update user data, role, or status",
+    summary="Atualiza dados do usuário, papel ou status",
 )
 def update_user(
     user_id: int,
     payload: UserUpdate,
-    db: Session = Depends(get_db),
-    email: EmailService = Depends(get_email_service),
+    service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_admin),
 ) -> SuccessResponse[UserRead]:
     return ok(
-        UserController(db, email).update_user(user_id, payload, updated_by=current_user)
+        UserRead.model_validate(
+            service.update_user(user_id, payload, updated_by=current_user)
+        )
     )

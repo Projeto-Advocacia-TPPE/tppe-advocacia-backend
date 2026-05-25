@@ -11,8 +11,8 @@ from app.modules.google_calendar.fake_service import FakeGoogleCalendarClient
 from app.modules.tasks.model import Task
 from app.modules.users.model import User
 from app.modules.users.repository import UserRepository
-from app.shared.email_deps import get_email_service
-from app.shared.google_deps import get_google_calendar_client
+from app.shared.deps.email import get_email_service
+from app.shared.deps.google import get_google_calendar_client
 from app.shared.types import Role
 
 app.dependency_overrides[get_email_service] = lambda: FakeEmailService()

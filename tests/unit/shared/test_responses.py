@@ -1,4 +1,4 @@
-from app.shared.responses import paginated
+from app.shared.http.responses import paginated
 
 
 class TestPaginated:

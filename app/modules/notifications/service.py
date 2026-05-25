@@ -5,7 +5,7 @@ from app.modules.notifications.repository import NotificationPreferenceRepositor
 from app.modules.notifications.schema import EventType
 from app.modules.notifications.templates import TEMPLATES
 from app.modules.users.repository import UserRepository
-from app.shared.uow import unit_of_work
+from app.shared.db.uow import unit_of_work
 
 logger = logging.getLogger(__name__)
 

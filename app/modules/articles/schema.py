@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.modules.articles.model import ArticleStatus
 
@@ -33,6 +33,8 @@ class ArticleListItem(BaseModel):
 
 
 class ArticleRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     title: str
     content: str
@@ -45,4 +47,21 @@ class ArticleRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    @model_validator(mode="before")
+    @classmethod
+    def resolve_fields(cls, data: object) -> object:
+        if isinstance(data, dict):
+            return data
+        return {
+            "id": data.id,
+            "title": data.title,
+            "content": data.content,
+            "category": data.category,
+            "summary": data.summary,
+            "cover_image_url": data.cover_image_url,
+            "status": data.status,
+            "author_id": data.author_id,
+            "author_name": data.author.name if data.author else "",
+            "created_at": data.created_at,
+            "updated_at": data.updated_at,
+        }

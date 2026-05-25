@@ -1,17 +1,16 @@
 from fastapi import APIRouter, Depends, Query, Request
-from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.modules.articles.controller import ArticleController
+from app.modules.articles.deps import get_article_service
 from app.modules.articles.schema import (
     ArticleCreate,
     ArticleListItem,
     ArticleRead,
     ArticleUpdate,
 )
+from app.modules.articles.service import ArticleService
 from app.modules.users.model import User
-from app.shared.auth_deps import get_current_user
-from app.shared.responses import (
+from app.shared.deps.auth import get_current_user
+from app.shared.http.responses import (
     PaginatedResponse,
     SuccessResponse,
     error_responses,
@@ -27,89 +26,115 @@ router = APIRouter(prefix="/articles", tags=["Articles"])
     status_code=201,
     response_model=SuccessResponse[ArticleRead],
     responses=error_responses(401, 422),
-    summary="Create a new article",
+    summary="Cria um novo artigo",
 )
 def create_article(
     payload: ArticleCreate,
-    db: Session = Depends(get_db),
+    service: ArticleService = Depends(get_article_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[ArticleRead]:
-    return ok(ArticleController(db).create(payload, author=current_user))
+    return ok(ArticleRead.model_validate(service.create(payload, current_user)))
 
 
 @router.patch(
     "/{article_id}",
     response_model=SuccessResponse[ArticleRead],
     responses=error_responses(401, 404, 422),
-    summary="Update an article",
+    summary="Atualiza um artigo",
 )
 def update_article(
     article_id: int,
     payload: ArticleUpdate,
-    db: Session = Depends(get_db),
+    service: ArticleService = Depends(get_article_service),
     _: User = Depends(get_current_user),
 ) -> SuccessResponse[ArticleRead]:
-    return ok(ArticleController(db).update(article_id, payload))
+    return ok(ArticleRead.model_validate(service.update(article_id, payload)))
 
 
 @router.get(
     "/admin",
     response_model=PaginatedResponse[ArticleListItem],
     responses=error_responses(401),
-    summary="List all articles including drafts (authenticated)",
+    summary="Lista todos os artigos incluindo rascunhos (autenticado)",
 )
 def list_all_articles(
     request: Request,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    service: ArticleService = Depends(get_article_service),
     _: User = Depends(get_current_user),
 ) -> PaginatedResponse[ArticleListItem]:
-    items, total = ArticleController(db).list_all(
-        request=request, page=page, limit=limit
+    items, total = service.list_all(page=page, limit=limit)
+    return paginated(
+        [
+            ArticleListItem(
+                id=a.id,
+                title=a.title,
+                summary=a.summary,
+                status=a.status,
+                created_at=a.created_at,
+                url=str(request.url_for("preview_article", article_id=a.id)),
+            )
+            for a in items
+        ],
+        total=total,
+        page=page,
+        limit=limit,
     )
-    return paginated(items, total=total, page=page, limit=limit)
 
 
 @router.get(
     "/{article_id}/preview",
     response_model=SuccessResponse[ArticleRead],
     responses=error_responses(401, 404),
-    summary="Preview an article regardless of status",
+    summary="Visualiza um artigo independente do status",
 )
 def preview_article(
     article_id: int,
-    db: Session = Depends(get_db),
+    service: ArticleService = Depends(get_article_service),
     _: User = Depends(get_current_user),
 ) -> SuccessResponse[ArticleRead]:
-    return ok(ArticleController(db).get_preview(article_id))
+    return ok(ArticleRead.model_validate(service.get_preview(article_id)))
 
 
 @router.get(
     "/{article_id}",
     response_model=SuccessResponse[ArticleRead],
     responses=error_responses(404),
-    summary="Get a published article by ID",
+    summary="Obtém um artigo publicado por ID",
 )
 def get_article(
     article_id: int,
-    db: Session = Depends(get_db),
+    service: ArticleService = Depends(get_article_service),
 ) -> SuccessResponse[ArticleRead]:
-    return ok(ArticleController(db).get_by_id(article_id))
+    return ok(ArticleRead.model_validate(service.get_published_by_id(article_id)))
 
 
 @router.get(
     "",
     response_model=PaginatedResponse[ArticleListItem],
-    summary="List published articles",
+    summary="Lista artigos publicados",
 )
 def list_articles(
     request: Request,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    service: ArticleService = Depends(get_article_service),
 ) -> PaginatedResponse[ArticleListItem]:
-    items, total = ArticleController(db).list_published(
-        request=request, page=page, limit=limit
+    items, total = service.list_published(page=page, limit=limit)
+    return paginated(
+        [
+            ArticleListItem(
+                id=a.id,
+                title=a.title,
+                summary=a.summary,
+                status=a.status,
+                created_at=a.created_at,
+                url=str(request.url_for("get_article", article_id=a.id)),
+            )
+            for a in items
+        ],
+        total=total,
+        page=page,
+        limit=limit,
     )
-    return paginated(items, total=total, page=page, limit=limit)

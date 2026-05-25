@@ -10,21 +10,6 @@ from app.shared.exceptions import ArticleNotFoundError
 from app.shared.types import Role
 
 
-def make_request(base="http://testserver"):
-    request = MagicMock()
-
-    def url_for(name, **kwargs):
-        article_id = kwargs.get("article_id", "")
-        if name == "get_article":
-            return f"{base}/api/v1/articles/{article_id}"
-        if name == "preview_article":
-            return f"{base}/api/v1/articles/{article_id}/preview"
-        return ""
-
-    request.url_for.side_effect = url_for
-    return request
-
-
 def make_author(**kwargs):
     defaults = {"id": 1, "name": "Dr. Silva", "role": Role.USER}
     defaults.update(kwargs)
@@ -110,8 +95,9 @@ class TestCreate:
 
         assert repo.create.call_args.kwargs["author_id"] == 5
 
-    def test_author_name_in_result(self, service, repo):
-        repo.create.return_value = make_article()
+    def test_returns_orm_with_author_relationship(self, service, repo):
+        article = make_article()
+        repo.create.return_value = article
 
         result = service.create(
             ArticleCreate(
@@ -120,7 +106,8 @@ class TestCreate:
             author=make_author(name="Dr. Silva"),
         )
 
-        assert result.author_name == "Dr. Silva"
+        assert result is article
+        assert result.author.name == "Dr. Silva"
 
 
 class TestUpdate:
@@ -214,7 +201,7 @@ class TestListPublished:
     def test_returns_empty_list_when_none(self, service, repo):
         repo.get_published.return_value = ([], 0)
 
-        result, total = service.list_published(make_request())
+        result, total = service.list_published()
 
         assert result == []
         assert total == 0
@@ -228,37 +215,27 @@ class TestListPublished:
             2,
         )
 
-        result, total = service.list_published(make_request())
+        result, total = service.list_published()
 
         assert len(result) == 2
         assert total == 2
 
-    def test_url_points_to_article(self, service, repo):
-        repo.get_published.return_value = ([make_article(id=42)], 1)
+    def test_returns_orm_items(self, service, repo):
+        article = make_article(id=1, title="Título")
+        repo.get_published.return_value = ([article], 1)
 
-        result, _ = service.list_published(make_request())
+        result, _ = service.list_published()
 
-        assert result[0].url == "http://testserver/api/v1/articles/42"
-
-    def test_returns_list_item_fields(self, service, repo):
-        repo.get_published.return_value = ([make_article(id=1, title="Título")], 1)
-
-        result, _ = service.list_published(make_request())
-
-        item = result[0]
-        assert item.id == 1
-        assert item.title == "Título"
-        assert hasattr(item, "summary")
-        assert hasattr(item, "created_at")
-        assert hasattr(item, "url")
-        assert hasattr(item, "status")
+        assert result[0] is article
+        assert result[0].id == 1
+        assert result[0].title == "Título"
 
 
 class TestListAll:
     def test_returns_empty_list_when_none(self, service, repo):
         repo.get_all.return_value = ([], 0)
 
-        result, total = service.list_all(make_request())
+        result, total = service.list_all()
 
         assert result == []
         assert total == 0
@@ -272,24 +249,16 @@ class TestListAll:
             2,
         )
 
-        result, total = service.list_all(make_request())
+        result, total = service.list_all()
 
         assert len(result) == 2
         assert total == 2
 
-    def test_url_points_to_preview(self, service, repo):
-        repo.get_all.return_value = ([make_article(id=7)], 1)
+    def test_returns_orm_items(self, service, repo):
+        article = make_article(id=7, status=ArticleStatus.DRAFT)
+        repo.get_all.return_value = ([article], 1)
 
-        result, _ = service.list_all(make_request())
+        result, _ = service.list_all()
 
-        assert result[0].url == "http://testserver/api/v1/articles/7/preview"
-
-    def test_returns_status_in_list_item(self, service, repo):
-        repo.get_all.return_value = (
-            [make_article(id=1, status=ArticleStatus.DRAFT)],
-            1,
-        )
-
-        result, _ = service.list_all(make_request())
-
+        assert result[0] is article
         assert result[0].status == ArticleStatus.DRAFT

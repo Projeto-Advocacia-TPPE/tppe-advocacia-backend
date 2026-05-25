@@ -29,7 +29,7 @@ from app.modules.notifications.repository import (  # noqa: E402
 from app.modules.notifications.service import NotificationService  # noqa: E402
 from app.modules.processes.repository import ProcessRepository  # noqa: E402
 from app.modules.users.repository import UserRepository  # noqa: E402
-from app.shared.email_deps import get_email_service  # noqa: E402
+from app.shared.deps.email import get_email_service  # noqa: E402
 
 
 def _env_int(name: str, default: int | None = None) -> int | None:
@@ -108,11 +108,14 @@ def run_sync(
             users,
             email or get_email_service(),
         )
+        log_repository = ExternalApiLogRepository(db)
         service = DataJudService(
             ProcessRepository(db),
-            ExternalApiLogRepository(db),
+            log_repository,
             datajud_client or DataJudApiService(),
-            failure_notifier=ExternalApiFailureNotifier(users, notifications),
+            failure_notifier=ExternalApiFailureNotifier(
+                users, notifications, log_repository
+            ),
         )
         return service.sync_active_processes(
             DataJudBatchSyncRequest(tribunal_alias=tribunal_alias, limit=limit),

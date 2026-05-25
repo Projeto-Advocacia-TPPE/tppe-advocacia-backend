@@ -67,13 +67,15 @@ def dispatch_datajud_sync_job() -> None:
                 users,
                 ResendEmailService(),
             )
+            log_repository = ExternalApiLogRepository(db)
             service = DataJudService(
                 process_repository=ProcessRepository(db),
-                log_repository=ExternalApiLogRepository(db),
+                log_repository=log_repository,
                 datajud_client=DataJudApiService(),
                 failure_notifier=ExternalApiFailureNotifier(
                     users,
                     notification_service,
+                    log_repository,
                 ),
             )
             result = service.sync_active_processes(

@@ -4,12 +4,17 @@ from unittest.mock import MagicMock
 
 import bcrypt
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.modules.users.model import User
 from app.modules.users.schema import UserCreate, UserUpdate
 from app.modules.users.service import UserService
 from app.shared.exceptions import EmailAlreadyExistsError, UserNotFoundError
 from app.shared.types import Role
+
+
+def make_integrity_error() -> IntegrityError:
+    return IntegrityError("stmt", "params", Exception("unique constraint"))
 
 
 def make_user(**kwargs) -> User:
@@ -123,7 +128,7 @@ class TestGetUser:
 
 class TestCreateUser:
     def test_raises_when_email_already_exists(self, service, repo):
-        repo.email_exists.return_value = True
+        repo.create.side_effect = make_integrity_error()
 
         with pytest.raises(EmailAlreadyExistsError):
             service.create_user(
@@ -131,8 +136,8 @@ class TestCreateUser:
                 created_by=make_user(id=1),
             )
 
-    def test_does_not_call_repo_create_when_email_exists(self, service, repo):
-        repo.email_exists.return_value = True
+    def test_does_not_send_email_when_integrity_error(self, service, repo, email):
+        repo.create.side_effect = make_integrity_error()
 
         with pytest.raises(EmailAlreadyExistsError):
             service.create_user(
@@ -140,10 +145,9 @@ class TestCreateUser:
                 created_by=make_user(id=1),
             )
 
-        repo.create.assert_not_called()
+        assert email.sent == []
 
     def test_stores_hashed_password_not_plain_text(self, service, repo):
-        repo.email_exists.return_value = False
         repo.create.return_value = make_user()
 
         service.create_user(
@@ -154,7 +158,6 @@ class TestCreateUser:
         assert hashed.startswith("$2b$")
 
     def test_password_hash_is_valid_bcrypt(self, service, repo):
-        repo.email_exists.return_value = False
         repo.create.return_value = make_user()
 
         service.create_user(
@@ -166,7 +169,6 @@ class TestCreateUser:
         assert bcrypt.checkpw(b"any", hashed.encode()) is False
 
     def test_always_assigns_role_user(self, service, repo):
-        repo.email_exists.return_value = False
         repo.create.return_value = make_user()
 
         service.create_user(
@@ -176,7 +178,6 @@ class TestCreateUser:
         assert repo.create.call_args.kwargs["role"] == Role.USER
 
     def test_passes_name_and_email_to_repo(self, service, repo):
-        repo.email_exists.return_value = False
         repo.create.return_value = make_user()
 
         service.create_user(
@@ -188,7 +189,6 @@ class TestCreateUser:
         assert kwargs["email"] == "bob@test.com"
 
     def test_returns_user_read_on_success(self, service, repo):
-        repo.email_exists.return_value = False
         repo.create.return_value = make_user(
             id=10, name="Alice", email="alice@test.com"
         )
@@ -202,7 +202,6 @@ class TestCreateUser:
         assert result.email == "alice@test.com"
 
     def test_logs_user_created_after_user_creation(self, service, repo, audit):
-        repo.email_exists.return_value = False
         user = make_user(id=10)
         repo.create.return_value = user
         admin = make_user(id=1, name="Admin")
@@ -214,7 +213,7 @@ class TestCreateUser:
         audit.log_user_created.assert_called_once_with(user, admin)
 
     def test_does_not_log_when_email_already_exists(self, service, repo, audit):
-        repo.email_exists.return_value = True
+        repo.create.side_effect = make_integrity_error()
 
         with pytest.raises(EmailAlreadyExistsError):
             service.create_user(

@@ -22,17 +22,16 @@ from app.modules.processes.schema import (
     format_cnj,
 )
 from app.modules.users.model import User
+from app.shared.db.uow import unit_of_work
 from app.shared.exceptions import (
     ClientNotFoundError,
     ClientNotFoundForProcessError,
-    ForbiddenError,
     ProcessNoteNotFoundError,
     ProcessNotFoundError,
     ProcessNumberAlreadyExistsError,
     ProcessStatusUnchangedError,
 )
-from app.shared.types import Role
-from app.shared.uow import unit_of_work
+from app.shared.service.helpers import assert_author_or_admin, get_or_raise
 
 
 class ProcessService:
@@ -55,7 +54,7 @@ class ProcessService:
 
         try:
             with unit_of_work(self.repository.db):
-                process = self.repository.create_no_commit(
+                process = self.repository.create(
                     number=payload.number,
                     client_id=payload.client_id,
                     court=payload.court,
@@ -64,7 +63,7 @@ class ProcessService:
                     opposing_party=payload.opposing_party,
                     created_by=created_by.id,
                 )
-                initial_movement = self.repository.create_movement_no_commit(
+                initial_movement = self.repository.create_movement(
                     process_id=process.id,
                     title="Processo cadastrado",
                     description=None,
@@ -75,15 +74,13 @@ class ProcessService:
         except IntegrityError as exc:
             raise ProcessNumberAlreadyExistsError() from exc
 
-        refreshed = self.repository.reload_with_client(process.id)
-        self._notify_movement(refreshed, initial_movement, actor_id=created_by.id)
-        return refreshed
+        self._notify_movement(process, initial_movement, actor_id=created_by.id)
+        return process
 
     def get_process(self, process_id: int) -> Process:
-        process = self.repository.get_by_id(process_id)
-        if process is None:
-            raise ProcessNotFoundError()
-        return process
+        return get_or_raise(
+            lambda: self.repository.get_by_id(process_id), ProcessNotFoundError
+        )
 
     def list_processes(
         self,
@@ -162,10 +159,10 @@ class ProcessService:
 
         previous = process.status
         with unit_of_work(self.repository.db):
-            self.repository.update_status_no_commit(
+            refreshed = self.repository.update_status(
                 process, payload.status, current_user.id
             )
-            movement = self.repository.create_movement_no_commit(
+            movement = self.repository.create_movement(
                 process_id=process.id,
                 title=f"Status alterado: {previous.value} -> {payload.status.value}",
                 description=payload.reason,
@@ -174,8 +171,6 @@ class ProcessService:
                 created_by=current_user.id,
             )
 
-        refreshed = self.repository.reload_with_client(process.id)
-        reloaded_movement = self.repository.reload_movement(movement.id)
         self._notify_status_change(
             refreshed,
             actor_id=current_user.id,
@@ -183,7 +178,7 @@ class ProcessService:
             new_status=payload.status,
             reason=payload.reason,
         )
-        return refreshed, reloaded_movement
+        return refreshed, movement
 
     def create_note(
         self,
@@ -216,13 +211,14 @@ class ProcessService:
         current_user: User,
     ) -> ProcessNote:
         self.get_process(process_id)
-        note = self.repository.get_note_by_id(note_id=note_id, process_id=process_id)
+        note = get_or_raise(
+            lambda: self.repository.get_note_by_id(
+                note_id=note_id, process_id=process_id
+            ),
+            ProcessNoteNotFoundError,
+        )
 
-        if note is None:
-            raise ProcessNoteNotFoundError()
-
-        if note.created_by != current_user.id and current_user.role != Role.ADMIN:
-            raise ForbiddenError()
+        assert_author_or_admin(current_user, note.created_by)
 
         with unit_of_work(self.repository.db):
             updated = self.repository.update_note(

@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+from sqlalchemy.exc import IntegrityError
+
 from app.modules.audit_logs.service import AuditLogService
 from app.modules.clients.model import Client, ClientNote
 from app.modules.clients.repository import ClientRepository
@@ -11,46 +13,53 @@ from app.modules.clients.schema import (
 )
 from app.modules.processes.repository import ProcessRepository
 from app.modules.users.model import User
+from app.shared.db.uow import unit_of_work
 from app.shared.exceptions import (
+    AppException,
     ClientCnpjAlreadyExistsError,
     ClientCpfAlreadyExistsError,
     ClientHasActiveProcessesError,
     ClientNoteNotFoundError,
     ClientNotFoundError,
-    ForbiddenError,
 )
+from app.shared.service.helpers import assert_author_or_admin, get_or_raise
 from app.shared.types import Role
-from app.shared.uow import unit_of_work
+
+
+def _client_integrity_error(exc: IntegrityError) -> AppException:
+    name = getattr(getattr(exc.orig, "diag", None), "constraint_name", "") or ""
+    if "cpf" in name:
+        return ClientCpfAlreadyExistsError()
+    if "cnpj" in name:
+        return ClientCnpjAlreadyExistsError()
+    raise exc
 
 
 class ClientService:
     def __init__(
         self,
         repository: ClientRepository,
-        process_repository: ProcessRepository | None = None,
-        audit: AuditLogService | None = None,
+        process_repository: ProcessRepository,
+        audit: AuditLogService,
     ) -> None:
         self.repository = repository
         self.process_repository = process_repository
         self.audit = audit
 
     def create_client(self, payload: ClientCreate, created_by: User) -> Client:
-        if payload.cpf and self.repository.get_by_cpf(payload.cpf):
-            raise ClientCpfAlreadyExistsError()
-
-        if payload.cnpj and self.repository.get_by_cnpj(payload.cnpj):
-            raise ClientCnpjAlreadyExistsError()
-
-        with unit_of_work(self.repository.db):
-            client = self.repository.create(
-                name=payload.name,
-                email=payload.email,
-                phone=payload.phone,
-                cpf=payload.cpf,
-                cnpj=payload.cnpj,
-                address=payload.address,
-                created_by=created_by.id,
-            )
+        try:
+            with unit_of_work(self.repository.db):
+                client = self.repository.create(
+                    name=payload.name,
+                    email=payload.email,
+                    phone=payload.phone,
+                    cpf=payload.cpf,
+                    cnpj=payload.cnpj,
+                    address=payload.address,
+                    created_by=created_by.id,
+                )
+        except IntegrityError as exc:
+            raise _client_integrity_error(exc) from exc
         return client
 
     def get_client(self, client_id: int, requester: User | None = None) -> Client:
@@ -74,7 +83,7 @@ class ClientService:
         self, client_id: int, payload: ClientUpdate, updated_by: User
     ) -> Client:
         client = self.get_client(client_id)
-        data = payload.model_dump(exclude_none=True)
+        data = payload.model_dump(exclude_unset=True)
 
         if not data:
             return client
@@ -96,11 +105,6 @@ class ClientService:
         return updated
 
     def anonymize(self, client_id: int, performed_by: User) -> Client:
-        if self.process_repository is None or self.audit is None:
-            raise RuntimeError(
-                "ClientService.anonymize requires process_repository and audit"
-            )
-
         client = self.repository.get_by_id(client_id, include_deleted=False)
         if client is None:
             raise ClientNotFoundError()
@@ -113,7 +117,7 @@ class ClientService:
         now = datetime.now(timezone.utc)
 
         with unit_of_work(self.repository.db):
-            self.repository.anonymize_no_commit(client, anonymized_at=now)
+            self.repository.anonymize(client, anonymized_at=now)
             self.audit.log_client_anonymized(
                 client_id=client.id,
                 client_name=original_name,
@@ -151,13 +155,14 @@ class ClientService:
         current_user: User,
     ) -> ClientNote:
         self.get_client(client_id)
-        note = self.repository.get_note_by_id(note_id=note_id, client_id=client_id)
+        note = get_or_raise(
+            lambda: self.repository.get_note_by_id(
+                note_id=note_id, client_id=client_id
+            ),
+            ClientNoteNotFoundError,
+        )
 
-        if note is None:
-            raise ClientNoteNotFoundError()
-
-        if note.created_by != current_user.id and current_user.role != Role.ADMIN:
-            raise ForbiddenError()
+        assert_author_or_admin(current_user, note.created_by)
 
         with unit_of_work(self.repository.db):
             updated = self.repository.update_note(

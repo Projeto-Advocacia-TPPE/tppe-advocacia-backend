@@ -159,7 +159,7 @@ class ClientRepository:
             ).all()
         )
 
-    def anonymize_no_commit(
+    def anonymize(
         self,
         client: Client,
         anonymized_at: datetime,

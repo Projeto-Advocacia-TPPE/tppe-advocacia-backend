@@ -6,7 +6,7 @@ from sqlalchemy import Date, DateTime, Index, String, UniqueConstraint, func
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.shared.base_model import Base
+from app.shared.db.base_model import Base
 
 
 class HolidayScope(str, Enum):

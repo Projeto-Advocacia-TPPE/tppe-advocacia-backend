@@ -1,18 +1,17 @@
+from app.modules.office_config.model import OfficeConfig
 from app.modules.office_config.repository import OfficeConfigRepository
-from app.modules.office_config.schema import OfficeConfigRead, OfficeConfigUpdate
-from app.shared.uow import unit_of_work
+from app.modules.office_config.schema import OfficeConfigUpdate
+from app.shared.db.uow import unit_of_work
 
 
 class OfficeConfigService:
     def __init__(self, repository: OfficeConfigRepository) -> None:
         self.repository = repository
 
-    def get(self) -> OfficeConfigRead:
-        config = self.repository.get_config()
-        return OfficeConfigRead.model_validate(config)
+    def get(self) -> OfficeConfig:
+        return self.repository.get_config()
 
-    def update(self, payload: OfficeConfigUpdate) -> OfficeConfigRead:
-        data = payload.model_dump(exclude_none=True)
+    def update(self, payload: OfficeConfigUpdate) -> OfficeConfig:
+        data = payload.model_dump(exclude_unset=True)
         with unit_of_work(self.repository.db):
-            config = self.repository.update_config(data)
-        return OfficeConfigRead.model_validate(config)
+            return self.repository.update_config(data)

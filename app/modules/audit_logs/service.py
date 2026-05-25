@@ -1,10 +1,9 @@
 from datetime import datetime
 
-from app.modules.audit_logs.model import AuditAction
+from app.modules.audit_logs.model import AuditAction, AuditLog
 from app.modules.audit_logs.repository import AuditLogRepository
-from app.modules.audit_logs.schema import AuditLogRead
 from app.modules.users.model import User
-from app.shared.uow import unit_of_work
+from app.shared.db.uow import unit_of_work
 
 
 class AuditLogService:
@@ -56,8 +55,7 @@ class AuditLogService:
         date_to: datetime | None,
         page: int,
         limit: int,
-    ) -> tuple[list[AuditLogRead], int]:
-        logs, total = self.repository.get_all(
+    ) -> tuple[list[AuditLog], int]:
+        return self.repository.get_all(
             action=action, date_from=date_from, date_to=date_to, page=page, limit=limit
         )
-        return [AuditLogRead.model_validate(log) for log in logs], total

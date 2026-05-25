@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, Query, Response, status
-from sqlalchemy.orm import Session
 
-from app.db.database import get_db
-from app.modules.deadlines.controller import DeadlineController
+from app.modules.deadlines.deps import get_deadline_service
 from app.modules.deadlines.schema import (
+    DeadlineAlertKind,
     DeadlineAlertRead,
     DeadlineCalculateRequest,
     DeadlineCalculateResponse,
@@ -11,9 +10,10 @@ from app.modules.deadlines.schema import (
     DeadlineRead,
     DeadlineUpdate,
 )
+from app.modules.deadlines.service import EXPIRED_DAYS_BEFORE, DeadlineService
 from app.modules.users.model import User
-from app.shared.auth_deps import get_current_user
-from app.shared.responses import (
+from app.shared.deps.auth import get_current_user
+from app.shared.http.responses import (
     PaginatedResponse,
     SuccessResponse,
     error_responses,
@@ -32,10 +32,25 @@ router = APIRouter(tags=["Deadlines"])
 )
 def calculate_deadline(
     payload: DeadlineCalculateRequest,
-    db: Session = Depends(get_db),
+    service: DeadlineService = Depends(get_deadline_service),
     _: User = Depends(get_current_user),
 ) -> SuccessResponse[DeadlineCalculateResponse]:
-    return ok(DeadlineController(db).calculate(payload))
+    due_date, skipped = service.calculate_due_date(
+        start_date=payload.start_date,
+        business_days=payload.business_days,
+        court=payload.court,
+        comarca=payload.comarca,
+    )
+    return ok(
+        DeadlineCalculateResponse(
+            start_date=payload.start_date,
+            business_days=payload.business_days,
+            due_date=due_date,
+            court=payload.court,
+            comarca=payload.comarca,
+            skipped_days=skipped,
+        )
+    )
 
 
 @router.post(
@@ -48,14 +63,13 @@ def calculate_deadline(
 def create_deadline(
     process_id: int,
     payload: DeadlineCreate,
-    db: Session = Depends(get_db),
+    service: DeadlineService = Depends(get_deadline_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[DeadlineRead]:
-    return ok(
-        DeadlineController(db).create_for_process(
-            process_id, payload, current_user=current_user
-        )
+    deadline = service.create_for_process(
+        process_id, payload, created_by_id=current_user.id
     )
+    return ok(DeadlineRead.model_validate(deadline))
 
 
 @router.get(
@@ -68,13 +82,16 @@ def list_deadlines(
     process_id: int,
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db),
+    service: DeadlineService = Depends(get_deadline_service),
     _: User = Depends(get_current_user),
 ) -> PaginatedResponse[DeadlineRead]:
-    items, total = DeadlineController(db).list_by_process(
-        process_id, page=page, limit=limit
+    items, total = service.list_by_process(process_id, page=page, limit=limit)
+    return paginated(
+        [DeadlineRead.model_validate(d) for d in items],
+        total=total,
+        page=page,
+        limit=limit,
     )
-    return paginated(items, total=total, page=page, limit=limit)
 
 
 @router.patch(
@@ -86,10 +103,10 @@ def list_deadlines(
 def update_deadline(
     deadline_id: int,
     payload: DeadlineUpdate,
-    db: Session = Depends(get_db),
+    service: DeadlineService = Depends(get_deadline_service),
     _: User = Depends(get_current_user),
 ) -> SuccessResponse[DeadlineRead]:
-    return ok(DeadlineController(db).update(deadline_id, payload))
+    return ok(DeadlineRead.model_validate(service.update(deadline_id, payload)))
 
 
 @router.delete(
@@ -100,10 +117,10 @@ def update_deadline(
 )
 def delete_deadline(
     deadline_id: int,
-    db: Session = Depends(get_db),
+    service: DeadlineService = Depends(get_deadline_service),
     _: User = Depends(get_current_user),
 ) -> Response:
-    DeadlineController(db).delete(deadline_id)
+    service.delete(deadline_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -116,7 +133,23 @@ def delete_deadline(
 def list_deadline_alerts(
     process_id: int,
     deadline_id: int,
-    db: Session = Depends(get_db),
+    service: DeadlineService = Depends(get_deadline_service),
     current_user: User = Depends(get_current_user),
 ) -> SuccessResponse[list[DeadlineAlertRead]]:
-    return ok(DeadlineController(db).list_alerts(process_id, deadline_id, current_user))
+    alerts = service.list_alerts(process_id, deadline_id, current_user)
+    return ok(
+        [
+            DeadlineAlertRead(
+                id=a.id,
+                deadline_id=a.deadline_id,
+                days_before=a.days_before,
+                kind=(
+                    DeadlineAlertKind.EXPIRED
+                    if a.days_before == EXPIRED_DAYS_BEFORE
+                    else DeadlineAlertKind.APPROACHING
+                ),
+                sent_at=a.sent_at,
+            )
+            for a in alerts
+        ]
+    )

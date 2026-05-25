@@ -165,8 +165,8 @@ class TestAtomicStatusChange:
         repo = ProcessRepository(db)
         process = make_process(repo, client_fixture, "12345678920248262300")
 
-        repo.update_status_no_commit(process, ProcessStatus.SUSPENSO, updated_by=42)
-        movement = repo.create_movement_no_commit(
+        repo.update_status(process, ProcessStatus.SUSPENSO, updated_by=42)
+        movement = repo.create_movement(
             process_id=process.id,
             title="Status alterado: ATIVO -> SUSPENSO",
             description="motivo",
@@ -193,8 +193,8 @@ class TestAtomicStatusChange:
         process = make_process(repo, client_fixture, "12345678920248262301")
         db.commit()
 
-        repo.update_status_no_commit(process, ProcessStatus.SUSPENSO, updated_by=42)
-        repo.create_movement_no_commit(
+        repo.update_status(process, ProcessStatus.SUSPENSO, updated_by=42)
+        repo.create_movement(
             process_id=process.id,
             title="should be discarded",
             occurred_at=datetime.now(timezone.utc),
