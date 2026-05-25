@@ -17,10 +17,20 @@ app/
 │   ├── scheduler.py               # setup/start/shutdown do BackgroundScheduler
 │   └── jobs.py                    # deadline alerts + DataJud sync jobs
 ├── shared/                        # código transversal entre módulos
-│   ├── base_model.py              # DeclarativeBase do SQLAlchemy
+│   ├── db/
+│   │   ├── base_model.py          # DeclarativeBase do SQLAlchemy
+│   │   └── uow.py                 # unit_of_work para transações
+│   ├── deps/
+│   │   ├── auth.py                # dependências de autenticação (get_current_user, require_admin)
+│   │   ├── email.py               # injeção de EmailService
+│   │   └── google.py              # injeção de GoogleCalendarClient
+│   ├── http/
+│   │   └── responses.py           # envelope padrão de resposta da API
+│   ├── service/
+│   │   └── helpers.py             # utilitários compartilhados entre services
 │   ├── exceptions.py              # exceções customizadas (AppException e subclasses)
-│   ├── responses.py               # envelope padrão de resposta da API
-│   └── auth_deps.py               # dependências de autenticação (get_current_user, require_admin)
+│   ├── datajud.py                 # utilitários para integração DataJud
+│   └── types.py                   # tipos compartilhados e type aliases
 ├── modules/
 │   ├── users/                     # domínio de usuários
 │   │   ├── model.py               # ORM: User, Role
@@ -206,6 +216,7 @@ return ok(service.get_user(user_id))
 ```
 
 Exceções justificadas (transformações que não são mapeamento 1-para-1 de ORM):
+
 - `articles` — `_to_read()` agrega campos de relações joined
 - `clients.timeline_service` — monta feed heterogêneo de múltiplos tipos de evento
 - `datajud` — `DataJudSyncResponse` é sumário de operação de sync, não mapeamento de entidade
@@ -234,12 +245,32 @@ Schemas Pydantic que definem o formato esperado nas requisições e nas resposta
 
 ## `shared/` — Código transversal
 
-Código que pertence a nenhum módulo específico, mas é usado por vários:
+Código que pertence a nenhum módulo específico, mas é usado por vários, organizado por camada:
+
+### `shared/db/`
 
 - **`base_model.py`** — `DeclarativeBase` do SQLAlchemy; todos os models herdam daqui
-- **`exceptions.py`** — `AppException` e subclasses; lançadas nos services, convertidas pelo handler global
+- **`uow.py`** — `unit_of_work` para abrir e fechar transações
+
+### `shared/deps/`
+
+- **`auth.py`** — `get_current_user()` e `require_admin()`; dependências de autenticação injetadas via `Depends()` nas rotas
+- **`email.py`** — injeção de `EmailService` (real ou fake)
+- **`google.py`** — injeção de `GoogleCalendarClient` (real ou fake)
+
+### `shared/http/`
+
 - **`responses.py`** — `SuccessResponse[T]`, `PaginatedResponse[T]`, `ErrorResponse`; helpers `ok()`, `paginated()`, `error_responses()`
-- **`auth_deps.py`** — `get_current_user()` e `require_admin()`; injetados via `Depends()` nas rotas
+
+### `shared/service/`
+
+- **`helpers.py`** — funções utilitárias compartilhadas entre services
+
+### `shared/` (raiz)
+
+- **`exceptions.py`** — `AppException` e subclasses; lançadas nos services, convertidas pelo handler global
+- **`datajud.py`** — utilitários para integração com DataJud
+- **`types.py`** — tipos customizados e type aliases
 
 ---
 
@@ -314,18 +345,28 @@ Para documentar respostas de erro no Swagger, usar o helper `error_responses(*co
 O projeto usa o sistema nativo de DI do FastAPI via `Depends`. O padrão é:
 
 ```
-deps.py        →  get_X_service() constrói o grafo (Repository → Service)
-router.py      →  injeta o service via Depends(get_X_service)
-service.py     →  recebe dependências já construídas no __init__
-repository.py  →  único ponto que recebe Session
+deps.py (módulo)      →  get_X_service() constrói o grafo (Repository → Service)
+shared/deps/*.py      →  get_current_user(), require_admin(), get_email_service(), get_google_client()
+router.py (módulo)    →  injeta o service via Depends(get_X_service)
+service.py (módulo)   →  recebe dependências já construídas no __init__
+repository.py (módulo) →  único ponto que recebe Session
 ```
 
-### `deps.py` — construção do grafo
+### Dependências centralizadas em `shared/deps/`
 
-Cada módulo tem um `deps.py` com funções que montam o service com suas dependências e são registradas no FastAPI via `Depends`:
+- **`auth.py`** — autenticação e autorização
+- **`email.py`** — injeção de EmailService (real ou fake)
+- **`google.py`** — injeção de GoogleCalendarClient (real ou fake)
+
+### `deps.py` — construção do grafo por módulo
+
+Cada módulo tem um `deps.py` com funções que montam o service com suas dependências e são registradas no FastAPI via `Depends`. Dependências compartilhadas (como `EmailService`, autenticação) vêm de `shared/deps/`:
 
 ```python
 # users/deps.py
+from app.shared.deps.email import get_email_service
+from app.shared.deps.auth import get_current_user
+
 def get_user_service(
     db: Session = Depends(get_db),
     email: EmailService = Depends(get_email_service),
@@ -339,16 +380,18 @@ def get_user_service(
 
 ### `router.py` — injeção via Depends
 
-O router injeta o service como parâmetro da rota — FastAPI resolve o grafo automaticamente:
+O router injeta o service como parâmetro da rota — FastAPI resolve o grafo automaticamente. Dependências compartilhadas são importadas de `shared.deps`:
 
 ```python
 # users/router.py
+from app.shared.deps.auth import get_current_user, require_admin
+
 def create_user(
     payload: UserCreate,
     service: UserService = Depends(get_user_service),
     current_user: User = Depends(require_admin),
 ) -> SuccessResponse[UserRead]:
-    return ok(service.create_user(payload, created_by=current_user))
+    return ok(UserRead.model_validate(service.create_user(payload, created_by=current_user)))
 ```
 
 ### `service.py` — recebe dependências prontas
