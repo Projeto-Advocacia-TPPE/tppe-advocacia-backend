@@ -175,23 +175,66 @@ app/
 
 ```
 tests/
+├── conftest.py                     # fixture globais e setup de ambiente
+├── config/                         # testes de configuração
 ├── unit/
-│   ├── users/         test_user_service.py
-│   ├── auth/          test_auth_service.py
-│   ├── health/        test_health_controller.py
-│   ├── media/         test_media_service.py, test_local_storage.py
-│   ├── office_config/ test_office_config_service.py
-│   ├── audit_logs/    test_audit_log_service.py
-│   └── shared/        test_responses.py, test_auth_deps.py
+│   ├── modules/
+│   │   ├── users/                 test_user_service.py
+│   │   ├── leads/                 test_lead_service.py
+│   │   ├── auth/                  test_auth_service.py
+│   │   ├── health/                test_health_controller.py
+│   │   ├── media/                 test_media_service.py, test_local_storage.py
+│   │   ├── office_config/         test_office_config_service.py
+│   │   ├── audit_logs/            (testes de auditoria)
+│   │   ├── articles/              (testes de artigos)
+│   │   ├── clients/               (testes de clientes)
+│   │   ├── deadlines/             (testes de prazos)
+│   │   ├── appointments/          (testes de compromissos)
+│   │   ├── tasks/                 test_task_service.py
+│   │   ├── processes/             test_process_service.py, test_schema.py
+│   │   ├── notifications/         test_notification_service.py, test_templates.py
+│   │   ├── google_calendar/       test_google_calendar_service.py, test_token_cipher.py
+│   │   ├── datajud/               (testes de integração DataJud)
+│   │   └── forensic_holidays/     (testes de feriados forenses)
+│   ├── shared/                    test_responses.py, test_auth_deps.py
+│   ├── scheduler/                 test_deadline_alert_config.py
+│   └── scripts/                   test_sync_datajud_active_processes.py
 ├── integration/
-│   ├── users/         test_user_repository.py
-│   ├── office_config/ test_office_config_repository.py
+│   ├── modules/
+│   │   ├── users/                 test_user_repository.py
+│   │   ├── leads/                 test_lead_repository.py
+│   │   ├── office_config/         test_office_config_repository.py
+│   │   ├── tasks/                 test_task_repository.py
+│   │   ├── processes/             test_process_repository.py
+│   │   ├── clients/               (testes de repositório de clientes)
+│   │   ├── appointments/          (testes de repositório de compromissos)
+│   │   ├── articles/              (testes de repositório de artigos)
+│   │   ├── deadlines/             (testes de repositório de prazos)
+│   │   ├── notifications/         (testes de repositório de notificações)
+│   │   ├── audit_logs/            (testes de repositório de auditoria)
+│   │   ├── google_calendar/       (testes de repositório Google Calendar)
+│   │   ├── datajud/               (testes de repositório DataJud)
+│   │   └── forensic_holidays/     (testes de repositório de feriados)
 └── e2e/
-    ├── users/         test_users.py
-    ├── auth/          test_auth.py
-    ├── health/        test_health.py
-    ├── media/         test_media.py
-    └── office_config/ test_office_config.py
+    ├── conftest.py               # fixtures de e2e (cliente HTTP, BD de teste, etc)
+    └── modules/
+        ├── users/                 test_users.py
+        ├── leads/                 test_leads.py
+        ├── auth/                  test_auth.py
+        ├── health/                test_health.py
+        ├── media/                 test_media.py
+        ├── office_config/         test_office_config.py
+        ├── articles/              test_articles.py
+        ├── clients/               test_clients.py
+        ├── deadlines/             test_deadlines.py
+        ├── appointments/          test_appointments.py
+        ├── tasks/                 test_tasks.py
+        ├── processes/             test_processes.py
+        ├── notifications/         test_notifications.py
+        ├── audit_logs/            test_audit_logs.py
+        ├── google_calendar/       test_google_calendar.py
+        ├── datajud/               test_datajud.py
+        └── forensic_holidays/     test_forensic_holidays.py
 ```
 
 ---
@@ -438,14 +481,141 @@ app.dependency_overrides[get_media_service] = lambda: MediaService(FakeStoragePr
 
 ---
 
+## Testes
+
+O projeto organiza testes em três níveis:
+
+### Unit — `tests/unit/`
+
+Testes isolados de unidades (services, repositories, controllers). Usam **mocks** e **fakes** para dependências externas.
+
+**Scope:**
+
+- `service.py` — lógica de negócio; maior cobertura esperada
+- `model.py`, `schema.py` — validação de dados
+- `helpers.py` e `shared/` — utilitários
+
+**Exemplo:**
+
+```python
+# tests/unit/modules/users/test_user_service.py
+from unittest.mock import Mock
+from app.modules.users.service import UserService
+
+def test_create_user_success():
+    repo = Mock()
+    repo.get_by_email.return_value = None
+
+    service = UserService(repo)
+    result = service.create_user(UserCreate(email="test@example.com", password="..."))
+
+    assert result.email == "test@example.com"
+    repo.get_by_email.assert_called_once()
+```
+
+### Integration — `tests/integration/`
+
+Testes de **repository** contra banco de dados real (SQLite em memória). Validam queries e persistência.
+
+**Scope:**
+
+- `repository.py` — queries SQL, transações, constraints
+
+**Setup:** usa `conftest.py` com fixture `db` (Session com banco de teste)
+
+**Exemplo:**
+
+```python
+# tests/integration/modules/users/test_user_repository.py
+def test_user_repository_create(db: Session):
+    repo = UserRepository(db)
+    user = repo.create(User(email="test@example.com"))
+
+    fetched = repo.get_by_id(user.id)
+    assert fetched.email == "test@example.com"
+```
+
+### E2E — `tests/e2e/`
+
+Testes de fluxos completos via **cliente HTTP** contra aplicação real.
+
+**Scope:**
+
+- Rotas (`router.py`) com todas as camadas (auth, service, repository, DB)
+- Validação de schemas Pydantic e serialização
+- Autenticação e autorização
+
+**Setup:**
+
+- Fixture `client` (TestClient do FastAPI)
+- Banco de teste limpo antes de cada teste (`conftest.py` com `app.dependency_overrides`)
+
+**Exemplo:**
+
+```python
+# tests/e2e/modules/users/test_users.py
+def test_create_user_e2e(client: TestClient, admin_token: str):
+    response = client.post(
+        "/api/v1/users",
+        json={"email": "test@example.com", "password": "..."},
+        headers={"Authorization": f"Bearer {admin_token}"}
+    )
+
+    assert response.status_code == 201
+    assert response.json()["data"]["email"] == "test@example.com"
+```
+
+### `conftest.py` — Fixtures globais
+
+- `tests/conftest.py` — variáveis de ambiente, setup global
+- `tests/e2e/conftest.py` — cliente HTTP, aplicação com dependências overrideadas, BD de teste
+
+### Executar testes
+
+```bash
+# Todos os testes
+pytest
+
+# Apenas unit
+pytest tests/unit/
+
+# Apenas integration
+pytest tests/integration/
+
+# Apenas e2e
+pytest tests/e2e/
+
+# Um módulo específico
+pytest tests/unit/modules/users/
+
+# Com cobertura HTML
+pytest --cov=app --cov-report=html
+# Abre em: htmlcov/index.html
+
+# Verboso + saída detalhada
+pytest -vv -s
+
+# Parar no primeiro erro
+pytest -x
+
+# Apenas testes que passaram antes (usar depois de correção)
+pytest --lf
+```
+
+---
+
 ## Adicionando um novo módulo
 
 Para cada nova história de usuário que introduz um novo domínio (ex: `contracts`):
 
-1. Criar pasta `app/modules/contracts/`
-2. Criar os arquivos: `model.py`, `schema.py`, `repository.py`, `service.py`, `deps.py`, `router.py`
-3. Registrar o router em `app/api/router.py`
-4. Criar testes em `tests/unit/contracts/`, `tests/integration/contracts/`, `tests/e2e/contracts/`
+1. **Criar pasta** `app/modules/contracts/`
+2. **Criar arquivos de domínio:** `model.py`, `schema.py`, `repository.py`, `service.py`, `deps.py`, `router.py`
+3. **Registrar router** em `app/api/router.py`
+4. **Criar testes** em três níveis:
+   - `tests/unit/modules/contracts/` — testes do service (lógica de negócio)
+   - `tests/integration/modules/contracts/` — testes do repository (BD)
+   - `tests/e2e/modules/contracts/` — testes de fluxo HTTP (rotas)
+5. **Garantir cobertura mínima** de testes (verificar com `pytest --cov`)
 
 Zero toque em código de outros módulos.
 
