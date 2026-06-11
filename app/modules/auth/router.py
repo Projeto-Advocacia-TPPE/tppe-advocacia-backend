@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from app.modules.auth.deps import get_auth_service
 from app.modules.auth.schema import (
@@ -9,6 +9,7 @@ from app.modules.auth.schema import (
 )
 from app.modules.auth.service import AuthService
 from app.shared.http.responses import SuccessResponse, error_responses, ok
+from app.shared.limiter import limiter
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -19,7 +20,9 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
     responses=error_responses(401, 403, 422),
     summary="Autentica usuário e retorna JWT",
 )
+@limiter.limit("5/minute")
 def login(
+    request: Request,
     payload: LoginRequest,
     service: AuthService = Depends(get_auth_service),
 ) -> SuccessResponse[TokenResponse]:
@@ -32,7 +35,9 @@ def login(
     responses=error_responses(422),
     summary="Solicita email de redefinição de senha",
 )
+@limiter.limit("3/minute")
 def request_password_reset(
+    request: Request,
     payload: PasswordResetRequest,
     service: AuthService = Depends(get_auth_service),
 ) -> SuccessResponse[None]:
@@ -46,7 +51,9 @@ def request_password_reset(
     responses=error_responses(400, 422),
     summary="Confirma redefinição de senha com token",
 )
+@limiter.limit("5/minute")
 def confirm_password_reset(
+    request: Request,
     payload: PasswordResetConfirm,
     service: AuthService = Depends(get_auth_service),
 ) -> SuccessResponse[None]:
