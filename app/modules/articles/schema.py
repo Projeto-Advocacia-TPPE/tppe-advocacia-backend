@@ -30,8 +30,8 @@ class ArticleListItem(BaseModel):
     status: ArticleStatus
     created_at: datetime
     url: str
-    author_name: str        
-    category: str 
+    author_name: str
+    category: str
 
 
 class ArticleRead(BaseModel):

@@ -252,7 +252,10 @@ class TestListPublished:
         assert result[0].author.name == "Dr. Silva"
 
     def test_list_item_has_category(self, service, repo):
-        repo.get_published.return_value = ([make_article(id=1, category="Direito Civil")], 1)
+        repo.get_published.return_value = (
+            [make_article(id=1, category="Direito Civil")],
+            1,
+        )
 
         result, _ = service.list_published()
 
