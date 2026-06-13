@@ -252,6 +252,28 @@ class TestListPublished:
         assert hasattr(item, "created_at")
         assert hasattr(item, "url")
         assert hasattr(item, "status")
+        assert hasattr(item, "author_name")
+        assert hasattr(item, "category")
+
+    def test_list_item_has_author_name(self, service, repo):
+        repo.get_published.return_value = (
+            [make_article(id=1, author_id=1)],
+            1,
+        )
+
+        result, _ = service.list_published(make_request())
+
+        assert result[0].author_name == "Dr. Silva"
+
+    def test_list_item_has_category(self, service, repo):
+        repo.get_published.return_value = (
+            [make_article(id=1, category="Direito Civil")],
+            1,
+        )
+
+        result, _ = service.list_published(make_request())
+
+        assert result[0].category == "Direito Civil"
 
 
 class TestListAll:
@@ -293,3 +315,17 @@ class TestListAll:
         result, _ = service.list_all(make_request())
 
         assert result[0].status == ArticleStatus.DRAFT
+
+    def test_list_item_has_author_name(self, service, repo):
+        repo.get_all.return_value = ([make_article(id=1, author_id=1)], 1)
+
+        result, _ = service.list_all(make_request())
+
+        assert result[0].author_name == "Dr. Silva"
+
+    def test_list_item_has_category(self, service, repo):
+        repo.get_all.return_value = ([make_article(id=1, category="Trabalhista")], 1)
+
+        result, _ = service.list_all(make_request())
+
+        assert result[0].category == "Trabalhista"

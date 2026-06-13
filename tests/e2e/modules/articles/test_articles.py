@@ -259,6 +259,26 @@ class TestListArticles:
         assert len(matching) == 1
         assert matching[0]["status"] == "published"
 
+    def test_list_item_has_author_name_and_category(
+        self, client, active_user, db_session
+    ):
+        article = make_article(
+            db_session,
+            active_user["id"],
+            status=ArticleStatus.PUBLISHED,
+            title="Com Author",
+            category="Direito Civil",
+        )
+
+        response = client.get(BASE_URL)
+        db_session.execute(delete(Article).where(Article.id == article.id))
+        db_session.commit()
+
+        matching = [a for a in response.json()["data"] if a["title"] == "Com Author"]
+        assert len(matching) == 1
+        assert matching[0]["author_name"] is not None
+        assert matching[0]["category"] == "Direito Civil"
+
 
 class TestListAllArticles:
     def test_returns_200_with_token(self, client, user_headers):
@@ -298,6 +318,26 @@ class TestListAllArticles:
         db_session.commit()
 
         assert all("status" in item for item in response.json()["data"])
+
+    def test_list_item_has_author_name_and_category(
+        self, client, user_headers, active_user, db_session
+    ):
+        article = make_article(
+            db_session,
+            active_user["id"],
+            status=ArticleStatus.DRAFT,
+            title="Admin Author",
+            category="Trabalhista",
+        )
+
+        response = client.get(f"{BASE_URL}/admin", headers=user_headers)
+        db_session.execute(delete(Article).where(Article.id == article.id))
+        db_session.commit()
+
+        matching = [a for a in response.json()["data"] if a["title"] == "Admin Author"]
+        assert len(matching) == 1
+        assert matching[0]["author_name"] is not None
+        assert matching[0]["category"] == "Trabalhista"
 
 
 class TestCreateArticleValidation:
