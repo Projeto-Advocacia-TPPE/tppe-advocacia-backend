@@ -99,11 +99,3 @@ class ArticleService:
             created_at=article.created_at,
             updated_at=article.updated_at,
         )
-
-    @staticmethod
-    def delete(self, article_id: int) -> None:
-        article = self.repository.get_by_id(article_id)
-        if article is None:
-            raise ArticleNotFoundError()
-        with unit_of_work(self.repository.db):
-            self.repository.delete(article)
