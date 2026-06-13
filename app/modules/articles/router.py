@@ -74,6 +74,8 @@ def list_all_articles(
                 status=a.status,
                 created_at=a.created_at,
                 url=str(request.url_for("preview_article", article_id=a.id)),
+                author_name=a.author.name,
+                category=a.category,
             )
             for a in items
         ],
@@ -131,6 +133,8 @@ def list_articles(
                 status=a.status,
                 created_at=a.created_at,
                 url=str(request.url_for("get_article", article_id=a.id)),
+                author_name=a.author.name,
+                category=a.category,
             )
             for a in items
         ],

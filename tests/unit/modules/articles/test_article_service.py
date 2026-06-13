@@ -230,6 +230,34 @@ class TestListPublished:
         assert result[0].id == 1
         assert result[0].title == "Título"
 
+    def test_returns_list_item_fields(self, service, repo):
+        repo.get_published.return_value = ([make_article(id=1, title="Título")], 1)
+
+        result, _ = service.list_published()
+
+        item = result[0]
+        assert item.id == 1
+        assert item.title == "Título"
+        assert hasattr(item, "summary")
+        assert hasattr(item, "created_at")
+        assert hasattr(item, "status")
+        assert hasattr(item, "author_name")
+        assert hasattr(item, "category")
+
+    def test_list_item_has_author_name(self, service, repo):
+        repo.get_published.return_value = ([make_article(id=1, author_id=1)], 1)
+
+        result, _ = service.list_published()
+
+        assert result[0].author.name == "Dr. Silva"
+
+    def test_list_item_has_category(self, service, repo):
+        repo.get_published.return_value = ([make_article(id=1, category="Direito Civil")], 1)
+
+        result, _ = service.list_published()
+
+        assert result[0].category == "Direito Civil"
+
 
 class TestListAll:
     def test_returns_empty_list_when_none(self, service, repo):
@@ -262,3 +290,17 @@ class TestListAll:
 
         assert result[0] is article
         assert result[0].status == ArticleStatus.DRAFT
+
+    def test_list_item_has_author_name(self, service, repo):
+        repo.get_all.return_value = ([make_article(id=1, author_id=1)], 1)
+
+        result, _ = service.list_all()
+
+        assert result[0].author.name == "Dr. Silva"
+
+    def test_list_item_has_category(self, service, repo):
+        repo.get_all.return_value = ([make_article(id=1, category="Trabalhista")], 1)
+
+        result, _ = service.list_all()
+
+        assert result[0].category == "Trabalhista"
