@@ -1,0 +1,122 @@
+from unittest.mock import MagicMock
+
+import pytest
+
+from app.modules.office_config.model import OfficeConfig
+from app.modules.office_config.schema import (
+    ListItem,
+    OfficeConfigUpdate,
+)
+from app.modules.office_config.service import OfficeConfigService
+
+
+def make_config(**kwargs) -> OfficeConfig:
+    defaults = {
+        "id": 1,
+        "office_name": None,
+        "cnpj": None,
+        "address": None,
+        "phone": None,
+        "email": None,
+        "instagram_url": None,
+        "linkedin_url": None,
+        "whatsapp_url": None,
+        "hero_title": None,
+        "hero_subtitle": None,
+        "hero_image_url": None,
+        "about_title": None,
+        "about_description": None,
+        "about_image_url": None,
+        "lawyer_name": None,
+        "lawyer_oab": None,
+        "lawyer_description": None,
+        "lawyer_image_url": None,
+        "differentials": [],
+        "areas_of_practice": [],
+    }
+    defaults.update(kwargs)
+    config = MagicMock(spec=OfficeConfig)
+    for key, value in defaults.items():
+        setattr(config, key, value)
+    return config
+
+
+@pytest.fixture
+def repo():
+    return MagicMock()
+
+
+@pytest.fixture
+def service(repo):
+    svc = OfficeConfigService.__new__(OfficeConfigService)
+    svc.repository = repo
+    return svc
+
+
+class TestGet:
+    def test_returns_office_config_orm(self, service, repo):
+        config = make_config()
+        repo.get_config.return_value = config
+        assert service.get() is config
+
+    def test_maps_fields_correctly(self, service, repo):
+        repo.get_config.return_value = make_config(
+            office_name="Escritório X", cnpj="00.000.000/0001-00"
+        )
+        result = service.get()
+        assert result.office_name == "Escritório X"
+        assert result.cnpj == "00.000.000/0001-00"
+
+    def test_returns_raw_orm_values(self, service, repo):
+        repo.get_config.return_value = make_config(
+            differentials=None, areas_of_practice=None
+        )
+        result = service.get()
+        assert result.differentials is None
+        assert result.areas_of_practice is None
+
+
+class TestUpdate:
+    def test_calls_repository_with_set_fields_only(self, service, repo):
+        repo.update_config.return_value = make_config(office_name="Novo")
+        service.update(OfficeConfigUpdate(office_name="Novo"))
+        repo.update_config.assert_called_once_with({"office_name": "Novo"})
+
+    def test_excludes_unset_fields_from_update(self, service, repo):
+        repo.update_config.return_value = make_config()
+        service.update(OfficeConfigUpdate())
+        repo.update_config.assert_called_once_with({})
+
+    def test_includes_explicit_none_to_clear_field(self, service, repo):
+        repo.update_config.return_value = make_config()
+        service.update(OfficeConfigUpdate(office_name=None, hero_title=None))
+        repo.update_config.assert_called_once_with(
+            {"office_name": None, "hero_title": None}
+        )
+
+    def test_serializes_differentials_to_dicts(self, service, repo):
+        repo.update_config.return_value = make_config(
+            differentials=[{"title": "T", "description": "D"}]
+        )
+        service.update(
+            OfficeConfigUpdate(differentials=[ListItem(title="T", description="D")])
+        )
+        call_data = repo.update_config.call_args[0][0]
+        assert call_data["differentials"] == [{"title": "T", "description": "D"}]
+
+    def test_serializes_areas_of_practice_to_dicts(self, service, repo):
+        repo.update_config.return_value = make_config(
+            areas_of_practice=[{"title": "A", "description": "B"}]
+        )
+        service.update(
+            OfficeConfigUpdate(areas_of_practice=[ListItem(title="A", description="B")])
+        )
+        call_data = repo.update_config.call_args[0][0]
+        assert call_data["areas_of_practice"] == [{"title": "A", "description": "B"}]
+
+    def test_returns_office_config_orm(self, service, repo):
+        config = make_config(office_name="X")
+        repo.update_config.return_value = config
+        result = service.update(OfficeConfigUpdate(office_name="X"))
+        assert result is config
+        assert result.office_name == "X"

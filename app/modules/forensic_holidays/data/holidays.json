@@ -1,0 +1,25 @@
+{
+  "national_fixed": [
+    {"month": 1, "day": 1, "description": "Confraternização Universal"},
+    {"month": 4, "day": 21, "description": "Tiradentes"},
+    {"month": 5, "day": 1, "description": "Dia do Trabalho"},
+    {"month": 9, "day": 7, "description": "Independência do Brasil"},
+    {"month": 10, "day": 12, "description": "Nossa Senhora Aparecida"},
+    {"month": 11, "day": 2, "description": "Finados"},
+    {"month": 11, "day": 15, "description": "Proclamação da República"},
+    {"month": 11, "day": 20, "description": "Dia Nacional de Zumbi e da Consciência Negra"},
+    {"month": 12, "day": 25, "description": "Natal"}
+  ],
+  "court_TJDFT": [
+    {"month": 4, "day": 23, "description": "Aniversário de Brasília (TJDFT)"},
+    {"month": 11, "day": 30, "description": "Dia do Servidor da Justiça (TJDFT)"},
+    {"month": 12, "day": 8, "description": "Dia da Justiça (TJDFT)"}
+  ],
+  "recess": {
+    "description": "Recesso Forense (art. 220 CPC)",
+    "start_month": 12,
+    "start_day": 20,
+    "end_month": 1,
+    "end_day": 20
+  }
+}

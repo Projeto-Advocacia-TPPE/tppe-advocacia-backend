@@ -1,0 +1,250 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "dev", "feat/**"]
+  pull_request:
+    branches: ["main", "dev"]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-lint-${{ hashFiles('requirements-dev.txt') }}
+          restore-keys: pip-lint-
+
+      - name: Install ruff
+        run: pip install ruff==0.11.13
+
+      - name: Check formatting
+        run: ruff format --check .
+
+      - name: Lint
+        run: ruff check .
+
+  audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-audit-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
+          restore-keys: pip-audit-
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Audit dependencies
+        # PYSEC-2025-183/CVE-2025-45768 is disputed upstream; this app enforces
+        # strong JWT secrets in production settings.
+        run: pip-audit -r requirements.txt --ignore-vuln PYSEC-2025-183
+
+  sast:
+    name: SAST (Bandit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-sast-${{ hashFiles('requirements-dev.txt') }}
+          restore-keys: pip-sast-
+
+      - name: Install bandit
+        run: pip install bandit==1.9.4
+
+      - name: Run SAST
+        run: bandit -r app/ -ll
+
+  test-unit:
+    name: Unit Tests
+    needs: [lint]
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: test
+      APP_NAME: Advocacia API
+      APP_VERSION: 0.1.0
+      API_V1_PREFIX: /api/v1
+      FRONTEND_URL: http://localhost:5173
+      FRONTEND_URL_ALT: http://127.0.0.1:5173
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: advocacia_db
+      JWT_SECRET_KEY: test-secret-key-for-ci-minimum-32-bytes!!
+      JWT_EXPIRE_MINUTES: "60"
+      RESEND_API_KEY: test-resend-api-key-for-ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
+          restore-keys: pip-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run unit tests
+        run: pytest tests/unit -v --cov=app --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit
+          path: coverage.xml
+
+  test-integration:
+    name: Integration Tests
+    needs: [test-unit]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: advocacia_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      APP_ENV: test
+      APP_NAME: Advocacia API
+      APP_VERSION: 0.1.0
+      API_V1_PREFIX: /api/v1
+      FRONTEND_URL: http://localhost:5173
+      FRONTEND_URL_ALT: http://127.0.0.1:5173
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: advocacia_db
+      JWT_SECRET_KEY: test-secret-key-for-ci-minimum-32-bytes!!
+      JWT_EXPIRE_MINUTES: "60"
+      RESEND_API_KEY: test-resend-api-key-for-ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
+          restore-keys: pip-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run integration tests
+        run: pytest tests/integration -v --cov=app --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-integration
+          path: coverage.xml
+
+  test-e2e:
+    name: E2E Tests
+    needs: [test-integration]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: advocacia_db
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      APP_ENV: test
+      APP_NAME: Advocacia API
+      APP_VERSION: 0.1.0
+      API_V1_PREFIX: /api/v1
+      FRONTEND_URL: http://localhost:5173
+      FRONTEND_URL_ALT: http://127.0.0.1:5173
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: advocacia_db
+      JWT_SECRET_KEY: test-secret-key-for-ci-minimum-32-bytes!!
+      JWT_EXPIRE_MINUTES: "60"
+      RESEND_API_KEY: test-resend-api-key-for-ci-placeholder
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ hashFiles('requirements.txt', 'requirements-dev.txt') }}
+          restore-keys: pip-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run database migrations
+        run: alembic upgrade head
+
+      - name: Run e2e tests
+        run: pytest tests/e2e -v --cov=app --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-e2e
+          path: coverage.xml

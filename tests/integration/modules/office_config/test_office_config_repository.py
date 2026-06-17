@@ -1,0 +1,76 @@
+import pytest
+
+from app.modules.office_config.model import (
+    OfficeConfig,  # noqa: F401 — registers with Base
+)
+from app.modules.office_config.repository import OfficeConfigRepository
+
+
+@pytest.fixture(autouse=True)
+def seed_config(db):
+    db.add(OfficeConfig(id=1, differentials=[], areas_of_practice=[]))
+    db.commit()
+
+
+class TestGetConfig:
+    def test_returns_row_with_id_1(self, db):
+        config = OfficeConfigRepository(db).get_config()
+        assert config.id == 1
+
+    def test_string_fields_are_none_by_default(self, db):
+        config = OfficeConfigRepository(db).get_config()
+        assert config.office_name is None
+        assert config.hero_title is None
+        assert config.lawyer_name is None
+
+    def test_list_fields_are_empty_by_default(self, db):
+        config = OfficeConfigRepository(db).get_config()
+        assert config.differentials == []
+        assert config.areas_of_practice == []
+
+
+class TestUpdateConfig:
+    def test_patches_string_field(self, db):
+        result = OfficeConfigRepository(db).update_config(
+            {"office_name": "Test Office"}
+        )
+        assert result.office_name == "Test Office"
+
+    def test_untouched_fields_remain_none(self, db):
+        result = OfficeConfigRepository(db).update_config({"office_name": "X"})
+        assert result.cnpj is None
+        assert result.phone is None
+
+    def test_updates_differentials_json(self, db):
+        items = [
+            {"title": "T1", "description": "D1"},
+            {"title": "T2", "description": "D2"},
+        ]
+        result = OfficeConfigRepository(db).update_config({"differentials": items})
+        assert result.differentials == items
+
+    def test_updates_areas_of_practice_json(self, db):
+        items = [{"title": "A", "description": "B"}]
+        result = OfficeConfigRepository(db).update_config({"areas_of_practice": items})
+        assert result.areas_of_practice == items
+
+    def test_replaces_list_on_second_update(self, db):
+        repo = OfficeConfigRepository(db)
+        repo.update_config({"differentials": [{"title": "Old", "description": "X"}]})
+        result = repo.update_config(
+            {"differentials": [{"title": "New", "description": "Y"}]}
+        )
+        assert len(result.differentials) == 1
+        assert result.differentials[0]["title"] == "New"
+
+    def test_multiple_fields_updated_at_once(self, db):
+        result = OfficeConfigRepository(db).update_config(
+            {
+                "office_name": "Firm",
+                "cnpj": "12.345.678/0001-99",
+                "phone": "61 9999-0000",
+            }
+        )
+        assert result.office_name == "Firm"
+        assert result.cnpj == "12.345.678/0001-99"
+        assert result.phone == "61 9999-0000"

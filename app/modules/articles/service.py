@@ -1,0 +1,51 @@
+from app.modules.articles.model import Article, ArticleStatus
+from app.modules.articles.repository import ArticleRepository
+from app.modules.articles.schema import ArticleCreate, ArticleUpdate
+from app.modules.users.model import User
+from app.shared.db.uow import unit_of_work
+from app.shared.exceptions import ArticleNotFoundError
+from app.shared.service.helpers import get_or_raise
+
+
+class ArticleService:
+    def __init__(self, repository: ArticleRepository) -> None:
+        self.repository = repository
+
+    def create(self, payload: ArticleCreate, author: User) -> Article:
+        with unit_of_work(self.repository.db):
+            return self.repository.create(
+                title=payload.title,
+                content=payload.content,
+                category=payload.category,
+                author_id=author.id,
+                cover_image_url=payload.cover_image_url,
+                status=payload.status,
+                summary=payload.summary,
+            )
+
+    def update(self, article_id: int, payload: ArticleUpdate) -> Article:
+        article = get_or_raise(
+            lambda: self.repository.get_by_id(article_id), ArticleNotFoundError
+        )
+        data = payload.model_dump(exclude_unset=True)
+        with unit_of_work(self.repository.db):
+            return self.repository.update(article, data)
+
+    def get_published_by_id(self, article_id: int) -> Article:
+        article = self.repository.get_by_id(article_id)
+        if article is None or article.status != ArticleStatus.PUBLISHED:
+            raise ArticleNotFoundError()
+        return article
+
+    def get_preview(self, article_id: int) -> Article:
+        return get_or_raise(
+            lambda: self.repository.get_by_id(article_id), ArticleNotFoundError
+        )
+
+    def list_published(
+        self, page: int = 1, limit: int = 20
+    ) -> tuple[list[Article], int]:
+        return self.repository.get_published(page=page, limit=limit)
+
+    def list_all(self, page: int = 1, limit: int = 20) -> tuple[list[Article], int]:
+        return self.repository.get_all(page=page, limit=limit)
