@@ -42,4 +42,5 @@ class Lead(Base):
         nullable=False,
     )
 
+    # TODO: consent_given field, se for relevante para o MVP. Pode ser bool ou datetime do consentimento.
     # TODO: add updated_by field to track which user last updated

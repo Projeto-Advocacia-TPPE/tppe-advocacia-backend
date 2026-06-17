@@ -22,6 +22,8 @@ from app.shared.http.responses import (
 
 router = APIRouter(prefix="/appointments", tags=["Appointments"])
 
+# TODO: endpoint para listar todos os compromissos do mesmo que o usuário, para exibir no calendário.
+
 
 @router.post(
     "",

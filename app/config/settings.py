@@ -99,8 +99,6 @@ class Settings(BaseSettings):
         validation_alias="DEADLINE_ALERT_INTERVALS",
     )
 
-    database_url_heroku: str | None = Field(None, validation_alias="DATABASE_URL")
-
     google_client_id: str = Field("", validation_alias="GOOGLE_CLIENT_ID")
     google_client_secret: str = Field("", validation_alias="GOOGLE_CLIENT_SECRET")
     google_redirect_uri: str = Field(
@@ -159,11 +157,6 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        if self.database_url_heroku:
-            # Heroku provides postgres:// — psycopg3 requires postgresql+psycopg://
-            return self.database_url_heroku.replace(
-                "postgres://", "postgresql+psycopg://", 1
-            )
         return (
             "postgresql+psycopg://"
             f"{self.postgres_user}:{self.postgres_password}"

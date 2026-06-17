@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 
 from app.modules.leads.deps import get_lead_service
 from app.modules.leads.model import LeadStatus
@@ -13,6 +13,7 @@ from app.shared.http.responses import (
     ok,
     paginated,
 )
+from app.shared.limiter import limiter
 
 router = APIRouter(prefix="/leads", tags=["Leads"])
 
@@ -49,7 +50,9 @@ def read_leads(
     responses=error_responses(409, 422),
     summary="Cria um novo lead (público)",
 )
+@limiter.limit("5/minute")
 def create_new_lead(
+    request: Request,
     payload: LeadCreate,
     service: LeadService = Depends(get_lead_service),
 ) -> SuccessResponse[LeadRead]:

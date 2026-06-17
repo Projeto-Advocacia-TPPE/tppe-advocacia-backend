@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -44,6 +45,8 @@ app = FastAPI(
 if _is_prod:
     app.add_middleware(HTTPSRedirectMiddleware)
 
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
@@ -56,6 +59,25 @@ app.add_middleware(
 )
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
+
+
+_SECURITY_HEADERS = {
+    "X-Frame-Options": "DENY",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+}
+_HSTS_HEADER = "max-age=31536000; includeSubDomains"
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next: object) -> Response:
+    response: Response = await call_next(request)  # type: ignore[operator]
+    for header, value in _SECURITY_HEADERS.items():
+        response.headers[header] = value
+    if _is_prod:
+        response.headers["Strict-Transport-Security"] = _HSTS_HEADER
+    return response
 
 
 @app.exception_handler(AppException)
