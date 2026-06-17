@@ -4,7 +4,6 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.config.settings import get_settings
-from app.shared.db.base_model import Base
 
 settings = get_settings()
 
@@ -34,29 +33,11 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
-    from app.modules.appointments.model import Appointment  # noqa: F401
-    from app.modules.articles.model import Article  # noqa: F401
-    from app.modules.audit_logs.model import AuditLog  # noqa: F401
-    from app.modules.clients.model import Client, ClientNote  # noqa: F401
-    from app.modules.deadlines.model import (  # noqa: F401
-        Deadline,
-        DeadlineAlert,
-    )
-    from app.modules.external_api_logs.model import ExternalApiLog  # noqa: F401
-    from app.modules.forensic_holidays.model import ForensicHoliday  # noqa: F401
-    from app.modules.google_calendar.model import GoogleCredential  # noqa: F401
-    from app.modules.leads.model import Lead  # noqa: F401
-    from app.modules.notifications.model import NotificationPreference  # noqa: F401
-    from app.modules.office_config.model import OfficeConfig  # noqa: F401
-    from app.modules.processes.model import Process  # noqa: F401
-    from app.modules.tasks.model import Task  # noqa: F401
-    from app.modules.users.model import User  # noqa: F401
+    from sqlalchemy import select
 
-    Base.metadata.create_all(bind=engine)
+    from app.modules.office_config.model import OfficeConfig
 
     with SessionLocal() as db:
-        from sqlalchemy import select
-
         existing = db.scalars(select(OfficeConfig).where(OfficeConfig.id == 1)).first()
         if existing is None:
             db.add(OfficeConfig(id=1, differentials=[], areas_of_practice=[]))

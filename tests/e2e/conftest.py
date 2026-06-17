@@ -33,7 +33,16 @@ def require_database():
             conn.execute(text("SELECT 1"))
         engine.dispose()
     except Exception:
-        pytest.skip("PostgreSQL unavailable — run: docker-compose up -d")
+        pytest.skip("PostgreSQL unavailable — run: docker-compose up -d db")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def run_migrations(require_database):
+    from alembic import command
+    from alembic.config import Config
+
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, "head")
 
 
 @pytest.fixture(scope="session")

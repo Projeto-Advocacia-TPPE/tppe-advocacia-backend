@@ -21,6 +21,8 @@ services:
   api:
     build: .
     restart: unless-stopped
+    command: >
+      sh -c "alembic upgrade head && gunicorn app.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --timeout 120 --log-level info"
     env_file:
       - .env
     environment:
