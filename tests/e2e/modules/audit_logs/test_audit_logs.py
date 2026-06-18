@@ -141,7 +141,7 @@ class TestAuditLogIntegration:
 
         assert all(log["action"] == "USER_CREATED" for log in response.json()["data"])
 
-    def test_updating_name_does_not_generate_audit_log(
+    def test_updating_name_generates_user_updated_log(
         self, client, admin_headers, created_user_with_audit, db_session
     ):
         user_id = created_user_with_audit
@@ -152,15 +152,39 @@ class TestAuditLogIntegration:
             headers=admin_headers,
         )
 
-        deactivated_logs = (
+        updated_logs = (
             db_session.execute(
                 select(AuditLog).where(
                     AuditLog.target_user_id == user_id,
-                    AuditLog.action == AuditAction.USER_DEACTIVATED,
+                    AuditLog.action == AuditAction.USER_UPDATED,
                 )
             )
             .scalars()
             .all()
         )
 
-        assert len(deactivated_logs) == 0
+        assert len(updated_logs) == 1
+
+    def test_deactivation_does_not_generate_user_updated_log(
+        self, client, admin_headers, created_user_with_audit, db_session
+    ):
+        user_id = created_user_with_audit
+
+        client.patch(
+            f"{USERS_URL}/{user_id}",
+            json={"is_active": False},
+            headers=admin_headers,
+        )
+
+        updated_logs = (
+            db_session.execute(
+                select(AuditLog).where(
+                    AuditLog.target_user_id == user_id,
+                    AuditLog.action == AuditAction.USER_UPDATED,
+                )
+            )
+            .scalars()
+            .all()
+        )
+
+        assert len(updated_logs) == 0
