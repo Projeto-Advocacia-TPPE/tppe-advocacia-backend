@@ -9,8 +9,6 @@ from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
-
 from app.api.router import api_router
 from app.config.settings import get_settings
 from app.db.database import init_db
@@ -41,9 +39,6 @@ app = FastAPI(
     redoc_url=None if _is_prod else "/redoc",
     openapi_url=None if _is_prod else "/openapi.json",
 )
-
-if _is_prod:
-    app.add_middleware(HTTPSRedirectMiddleware)
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
