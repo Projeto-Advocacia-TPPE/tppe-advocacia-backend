@@ -22,6 +22,18 @@ class AuditLogService:
                 target_user_role=user.role.value,
             )
 
+    def log_user_updated(self, user: User, performed_by: User) -> None:
+        with unit_of_work(self.repository.db):
+            self.repository.create(
+                action=AuditAction.USER_UPDATED,
+                performed_by_id=performed_by.id,
+                performed_by_name=performed_by.name,
+                target_user_id=user.id,
+                target_user_name=user.name,
+                target_user_email=user.email,
+                target_user_role=user.role.value,
+            )
+
     def log_user_deactivated(self, user: User, performed_by: User) -> None:
         with unit_of_work(self.repository.db):
             self.repository.create(

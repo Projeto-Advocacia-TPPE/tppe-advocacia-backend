@@ -86,6 +86,8 @@ class UserService:
 
         if is_deactivating:
             self.audit.log_user_deactivated(updated, updated_by)
+        elif {"name", "email", "role", "is_active"} & set(updates.keys()):
+            self.audit.log_user_updated(updated, updated_by)
 
         return updated
 

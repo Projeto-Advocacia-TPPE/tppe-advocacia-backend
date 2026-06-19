@@ -149,6 +149,51 @@ class TestLogUserDeactivated:
         repo.create.assert_called_once()
 
 
+class TestLogUserUpdated:
+    def test_calls_repo_with_user_updated_action(self, service, repo):
+        user = make_user()
+        admin = make_user(id=99, name="Admin")
+
+        service.log_user_updated(user, performed_by=admin)
+
+        assert repo.create.call_args.kwargs["action"] == AuditAction.USER_UPDATED
+
+    def test_passes_correct_performed_by_id(self, service, repo):
+        user = make_user()
+        admin = make_user(id=42, name="Admin")
+
+        service.log_user_updated(user, performed_by=admin)
+
+        assert repo.create.call_args.kwargs["performed_by_id"] == 42
+
+    def test_passes_correct_performed_by_name(self, service, repo):
+        user = make_user()
+        admin = make_user(id=1, name="Super Admin")
+
+        service.log_user_updated(user, performed_by=admin)
+
+        assert repo.create.call_args.kwargs["performed_by_name"] == "Super Admin"
+
+    def test_captures_target_user_snapshot(self, service, repo):
+        user = make_user(id=7, name="Dave", email="dave@test.com", role=Role.ADMIN)
+        admin = make_user(id=1, name="Admin")
+
+        service.log_user_updated(user, performed_by=admin)
+
+        kwargs = repo.create.call_args.kwargs
+        assert kwargs["target_user_id"] == 7
+        assert kwargs["target_user_name"] == "Dave"
+        assert kwargs["target_user_email"] == "dave@test.com"
+        assert kwargs["target_user_role"] == "ADMIN"
+
+    def test_calls_repo_create_exactly_once(self, service, repo):
+        service.log_user_updated(
+            make_user(), performed_by=make_user(id=1, name="Admin")
+        )
+
+        repo.create.assert_called_once()
+
+
 class TestListLogs:
     def test_calls_repo_get_all_with_correct_params(self, service, repo):
         repo.get_all.return_value = ([], 0)

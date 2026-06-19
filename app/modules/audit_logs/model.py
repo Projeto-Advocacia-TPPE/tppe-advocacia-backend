@@ -9,6 +9,7 @@ from app.shared.db.base_model import Base
 
 class AuditAction(enum.Enum):
     USER_CREATED = "USER_CREATED"
+    USER_UPDATED = "USER_UPDATED"
     USER_DEACTIVATED = "USER_DEACTIVATED"
     CLIENT_ANONYMIZED = "CLIENT_ANONYMIZED"
 
