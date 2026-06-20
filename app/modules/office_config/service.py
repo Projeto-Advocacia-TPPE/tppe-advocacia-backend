@@ -12,6 +12,6 @@ class OfficeConfigService:
         return self.repository.get_config()
 
     def update(self, payload: OfficeConfigUpdate) -> OfficeConfig:
-        data = payload.model_dump(exclude_unset=True)
+        data = payload.model_dump(mode='json', exclude_unset=True)
         with unit_of_work(self.repository.db):
             return self.repository.update_config(data)
