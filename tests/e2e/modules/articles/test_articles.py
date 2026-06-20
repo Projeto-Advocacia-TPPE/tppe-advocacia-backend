@@ -340,6 +340,77 @@ class TestListAllArticles:
         assert matching[0]["category"] == "Trabalhista"
 
 
+class TestCoverImagePosition:
+    def test_cover_image_position_defaults_to_null(
+        self, client, user_headers, db_session
+    ):
+        response = client.post(
+            BASE_URL,
+            json={
+                "title": "Sem posição",
+                "content": "Texto",
+                "category": "Civil",
+                "summary": "Resumo",
+            },
+            headers=user_headers,
+        )
+        article_id = response.json()["data"]["id"]
+        db_session.execute(delete(Article).where(Article.id == article_id))
+        db_session.commit()
+
+        assert response.json()["data"]["cover_image_position"] is None
+
+    def test_create_with_cover_image_position(self, client, user_headers, db_session):
+        response = client.post(
+            BASE_URL,
+            json={
+                "title": "Com posição",
+                "content": "Texto",
+                "category": "Civil",
+                "summary": "Resumo",
+                "cover_image_url": "https://example.com/img.jpg",
+                "cover_image_position": "30,70",
+            },
+            headers=user_headers,
+        )
+        article_id = response.json()["data"]["id"]
+        db_session.execute(delete(Article).where(Article.id == article_id))
+        db_session.commit()
+
+        assert response.status_code == 201
+        assert response.json()["data"]["cover_image_position"] == "30,70"
+
+    def test_update_cover_image_position(
+        self, client, user_headers, active_user, db_session
+    ):
+        article = make_article(db_session, active_user["id"])
+
+        response = client.patch(
+            f"{BASE_URL}/{article.id}",
+            json={"cover_image_position": "80,20"},
+            headers=user_headers,
+        )
+        db_session.execute(delete(Article).where(Article.id == article.id))
+        db_session.commit()
+
+        assert response.status_code == 200
+        assert response.json()["data"]["cover_image_position"] == "80,20"
+
+    def test_cover_image_position_present_in_preview_response(
+        self, client, user_headers, active_user, db_session
+    ):
+        article = make_article(
+            db_session, active_user["id"], cover_image_position="50,50"
+        )
+
+        response = client.get(f"{BASE_URL}/{article.id}/preview", headers=user_headers)
+        db_session.execute(delete(Article).where(Article.id == article.id))
+        db_session.commit()
+
+        assert response.status_code == 200
+        assert response.json()["data"]["cover_image_position"] == "50,50"
+
+
 class TestCreateArticleValidation:
     def test_returns_422_for_empty_title(self, client, user_headers):
         response = client.post(

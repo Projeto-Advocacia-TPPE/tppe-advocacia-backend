@@ -60,6 +60,22 @@ class TestCreate:
 
         assert article.cover_image_url is None
 
+    def test_cover_image_position_defaults_to_none(self, db: Session):
+        user = make_user(db, email="author3b@test.com")
+        repo = ArticleRepository(db)
+
+        article = make_article(repo, user.id)
+
+        assert article.cover_image_position is None
+
+    def test_cover_image_position_can_be_persisted(self, db: Session):
+        user = make_user(db, email="author3c@test.com")
+        repo = ArticleRepository(db)
+
+        article = make_article(repo, user.id, cover_image_position="30,70")
+
+        assert article.cover_image_position == "30,70"
+
 
 class TestGetById:
     def test_returns_article_when_exists(self, db: Session):
@@ -129,6 +145,15 @@ class TestUpdate:
         updated = repo.update(article, {"status": ArticleStatus.PUBLISHED})
 
         assert updated.status == ArticleStatus.PUBLISHED
+
+    def test_can_update_cover_image_position(self, db: Session):
+        user = make_user(db, email="author9b@test.com")
+        repo = ArticleRepository(db)
+        article = make_article(repo, user.id)
+
+        updated = repo.update(article, {"cover_image_position": "80,20"})
+
+        assert updated.cover_image_position == "80,20"
 
 
 class TestGetAll:
