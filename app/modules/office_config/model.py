@@ -21,15 +21,18 @@ class OfficeConfig(Base):
     hero_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     hero_subtitle: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     hero_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    hero_image_position: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     about_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     about_description: Mapped[str | None] = mapped_column(Text, nullable=True)
     about_image_url: Mapped[str | None] = mapped_column(String(5000), nullable=True)
+    about_image_position: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     lawyer_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     lawyer_oab: Mapped[str | None] = mapped_column(String(50), nullable=True)
     lawyer_description: Mapped[str | None] = mapped_column(Text, nullable=True)
     lawyer_image_url: Mapped[str | None] = mapped_column(String(5000), nullable=True)
+    lawyer_image_position: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     differentials: Mapped[list | None] = mapped_column(JSON, nullable=True)
     areas_of_practice: Mapped[list | None] = mapped_column(JSON, nullable=True)

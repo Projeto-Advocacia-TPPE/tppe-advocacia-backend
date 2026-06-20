@@ -33,6 +33,9 @@ def make_config(**kwargs) -> OfficeConfig:
         "lawyer_image_url": None,
         "differentials": [],
         "areas_of_practice": [],
+        "hero_image_position": None,
+        "about_image_position": None,
+        "lawyer_image_position": None,
     }
     defaults.update(kwargs)
     config = MagicMock(spec=OfficeConfig)
@@ -120,3 +123,29 @@ class TestUpdate:
         result = service.update(OfficeConfigUpdate(office_name="X"))
         assert result is config
         assert result.office_name == "X"
+
+    def test_can_update_image_position_fields(self, service, repo):
+        repo.update_config.return_value = make_config(hero_image_position="50,50")
+        service.update(OfficeConfigUpdate(hero_image_position="50,50"))
+        repo.update_config.assert_called_once_with({"hero_image_position": "50,50"})
+
+    def test_can_update_all_three_image_positions(self, service, repo):
+        repo.update_config.return_value = make_config(
+            hero_image_position="30,70",
+            about_image_position="50,50",
+            lawyer_image_position="80,20",
+        )
+        service.update(
+            OfficeConfigUpdate(
+                hero_image_position="30,70",
+                about_image_position="50,50",
+                lawyer_image_position="80,20",
+            )
+        )
+        repo.update_config.assert_called_once_with(
+            {
+                "hero_image_position": "30,70",
+                "about_image_position": "50,50",
+                "lawyer_image_position": "80,20",
+            }
+        )

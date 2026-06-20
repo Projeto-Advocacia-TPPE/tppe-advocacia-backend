@@ -24,15 +24,18 @@ class OfficeConfigUpdate(BaseModel):
     hero_title: str | None = None
     hero_subtitle: str | None = Field(None, max_length=1000)
     hero_image_url: AnyHttpUrl | None = None
+    hero_image_position: str | None = Field(None, max_length=20)
 
     about_title: str | None = None
     about_description: str | None = Field(None, max_length=5000)
     about_image_url: AnyHttpUrl | None = None
+    about_image_position: str | None = Field(None, max_length=20)
 
     lawyer_name: str | None = None
     lawyer_oab: str | None = None
     lawyer_description: str | None = Field(None, max_length=5000)
     lawyer_image_url: AnyHttpUrl | None = None
+    lawyer_image_position: str | None = Field(None, max_length=20)
 
     differentials: _ListField | None = None
     areas_of_practice: _ListField | None = None
@@ -53,15 +56,18 @@ class OfficeConfigRead(BaseModel):
     hero_title: str | None
     hero_subtitle: str | None
     hero_image_url: str | None
+    hero_image_position: str | None
 
     about_title: str | None
     about_description: str | None
     about_image_url: str | None
+    about_image_position: str | None
 
     lawyer_name: str | None
     lawyer_oab: str | None
     lawyer_description: str | None
     lawyer_image_url: str | None
+    lawyer_image_position: str | None
 
     differentials: list[ListItem] = []
     areas_of_practice: list[ListItem] = []

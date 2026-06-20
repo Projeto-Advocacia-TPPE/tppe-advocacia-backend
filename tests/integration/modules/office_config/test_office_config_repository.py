@@ -22,6 +22,9 @@ class TestGetConfig:
         assert config.office_name is None
         assert config.hero_title is None
         assert config.lawyer_name is None
+        assert config.hero_image_position is None
+        assert config.about_image_position is None
+        assert config.lawyer_image_position is None
 
     def test_list_fields_are_empty_by_default(self, db):
         config = OfficeConfigRepository(db).get_config()
@@ -74,3 +77,27 @@ class TestUpdateConfig:
         assert result.office_name == "Firm"
         assert result.cnpj == "12.345.678/0001-99"
         assert result.phone == "61 9999-0000"
+
+    def test_patches_hero_image_position(self, db):
+        result = OfficeConfigRepository(db).update_config(
+            {"hero_image_position": "30,70"}
+        )
+        assert result.hero_image_position == "30,70"
+
+    def test_patches_all_image_positions(self, db):
+        result = OfficeConfigRepository(db).update_config(
+            {
+                "hero_image_position": "30,70",
+                "about_image_position": "50,50",
+                "lawyer_image_position": "80,20",
+            }
+        )
+        assert result.hero_image_position == "30,70"
+        assert result.about_image_position == "50,50"
+        assert result.lawyer_image_position == "80,20"
+
+    def test_image_position_update_does_not_affect_other_fields(self, db):
+        repo = OfficeConfigRepository(db)
+        repo.update_config({"office_name": "Escritório"})
+        result = repo.update_config({"hero_image_position": "50,50"})
+        assert result.office_name == "Escritório"

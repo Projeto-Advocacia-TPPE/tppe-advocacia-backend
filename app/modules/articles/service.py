@@ -19,6 +19,7 @@ class ArticleService:
                 category=payload.category,
                 author_id=author.id,
                 cover_image_url=payload.cover_image_url,
+                cover_image_position=payload.cover_image_position,
                 status=payload.status,
                 summary=payload.summary,
             )
