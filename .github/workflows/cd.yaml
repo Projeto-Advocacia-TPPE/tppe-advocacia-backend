@@ -31,7 +31,22 @@ jobs:
               docker image prune -f
 
         - name: Health check
+          id: healthcheck
           run: |
             sleep 20
             curl --fail --retry 5 --retry-delay 5 \
               https://api.vitorfrancaadv.com.br/api/v1/health
+
+        - name: Rollback on failure
+          if: failure() && steps.healthcheck.conclusion == 'failure'
+          uses: appleboy/ssh-action@v1.2.0
+          with:
+            host: ${{ secrets.VPS_HOST }}
+            username: ${{ secrets.VPS_USER }}
+            key: ${{ secrets.VPS_SSH_KEY }}
+            port: ${{ secrets.VPS_SSH_PORT }}
+            script: |
+              set -e
+              cd /home/deploy/apps/tppe-advocacia-backend/
+              git checkout HEAD~1
+              docker compose up -d --build --remove-orphans
