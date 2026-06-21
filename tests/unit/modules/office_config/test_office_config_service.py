@@ -21,6 +21,7 @@ def make_config(**kwargs) -> OfficeConfig:
         "instagram_url": None,
         "linkedin_url": None,
         "whatsapp_url": None,
+        "website_url": None,
         "hero_title": None,
         "hero_subtitle": None,
         "hero_image_url": None,
