@@ -22,6 +22,7 @@ class Article(Base):
     category: Mapped[str] = mapped_column(String(100), nullable=False)
     summary: Mapped[str] = mapped_column(String(500), nullable=True)
     cover_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cover_image_position: Mapped[str | None] = mapped_column(String(20), nullable=True)
     status: Mapped[ArticleStatus] = mapped_column(
         Enum(ArticleStatus), nullable=False, default=ArticleStatus.DRAFT
     )

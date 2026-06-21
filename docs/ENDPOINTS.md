@@ -345,7 +345,7 @@ Lista usuários com filtros opcionais e paginação.
 
 ### `POST /api/v1/users`
 
-Cria um novo usuário. O sistema gera a senha temporária e a registra no log do servidor.
+Cria um novo usuário com papel `USER`. O sistema gera uma senha temporária e a envia ao novo usuário por e-mail. Para promover a `ADMIN`, use `PATCH /api/v1/users/{id}` após a criação.
 
 **Body**
 
@@ -354,7 +354,6 @@ Cria um novo usuário. O sistema gera a senha temporária e a registra no log do
   "name": "Carlos Souza",
   "email": "carlos@escritorio.com"
 }
-```
 
 **Resposta 201**
 
@@ -526,7 +525,7 @@ Lista logs de auditoria com filtros opcionais e paginação.
 
 | Parâmetro   | Tipo                                                       | Obrigatório | Descrição                            |
 | ----------- | ---------------------------------------------------------- | ----------- | ------------------------------------ |
-| `action`    | `USER_CREATED` \| `USER_DEACTIVATED` \| `CLIENT_ANONYMIZED` | Não         | Filtra por tipo de ação              |
+| `action`    | `USER_CREATED` \| `USER_UPDATED` \| `USER_DEACTIVATED` \| `CLIENT_ANONYMIZED` | Não         | Filtra por tipo de ação              |
 | `date_from` | `datetime` (ISO 8601)                | Não         | Filtra registros a partir desta data |
 | `date_to`   | `datetime` (ISO 8601)                | Não         | Filtra registros até esta data       |
 | `page`      | `integer` (≥ 1)                      | Não         | Página atual (default: `1`)          |

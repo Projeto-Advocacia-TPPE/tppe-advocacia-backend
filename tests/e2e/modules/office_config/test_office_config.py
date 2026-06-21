@@ -57,6 +57,9 @@ class TestGetOfficeConfig:
             "lawyer_image_url",
             "differentials",
             "areas_of_practice",
+            "hero_image_position",
+            "about_image_position",
+            "lawyer_image_position",
         ]
         for field in expected_fields:
             assert field in data, f"Missing field: {field}"
@@ -156,3 +159,49 @@ class TestPatchOfficeConfig:
         data = client.get(OFFICE_CONFIG_URL).json()["data"]
         assert data["lawyer_name"] == "Dr. Carlos Mendes"
         assert data["lawyer_oab"] == "OAB/DF 12345"
+
+    def test_image_positions_default_to_null(self, client):
+        data = client.get(OFFICE_CONFIG_URL).json()["data"]
+        assert data["hero_image_position"] is None
+        assert data["about_image_position"] is None
+        assert data["lawyer_image_position"] is None
+
+    def test_admin_can_update_image_positions(self, client, admin_headers):
+        response = client.patch(
+            OFFICE_CONFIG_URL,
+            json={
+                "hero_image_position": "30,70",
+                "about_image_position": "50,50",
+                "lawyer_image_position": "80,20",
+            },
+            headers=admin_headers,
+        )
+        assert response.status_code == 200
+        data = response.json()["data"]
+        assert data["hero_image_position"] == "30,70"
+        assert data["about_image_position"] == "50,50"
+        assert data["lawyer_image_position"] == "80,20"
+
+    def test_image_position_persists_after_other_update(self, client, admin_headers):
+        client.patch(
+            OFFICE_CONFIG_URL,
+            json={"hero_image_position": "25,75"},
+            headers=admin_headers,
+        )
+        client.patch(
+            OFFICE_CONFIG_URL,
+            json={"office_name": "Escritório Nova"},
+            headers=admin_headers,
+        )
+        data = client.get(OFFICE_CONFIG_URL).json()["data"]
+        assert data["hero_image_position"] == "25,75"
+
+    def test_image_position_rejects_value_exceeding_max_length(
+        self, client, admin_headers
+    ):
+        response = client.patch(
+            OFFICE_CONFIG_URL,
+            json={"hero_image_position": "123456789012345678901"},
+            headers=admin_headers,
+        )
+        assert response.status_code == 422

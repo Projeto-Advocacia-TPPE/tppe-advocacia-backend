@@ -20,6 +20,7 @@ class ArticleRepository:
         cover_image_url: str | None,
         status: ArticleStatus,
         summary: str | None = None,
+        cover_image_position: str | None = None,
     ) -> Article:
         article = Article(
             title=title,
@@ -29,6 +30,7 @@ class ArticleRepository:
             cover_image_url=cover_image_url,
             status=status,
             summary=summary,
+            cover_image_position=cover_image_position,
         )
         self.db.add(article)
         self.db.flush()

@@ -28,6 +28,7 @@ def make_article(**kwargs):
         "category": "Direito Civil",
         "summary": None,
         "cover_image_url": None,
+        "cover_image_position": None,
         "status": ArticleStatus.DRAFT,
         "author_id": 1,
         "created_at": now,
@@ -152,6 +153,16 @@ class TestUpdate:
         result = service.update(1, ArticleUpdate(status=ArticleStatus.PUBLISHED))
 
         assert result.status == ArticleStatus.PUBLISHED
+
+    def test_passes_cover_image_position_when_set(self, service, repo):
+        article = make_article()
+        repo.get_by_id.return_value = article
+        repo.update.return_value = make_article(cover_image_position="30,70")
+
+        service.update(1, ArticleUpdate(cover_image_position="30,70"))
+
+        data = repo.update.call_args[0][1]
+        assert data.get("cover_image_position") == "30,70"
 
 
 class TestGetPublishedById:

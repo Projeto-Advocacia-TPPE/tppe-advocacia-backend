@@ -11,6 +11,7 @@ class ArticleCreate(BaseModel):
     category: str = Field(..., min_length=1, max_length=100)
     summary: str = Field(..., max_length=500)
     cover_image_url: str | None = Field(None, max_length=500)
+    cover_image_position: str | None = Field(None, max_length=20)
     status: ArticleStatus = ArticleStatus.DRAFT
 
 
@@ -20,6 +21,7 @@ class ArticleUpdate(BaseModel):
     category: str | None = Field(None, min_length=1, max_length=100)
     summary: str | None = Field(None, max_length=500)
     cover_image_url: str | None = Field(None, max_length=500)
+    cover_image_position: str | None = Field(None, max_length=20)
     status: ArticleStatus | None = None
 
 
@@ -43,6 +45,7 @@ class ArticleRead(BaseModel):
     category: str
     summary: str | None
     cover_image_url: str | None
+    cover_image_position: str | None
     status: ArticleStatus
     author_id: int
     author_name: str
@@ -61,6 +64,7 @@ class ArticleRead(BaseModel):
             "category": data.category,
             "summary": data.summary,
             "cover_image_url": data.cover_image_url,
+            "cover_image_position": data.cover_image_position,
             "status": data.status,
             "author_id": data.author_id,
             "author_name": data.author.name if data.author else "",
