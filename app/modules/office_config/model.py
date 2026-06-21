@@ -17,6 +17,7 @@ class OfficeConfig(Base):
     instagram_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     linkedin_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     whatsapp_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    website_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     hero_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     hero_subtitle: Mapped[str | None] = mapped_column(String(1000), nullable=True)
