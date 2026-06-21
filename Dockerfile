@@ -15,6 +15,8 @@ COPY --chown=appuser:appuser alembic.ini .
 COPY --chown=appuser:appuser alembic ./alembic
 COPY --chown=appuser:appuser scripts ./scripts
 
+RUN mkdir -p /app/uploads/media && chown -R appuser:appuser /app/uploads
+
 USER appuser
 
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 \

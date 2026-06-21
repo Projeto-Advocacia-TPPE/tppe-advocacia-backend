@@ -16,4 +16,3 @@ uploads/
 tests/
 docker-compose*.yml
 *.md
-scripts/
