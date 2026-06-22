@@ -347,6 +347,48 @@ class TestUpdateUser:
 
         audit.log_user_deactivated.assert_not_called()
 
+    def test_logs_user_updated_when_name_changes(self, service, repo, audit):
+        existing = make_user(is_active=True)
+        updated = make_user(name="New Name")
+        repo.get_by_id.return_value = existing
+        repo.update.return_value = updated
+        admin = make_user(id=5)
+
+        service.update_user(1, UserUpdate(name="New Name"), updated_by=admin)
+
+        audit.log_user_updated.assert_called_once_with(updated, admin)
+
+    def test_logs_user_updated_when_role_changes(self, service, repo, audit):
+        existing = make_user(role=Role.USER)
+        updated = make_user(role=Role.ADMIN)
+        repo.get_by_id.return_value = existing
+        repo.update.return_value = updated
+        admin = make_user(id=5)
+
+        service.update_user(1, UserUpdate(role=Role.ADMIN), updated_by=admin)
+
+        audit.log_user_updated.assert_called_once_with(updated, admin)
+
+    def test_does_not_log_user_updated_when_deactivating(self, service, repo, audit):
+        repo.get_by_id.return_value = make_user(is_active=True)
+        repo.update.return_value = make_user(is_active=False)
+        admin = make_user(id=5)
+
+        service.update_user(1, UserUpdate(is_active=False), updated_by=admin)
+
+        audit.log_user_updated.assert_not_called()
+
+    def test_logs_user_updated_when_activating(self, service, repo, audit):
+        existing = make_user(is_active=False)
+        updated = make_user(is_active=True)
+        repo.get_by_id.return_value = existing
+        repo.update.return_value = updated
+        admin = make_user(id=5)
+
+        service.update_user(1, UserUpdate(is_active=True), updated_by=admin)
+
+        audit.log_user_updated.assert_called_once_with(updated, admin)
+
 
 class TestGeneratePassword:
     def test_default_length_is_12(self):
