@@ -182,16 +182,12 @@ class GoogleCalendarService:
             self.repository.update_sync_token(credential, next_sync_token)
         return result
 
-    def _apply_event(
-        self, user_id: int, event: dict, result: GooglePullResult
-    ) -> None:
+    def _apply_event(self, user_id: int, event: dict, result: GooglePullResult) -> None:
         google_event_id = event.get("id")
         if not google_event_id:
             return
 
-        existing = self.appointments.get_by_google_event_id(
-            google_event_id, user_id
-        )
+        existing = self.appointments.get_by_google_event_id(google_event_id, user_id)
 
         if event.get("status") == "cancelled":
             if existing is not None:
