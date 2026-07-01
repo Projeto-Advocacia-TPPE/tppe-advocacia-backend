@@ -249,7 +249,8 @@ class GoogleCalendarService:
             return None
         value = datetime.fromisoformat(raw)
         if value.tzinfo is None:  # evento all-day ("2026-12-01")
-            value = value.replace(tzinfo=timezone.utc)
+            # Noon UTC evita que o dia vire para trás em fusos como UTC-3 (Brasil)
+            value = value.replace(hour=12, tzinfo=timezone.utc)
         return value
 
     @staticmethod

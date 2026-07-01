@@ -256,6 +256,7 @@ class TestPullChanges:
         kwargs = appointments.create_from_google.call_args.kwargs
         assert kwargs["duration_minutes"] == 30
         assert kwargs["title"] == "(sem título)"
+        assert kwargs["starts_at"] == datetime(2026, 12, 1, 12, 0, 0, tzinfo=timezone.utc)
 
     def test_raises_when_not_configured(self, repo, client):
         service = GoogleCalendarService(repo, client, None, None, SECRET, MagicMock())
