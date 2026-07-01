@@ -231,7 +231,7 @@ class TestPullChanges:
         assert result.deleted == 0
         appointments.delete.assert_not_called()
 
-    def test_all_day_event_defaults_to_full_day(self, repo, client, cipher):
+    def test_all_day_event_defaults_to_30_minutes(self, repo, client, cipher):
         repo.get_by_user.return_value = pull_credential(cipher)
         appointments = MagicMock()
         appointments.get_by_google_event_id.return_value = None
@@ -254,7 +254,7 @@ class TestPullChanges:
         service.pull_changes(7)
 
         kwargs = appointments.create_from_google.call_args.kwargs
-        assert kwargs["duration_minutes"] == 1440
+        assert kwargs["duration_minutes"] == 30
         assert kwargs["title"] == "(sem título)"
 
     def test_raises_when_not_configured(self, repo, client):

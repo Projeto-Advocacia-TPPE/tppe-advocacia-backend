@@ -226,10 +226,10 @@ class GoogleCalendarService:
             return None
         end = GoogleCalendarService._parse_edge(end_raw)
 
-        if end is not None and end > start:
+        if "date" in start_raw and "dateTime" not in start_raw:
+            duration_minutes = 30  # evento de dia inteiro
+        elif end is not None and end > start:
             duration_minutes = int((end - start).total_seconds() // 60)
-        elif "date" in start_raw:
-            duration_minutes = 1440  # dia inteiro sem fim explícito
         else:
             duration_minutes = 60
         duration_minutes = max(1, duration_minutes)
